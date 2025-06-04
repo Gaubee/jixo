@@ -1,0 +1,46 @@
+{
+  "name": "jixo",
+  "version": "0.0.0",
+  "description": "The AI-Driven Development Foundation for Automated Software Engineering",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsc --build --watch",
+    "build": "rolldown -c ./rolldown.config.mts",
+    "build2": "esbuild --bundle ./index.ts --format=esm --outfile=./bundle/index.js --platform=node",
+    "files-to-prompt": "node ./scripts/files-to-prompt.ts",
+    "test": "node --env-file=.env  bundle/index.js"
+  },
+  "bin": "./bundle/index.js",
+  "exports": {
+    ".": {
+      "default": "./bundle/index.js"
+    }
+  },
+  "files": [
+    "!scripts",
+    "!packages"
+  ],
+  "keywords": [],
+  "author": "Gaubee",
+  "license": "MIT",
+  "packageManager": "pnpm@10.11.1",
+  "dependencies": {
+    "@jixo/cli": "workspace:^"
+  },
+  "devDependencies": {
+    "@gaubee/node": "^0.2.1",
+    "@gaubee/nodekit": "^0.8.0",
+    "@gaubee/util": "^0.32.1",
+    "@parcel/watcher": "^2.5.1",
+    "@std/cli": "jsr:^1.0.17",
+    "@std/fmt": "jsr:^1.0.8",
+    "@types/node": "^22.15.21",
+    "esbuild": "^0.25.5",
+    "import-meta-ponyfill": "^3.2.1",
+    "prettier": "^3.5.3",
+    "prettier-plugin-organize-imports": "^4.1.0",
+    "rolldown": "1.0.0-beta.10",
+    "typescript": "^5.8.3"
+  }
+}

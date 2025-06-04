@@ -1,0 +1,35 @@
+{
+    "compilerOptions": {
+        "composite": true,
+        "target": "es2022",
+        "module": "ESNext",
+        "lib": [
+            "ESNext",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        "jsx": "react",
+        "importHelpers": true,
+        "noEmitOnError": false,
+        "declaration": true,
+        "declarationMap": true,
+        "sourceMap": true,
+        "inlineSources": true,
+        "strict": true,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "noImplicitReturns": false,
+        "noFallthroughCasesInSwitch": true,
+        "noImplicitAny": true,
+        "noImplicitThis": true,
+        "verbatimModuleSyntax": true,
+        "moduleResolution": "bundler",
+        "allowSyntheticDefaultImports": true,
+        "experimentalDecorators": false,
+        "useDefineForClassFields": true,
+        "forceConsistentCasingInFileNames": true,
+        "noImplicitOverride": true,
+        "plugins": [],
+        "types": []
+    }
+}
