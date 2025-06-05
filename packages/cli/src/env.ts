@@ -20,5 +20,3 @@ export const safeEnv = defineEnv("JIXO", {
   DEEPINFRA_BASE_URL: "",
   DEEPINFRA_API_KEY: "",
 });
-
-console.log("QAQ env", safeEnv);

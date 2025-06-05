@@ -1,7 +1,6 @@
-import {FileEntry, walkFiles} from "@gaubee/nodekit";
-import {import_meta_ponyfill} from "import-meta-ponyfill";
+import {FileEntry, gray, red, walkFiles} from "@gaubee/nodekit";
 import {type ExecException, execSync} from "node:child_process";
-import * as path from "node:path";
+import path from "node:path";
 
 interface GitError extends ExecException {
   status?: number | null;
@@ -9,15 +8,15 @@ interface GitError extends ExecException {
   //   stdout?: Buffer | string;
 }
 
-export async function findChangedFilesSinceCommit(messagePattern: string, repoPath: string = "."): Promise<FileEntry[]> {
-  const gitCommandOptions = {cwd: repoPath, encoding: "utf8" as BufferEncoding, stdio: "pipe" as "pipe"}; // stdio: 'pipe' to access stdout/stderr on error
-
-  // 确保在 Git 仓库中运行
+export async function findChangedFilesSinceCommit(messagePattern: string, cwd: string = "."): Promise<FileEntry[]> {
+  let repoPath = cwd;
   try {
-    execSync("git rev-parse --is-inside-work-tree", {...gitCommandOptions, stdio: "ignore"});
+    // 获取 Git 仓库位置，同时确保在 Git 仓库中运行
+    repoPath = execSync("git rev-parse --show-toplevel", {cwd, encoding: "utf8", stdio: "pipe"}).toString().trim();
   } catch (e) {
     return [...walkFiles(repoPath)];
   }
+  const gitCommandOptions = {cwd: repoPath, encoding: "utf8" as BufferEncoding, stdio: "pipe" as "pipe"}; // stdio: 'pipe' to access stdout/stderr on error
 
   let baseCommitForDiff: string | null = null;
 
@@ -30,13 +29,14 @@ export async function findChangedFilesSinceCommit(messagePattern: string, repoPa
       console.log(`Found target commit SHA: ${targetCommitSha} for message pattern: "${messagePattern}"`);
       baseCommitForDiff = targetCommitSha;
     } else {
-      console.warn(`No commit found with message pattern: "${messagePattern}". Only uncommitted changes will be listed if any.`);
+      console.warn(gray(`No commit found with message pattern: "${messagePattern}". Only uncommitted changes will be listed if any.`));
     }
   } catch (error) {
     // git log --grep 通常在没有匹配时返回空输出和退出码0。
     // 如果这里出错，可能是更严重的问题。
     const gitError = error as GitError;
-    console.warn(`Could not determine base commit with pattern "${messagePattern}". Only uncommitted changes will be listed. Details: ${gitError.message}`);
+    console.warn(red(`Could not determine base commit with pattern "${messagePattern}". Only uncommitted changes will be listed. Details:`));
+    console.error(gitError.message);
   }
 
   const changedFiles = new Set<string>();
@@ -105,25 +105,5 @@ export async function findChangedFilesSinceCommit(messagePattern: string, repoPa
   }
 
   // 返回相对于仓库根目录的文件路径
-  return [...changedFiles].map((filepath) => new FileEntry(filepath, {cwd: repoPath}));
-}
-
-// --- 使用示例 ---
-async function test() {
-  const messagePattern = "@jixo"; // 你要搜索的 commit message 内容
-  const repoDir = "."; // Git 仓库的路径，默认为当前目录
-
-  console.log(`Searching for changes since commit with message containing "${messagePattern}" in ${path.resolve(repoDir)}...`);
-  const files = await findChangedFilesSinceCommit(messagePattern, repoDir);
-
-  if (files.length > 0) {
-    console.log("\nChanged files (relative to git root):");
-  } else {
-    console.log("\nNo changed files found based on the criteria.");
-  }
-  return files;
-}
-if (import_meta_ponyfill(import.meta).main) {
-  const files = await test();
-  console.log(files.map((file) => file.path));
+  return [...changedFiles].map((filepath) => new FileEntry(path.resolve(repoPath, filepath), {cwd: repoPath}));
 }

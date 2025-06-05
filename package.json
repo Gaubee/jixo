@@ -7,14 +7,14 @@
   "scripts": {
     "dev": "tsc --build --watch",
     "build": "rolldown -c ./rolldown.config.mts",
-    "build2": "esbuild --bundle ./index.ts --format=esm --outfile=./bundle/index.js --platform=node",
+    "build2": "esbuild ./index.ts --format=cjs --outfile=./bundle/index.cjs --platform=node",
     "files-to-prompt": "node ./scripts/files-to-prompt.ts",
-    "test": "node --env-file=.env  bundle/index.js"
+    "test": "node --env-file=.env  bundle/index.cjs"
   },
-  "bin": "./bundle/index.js",
+  "bin": "./bundle/index.cjs",
   "exports": {
     ".": {
-      "default": "./bundle/index.js"
+      "default": "./bundle/index.cjs"
     }
   },
   "files": [

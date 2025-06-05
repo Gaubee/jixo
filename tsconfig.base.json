@@ -2,7 +2,7 @@
     "compilerOptions": {
         "composite": true,
         "target": "es2022",
-        "module": "ESNext",
+        "module": "node18",
         "lib": [
             "ESNext",
             "DOM",
@@ -23,7 +23,8 @@
         "noImplicitAny": true,
         "noImplicitThis": true,
         "verbatimModuleSyntax": true,
-        "moduleResolution": "bundler",
+        "moduleResolution": "node16",
+        "resolveJsonModule": true,
         "allowSyntheticDefaultImports": true,
         "experimentalDecorators": false,
         "useDefineForClassFields": true,

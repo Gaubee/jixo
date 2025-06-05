@@ -1,5 +1,7 @@
 import {cosmiconfig} from "cosmiconfig";
+import {defu} from "defu";
 import z from "zod";
+
 const zJixoTask = z.union([
   z.string(),
   z.object({
@@ -26,10 +28,12 @@ const defaultConfig: JixoConfig = {
 };
 export type JixoTask = z.output<typeof zJixoTask>;
 export type JixoConfig = z.output<typeof zJixoConfig>;
-export const defineConfig = (config: Partial<JixoConfig>) => {};
+export const defineConfig = (config: Partial<JixoConfig>) => {
+  return zJixoConfig.parse(config);
+};
 
 export const loadConfig = async (dir: string) => {
   const explorer = cosmiconfig("jixo");
-  const loaded = await explorer.load(dir);
-  return (loaded?.config as JixoConfig) ?? defaultConfig;
+  const loaded = await explorer.search(dir);
+  return defu(loaded?.config as JixoConfig, defaultConfig);
 };

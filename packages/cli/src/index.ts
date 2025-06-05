@@ -1,8 +1,8 @@
-export * from "./config";
+export * from "./config.js";
 
-import {import_meta_ponyfill} from "import-meta-ponyfill";
-import {runCli} from "./cli";
+import {runCli} from "./cli.js";
 
-if (import_meta_ponyfill(import.meta).main) {
-  runCli();
-}
+// import {import_meta_ponyfill} from "import-meta-ponyfill";
+// if (import_meta_ponyfill(import.meta).main) {
+runCli();
+// }
