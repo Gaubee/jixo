@@ -1,5 +1,6 @@
 import {cyan, FileEntry, gray, green, spinner} from "@gaubee/nodekit";
-import {streamText, type ModelMessage} from "ai";
+import {func_catch} from "@gaubee/util";
+import {streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart} from "ai";
 import {match, P} from "ts-pattern";
 import {safeEnv} from "../../env.js";
 import {getModelMessage, getPromptConfigs} from "../../helper/prompts-loader.js";
@@ -35,60 +36,188 @@ const getModel = (model?: string) => {
 
 export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedFiles: FileEntry[]) => {
   const model = getModel(ai_task.model);
+  const availableTools = {
+    ...(await tools.fileSystem(ai_task.cwd)),
+    ...(await tools.fetch()),
+    // ...(await tools.git(ai_task.cwd)),
+  };
 
-  const modelMessage: ModelMessage[] = getModelMessage(ai_task.agents);
-  modelMessage.push(
-    //
-    {
-      role: "system",
-      content: getPromptConfigs()
-        .base.content //
-        .replaceAll("{{task.name}}", ai_task.name)
-        .replaceAll("{{task.memory}}", ai_task.memory)
-        .replaceAll("{{task.content}}", ai_task.content)
-        .replaceAll("{{allFiles}}", allFiles.map((file) => `- ${file.path}`).join("\n"))
-        .replaceAll("{{changedFiles}}", changedFiles.map((file) => `- ${file.path}`).join("\n")),
-    },
-  );
-  // console.log("QAQ modelMessage", modelMessage);
-  // return;
-  const result = streamText({
-    model: model,
-    prompt: modelMessage,
-    tools: {
-      ...(await tools.fileSystem(ai_task.cwd)),
-      // ...(await tools.fetch()),
-      // ...(await tools.git(ai_task.cwd)),
-    },
-    onChunk: ({chunk}) => {
-      if (chunk.type === "reasoning") {
-        if (reasoning === "") {
-          loading.prefixText = "🤔 ";
-          loading.text = "";
-        }
-        reasoning += chunk.text;
-        loading.text = gray(reasoning.split("\n").slice(-3).join("\n"));
-      }
-    },
+  const initialMessages: ModelMessage[] = getModelMessage(ai_task.agents);
+  initialMessages.push({
+    role: "system",
+    content: getPromptConfigs()
+      .base.content //
+      .replace(/\{\{task.(\w+)\}\}/, (key) => Reflect.get(ai_task, key))
+      .replace(/\{\{env.(\w+)\}\}/, (key) => Reflect.get(process.env, key) ?? "")
+      .replaceAll("{{allFiles}}", allFiles.map((file) => `- ${file.path}`).join("\n"))
+      .replaceAll("{{changedFiles}}", changedFiles.map((file) => `- ${file.path}`).join("\n")),
   });
-  const loading = spinner.default(`Connecting To ${model.provider}...`);
+
+  let currentMessages: ModelMessage[] = [...initialMessages];
+  const maxTurns = 10; // Safeguard against infinite loops
+  const loading = spinner.default("Initializing AI task...");
   loading.prefixText = "⏳ ";
   loading.start();
-  let reasoning = "";
-  let fulltext = "";
-  for await (const text of result.textStream) {
-    if (fulltext === "") {
-      loading.prefixText = "🤖 ";
-      loading.text = "";
-      fulltext = "\n";
+
+  for (let turn = 0; turn < maxTurns; turn++) {
+    loading.text = turn === 0 ? `Connecting To ${model.provider}...` : `Processing turn ${turn + 1}...`;
+
+    const result = await streamText({
+      model: model,
+      messages: currentMessages,
+      tools: availableTools,
+      toolChoice: "auto", // Changed to auto for more flexibility
+    });
+
+    let reasoning = "";
+    let fulltext = "";
+    let firstStreamPart = true;
+    const requestedToolCalls: ToolCallPart[] = []; // Using any for now, should be ToolCallPart from 'ai'
+
+    let assistantMessageContent = "";
+    let currentAssistantMessage: AssistantModelMessage = {role: "assistant", content: ""};
+
+    const LOOP_SIGNALS = {
+      RETURN: "RETURN",
+      BREAK: "BREAK",
+      CONTINUE: "CONTINUE",
+    } as const;
+    for await (const part of result.fullStream) {
+      if (firstStreamPart) {
+        firstStreamPart = false;
+        loading.text = ""; // Clear initial connecting/processing message
+      }
+      const LOOP_SIGNAL = await match(part)
+        .with({type: "text"}, (textPart) => {
+          loading.prefixText = "🤖 ";
+          assistantMessageContent += textPart.text;
+          currentAssistantMessage.content = assistantMessageContent;
+          if (fulltext === "") fulltext = "\n"; // For consistent display
+          fulltext += textPart.text;
+          loading.text = fulltext;
+        })
+        .with({type: "tool-call"}, (callPart) => {
+          loading.prefixText = "🛠️ ";
+          console.log("\nQAQ tool-call", callPart);
+          requestedToolCalls.push(callPart);
+          // Update assistant message to include tool calls
+          currentAssistantMessage.content = [
+            {
+              type: "tool-call",
+              toolCallId: callPart.toolCallId,
+              toolName: callPart.toolName,
+              args: callPart.args,
+            },
+          ];
+          loading.text = `Requesting tool: ${callPart.toolName}`;
+        })
+        .with({type: "error"}, (errorPart) => {
+          loading.prefixText = "❌ ";
+          console.error("\nQAQ error", errorPart.error);
+          loading.fail(`Error: ${errorPart.error?.toString()}`);
+          return LOOP_SIGNALS.BREAK; // Stop processing on error
+        })
+        .with({type: "reasoning"}, (reasoningPart) => {
+          loading.prefixText = "🤔 ";
+          if (reasoning === "") loading.text = "";
+          reasoning += reasoningPart.text;
+          loading.text = gray(reasoning.split("\n").slice(-3).join("\n"));
+        })
+        // Add other console logs for debugging if needed, but keep them minimal for production
+        .with({type: "file"}, (p) => console.log("\nQAQ file", p.file))
+        .with({type: "source"}, (p) => console.log("\nQAQ source", p))
+        .with({type: "tool-result"}, (p) => console.log("\nQAQ tool-result", p))
+        .with({type: "tool-call-streaming-start"}, (p) => console.log("\nQAQ tool-call-streaming-start", p))
+        .with({type: "tool-call-delta"}, (p) => console.log("\nQAQ tool-call-delta", p))
+        .with({type: "reasoning-part-finish"}, (p) => console.log("\nQAQ reasoning-part-finish", p))
+        .with({type: "start-step"}, (p) => console.log("\nQAQ start-step", p))
+        .with({type: "finish-step"}, (p) => console.log("\nQAQ finish-step", p))
+        .with({type: "start"}, (p) => console.log("\nQAQ start", p))
+        .with({type: "finish"}, async (finishPart) => {
+          console.log("\nQAQ finish", finishPart);
+          // Add the assistant's message from this turn to the history
+          currentMessages.push(currentAssistantMessage);
+
+          if (finishPart.finishReason === "stop" || finishPart.finishReason === "length") {
+            loading.succeed(green(`✅ ${cyan(`[${ai_task.name}]`)} Completed`));
+            // Task finished without tool calls or after tool calls that didn't lead to more calls.
+            return LOOP_SIGNALS.RETURN; // Exit the outer loop and function
+          }
+
+          if (finishPart.finishReason === "tool-calls") {
+            if (requestedToolCalls.length === 0) {
+              loading.warn("Finished with 'tool-calls' but no tools were requested.");
+              return LOOP_SIGNALS.RETURN; // Exit, something is off
+            }
+
+            const toolResultMessages: ModelMessage[] = [];
+            for (const toolCall of requestedToolCalls) {
+              const toolToExecute = availableTools[toolCall.toolName];
+              if (!toolToExecute || typeof toolToExecute.execute !== "function") {
+                console.error(`Tool ${toolCall.toolName} not found or not executable.`);
+                toolResultMessages.push({
+                  role: "tool",
+                  content: [
+                    {
+                      type: "tool-result",
+                      toolCallId: toolCall.toolCallId,
+                      toolName: toolCall.toolName,
+                      result: JSON.stringify({error: `Tool ${toolCall.toolName} not found or not executable.`}),
+                      isError: true,
+                    },
+                  ],
+                });
+                continue;
+              }
+              loading.text = `Executing tool: ${toolCall.toolName}...`;
+              const executionResult = await func_catch(() =>
+                toolToExecute.execute!(toolCall.args, {
+                  toolCallId: toolCall.toolCallId,
+                  messages: currentMessages,
+                }),
+              )();
+              toolResultMessages.push({
+                role: "tool",
+                content: [
+                  {
+                    type: "tool-result",
+                    toolCallId: toolCall.toolCallId,
+                    toolName: toolCall.toolName,
+                    isError: !executionResult.success,
+                    result: JSON.stringify(executionResult.success ? executionResult.result : executionResult.error),
+                  },
+                ],
+              });
+              if (executionResult.success) {
+                loading.text = `Tool ${toolCall.toolName} executed.`;
+              } else {
+                loading.text = `Error executing tool ${toolCall.toolName}.`;
+              }
+            }
+            currentMessages.push(...toolResultMessages);
+            // Loop continues for the next turn
+          } else {
+            // Other finish reasons, potentially an error or unexpected state
+            loading.warn(`Task finished with unhandled reason: ${finishPart.finishReason}`);
+            return LOOP_SIGNALS.RETURN;
+          }
+        })
+        .otherwise(() => {}); // Handle any other part types if necessary
+
+      if (LOOP_SIGNAL === LOOP_SIGNALS.RETURN) {
+        return;
+      } else if (LOOP_SIGNAL === LOOP_SIGNALS.BREAK) {
+        break;
+      }
     }
-    fulltext += text;
-    loading.text = fulltext;
+    // If the stream finishes without a 'finish' part (e.g. error thrown inside), this loop might exit. Ensure spinner stops.
+    if (turn === maxTurns - 1) {
+      loading.warn("Max interaction turns reached.");
+      return;
+    }
   }
-
-  loading.stopAndPersist({
-    suffixText: green(`\n✅ ${cyan(`[${ai_task.name}]`)} Completed\n`),
-  });
-
-  console.log("QAQ done", result);
+  // Fallback spinner stop if loop exits unexpectedly
+  if (loading.isSpinning) {
+    loading.stopAndPersist({text: "Task ended.", prefixText: "🏁 "});
+  }
 };

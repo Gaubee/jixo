@@ -16,7 +16,6 @@ export const run = async (_cwd: string, options: {nameFilter: string[]; dirFilte
   //   const run_tasks: Array<Func> = [];
   for (const ai_task of ai_tasks) {
     const {dir: task_dir} = ai_task;
-    console.log(ai_task, dirMatcher.isMatch(task_dir), nameMatcher.isMatch(ai_task.name));
     if (!dirMatcher.isMatch(task_dir)) {
       continue;
     }
