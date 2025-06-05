@@ -11,6 +11,11 @@ import {providers} from "./model-providers.js";
 const getModel = (model?: string) => {
   return match(model)
     .with(P.string.startsWith("deepseek-"), (model) => providers.deepseek(model))
+    .with(P.string.startsWith("gemini-"), (model) => providers.google(model))
+    .with(P.string.startsWith("o3-"), P.string.startsWith("o1-"), P.string.startsWith("gpt-"), (model) => providers.openai(model))
+    .with(P.string.startsWith("claude-"), (model) => providers.anthropic(model))
+    .with(P.string.startsWith("grok-"), (model) => providers.xai(model))
+    .with(P.string.includes("/"), (model) => providers.deepinfra(model))
     .otherwise(() => {
       if (safeEnv.JIXO_DEEPSEEK_API_KEY) {
         return providers.deepseek("deepseek-chat");
@@ -38,15 +43,15 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
   const model = getModel(ai_task.model);
   const availableTools = {
     ...(await tools.fileSystem(ai_task.cwd)),
-    ...(await tools.fetch()),
+    // ...(await tools.fetch()),
     // ...(await tools.git(ai_task.cwd)),
   };
 
   const initialMessages: ModelMessage[] = getModelMessage(ai_task.agents);
   initialMessages.push({
-    role: "system",
+    role: "user",
     content: getPromptConfigs()
-      .base.content //
+      .user.content //
       .replace(/\{\{task.(\w+)\}\}/, (key) => Reflect.get(ai_task, key))
       .replace(/\{\{env.(\w+)\}\}/, (key) => Reflect.get(process.env, key) ?? "")
       .replaceAll("{{allFiles}}", allFiles.map((file) => `- ${file.path}`).join("\n"))
@@ -139,7 +144,8 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
           currentMessages.push(currentAssistantMessage);
 
           if (finishPart.finishReason === "stop" || finishPart.finishReason === "length") {
-            loading.succeed(green(`✅ ${cyan(`[${ai_task.name}]`)} Completed`));
+            loading.prefixText = "✅ ";
+            loading.text = green(`${cyan(`[${ai_task.name}]`)} Completed`);
             // Task finished without tool calls or after tool calls that didn't lead to more calls.
             return LOOP_SIGNALS.RETURN; // Exit the outer loop and function
           }
@@ -205,7 +211,7 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
         .otherwise(() => {}); // Handle any other part types if necessary
 
       if (LOOP_SIGNAL === LOOP_SIGNALS.RETURN) {
-        return;
+        break;
       } else if (LOOP_SIGNAL === LOOP_SIGNALS.BREAK) {
         break;
       }
@@ -217,7 +223,5 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
     }
   }
   // Fallback spinner stop if loop exits unexpectedly
-  if (loading.isSpinning) {
-    loading.stopAndPersist({text: "Task ended.", prefixText: "🏁 "});
-  }
+  loading.stop();
 };
