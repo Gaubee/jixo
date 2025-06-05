@@ -2,7 +2,7 @@ import {Ignore, normalizeFilePath, walkFiles} from "@gaubee/nodekit";
 import {loadConfig} from "../../config.js";
 import {findChangedFilesSinceCommit} from "../../helper/find-changes.js";
 import {resolveAiTasks} from "../../helper/resolve-ai-tasks.js";
-import {runAiTask} from "../../helper/run-ai.js";
+import {runAiTask} from "./run-ai-task.js";
 
 export const run = async (_cwd: string, options: {nameFilter: string[]; dirFilter: string[]}) => {
   const cwd = normalizeFilePath(_cwd);
