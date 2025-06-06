@@ -1,7 +1,8 @@
-import {blue, cyan, FileEntry, gray, green, spinner, YAML} from "@gaubee/nodekit";
+import {blue, cyan, FileEntry, gray, green, red, spinner, YAML, yellow} from "@gaubee/nodekit";
 import {func_catch} from "@gaubee/util";
 import {streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart} from "ai";
 import debug from "debug";
+import ms from "ms";
 import os from "node:os";
 import path from "node:path";
 import {match, P} from "ts-pattern";
@@ -10,6 +11,7 @@ import {getModelMessage, getPromptConfigs} from "../../helper/prompts-loader.js"
 import type {AiTask} from "../../helper/resolve-ai-tasks.js";
 import {tools} from "./ai-tools.js";
 import {providers} from "./model-providers.js";
+
 const log = debug("jixo:run-ai-task");
 
 const getModel = (model?: string) => {
@@ -99,10 +101,15 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
   });
 
   let currentMessages: ModelMessage[] = [...initialMessages];
-  const maxTurns = 10; // Safeguard against infinite loops
+  const maxTurns = 20; // Safeguard against infinite loops
   const loading = spinner("Initializing AI task...");
   loading.prefixText = "⏳ ";
   loading.start();
+  const endInfo = {
+    prefixText: "",
+    text: "",
+    suffixText: `⏱️ ${gray(ms(new Date().getTime() - new Date(ai_task.startTime).getTime(), {long: true}))}`,
+  };
 
   loop: for (let turn = 0; turn < maxTurns; turn++) {
     loading.text = turn === 0 ? `Connecting To ${model.provider}...` : `Processing turn ${turn + 1}...`;
@@ -114,8 +121,8 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
       toolChoice: "auto", // Changed to auto for more flexibility
     });
 
-    let reasoning = "";
-    let fulltext = "";
+    let fullReasoningText = "";
+    let fullText = "";
     let firstStreamPart = true;
     const requestedToolCalls: ToolCallPart[] = []; // Using any for now, should be ToolCallPart from 'ai'
 
@@ -141,13 +148,13 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
             assistantMessageContent.push(assistantTextPart);
           }
           assistantTextPart.text += textPart.text;
-          if (fulltext === "") fulltext = "\n"; // For consistent display
-          fulltext += textPart.text;
-          loading.text = fulltext;
+          if (fullText === "") fullText = "\n"; // For consistent display
+          fullText += textPart.text;
+          loading.text = fullText.split("\n").slice(-10).join("\n");
         })
         .with({type: "tool-call"}, (callPart) => {
           loading.prefixText = "🛠️ ";
-          loading.text = "Requesting tool:" + blue(callPart.toolName) + gray(": " + YAML.stringify(callPart.args));
+          loading.text = "Requesting tool:" + blue(callPart.toolName) + gray(": " + YAML.stringify(callPart.args).split("\n").slice(0, 3) + "...");
           log("\nQAQ tool-call", callPart);
           requestedToolCalls.push(callPart);
           // Update assistant message to include tool calls
@@ -159,20 +166,34 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
           });
         })
         .with({type: "error"}, (errorPart) => {
-          loading.prefixText = "❌ ";
           console.error("\nQAQ error", errorPart.error);
-          loading.fail(`Error: ${errorPart.error?.toString()}`);
+          loading.prefixText = endInfo.prefixText = "❌ ";
+          loading.text = endInfo.text = red(`Error: ${errorPart.error?.toString()}`);
           return LOOP_SIGNALS.BREAK; // Stop processing on error
         })
         .with({type: "reasoning"}, (reasoningPart) => {
           loading.prefixText = "🤔 ";
-          if (reasoning === "") loading.text = "";
-          reasoning += reasoningPart.text;
-          loading.text = gray(reasoning.split("\n").slice(-3).join("\n"));
+          if (fullReasoningText === "") loading.text = "";
+          fullReasoningText += reasoningPart.text;
+          loading.text = gray(fullReasoningText.split("\n").slice(-3).join("\n"));
         })
         // Add other console logs for debugging if needed, but keep them minimal for production
-        .with({type: "file"}, (p) => log("\nQAQ file", p.file))
-        .with({type: "source"}, (p) => log("\nQAQ source", p))
+        .with({type: "file"}, (p) => {
+          loading.prefixText = "📃 ";
+          loading.text = p.file.mediaType;
+
+          log("\nQAQ file", p.file);
+        })
+        .with({type: "source"}, (p) => {
+          loading.prefixText = "🔗 ";
+          if (p.title) {
+            loading.text = `[${p.title}](${p.url})`;
+          } else {
+            loading.text = p.url;
+          }
+
+          log("\nQAQ source", p);
+        })
         .with({type: "tool-result"}, (p) => log("\nQAQ tool-result", p))
         .with({type: "tool-call-streaming-start"}, (p) => log("\nQAQ tool-call-streaming-start", p))
         .with({type: "tool-call-delta"}, (p) => log("\nQAQ tool-call-delta", p))
@@ -186,15 +207,16 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
           currentMessages.push(_currentAssistantMessage);
 
           if (finishPart.finishReason === "stop" || finishPart.finishReason === "length") {
-            loading.prefixText = "✅ ";
-            loading.text = green(`${cyan(`[${ai_task.name}]`)} Completed`);
+            loading.prefixText = endInfo.prefixText = "✅ ";
+            loading.text = endInfo.text = green(`${cyan(`[${ai_task.name}]`)} Completed`);
             // Task finished without tool calls or after tool calls that didn't lead to more calls.
             return LOOP_SIGNALS.RETURN; // Exit the outer loop and function
           }
 
           if (finishPart.finishReason === "tool-calls") {
             if (requestedToolCalls.length === 0) {
-              loading.warn("Finished with 'tool-calls' but no tools were requested.");
+              loading.prefixText = endInfo.prefixText = "🚧 ";
+              loading.text = endInfo.text = yellow(`${cyan(`[${ai_task.name}]`)} finished with 'tool-calls' but no tools were requested.`);
               return LOOP_SIGNALS.RETURN; // Exit, something is off
             }
 
@@ -246,7 +268,8 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
             // Loop continues for the next turn
           } else {
             // Other finish reasons, potentially an error or unexpected state
-            loading.warn(`Task finished with unhandled reason: ${finishPart.finishReason}`);
+            loading.prefixText = endInfo.prefixText = "🛑 ";
+            loading.text = endInfo.text = red(`${cyan(`[${ai_task.name}]`)} task finished with unhandled reason: ${finishPart.finishReason}`);
             return LOOP_SIGNALS.RETURN;
           }
         })
@@ -260,10 +283,11 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
     }
     // If the stream finishes without a 'finish' part (e.g. error thrown inside), this loop might exit. Ensure spinner stops.
     if (turn === maxTurns - 1) {
-      loading.warn("Max interaction turns reached.");
-      return;
+      loading.prefixText = endInfo.prefixText = "🚧 ";
+      loading.text = endInfo.text = yellow(`${cyan(`[${ai_task.name}]`)} Max interaction turns reached.`);
+      break;
     }
   }
   // Fallback spinner stop if loop exits unexpectedly
-  loading.stop();
+  loading.stopAndPersist(endInfo);
 };
