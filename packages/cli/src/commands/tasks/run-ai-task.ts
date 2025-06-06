@@ -53,38 +53,43 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
   };
 
   const initialMessages: ModelMessage[] = getModelMessage(ai_task.agents);
+  ai_task.startTime;
+  const userPrompt = getPromptConfigs()
+    .user.content //
+    .replace(/\{\{task.(\w+)\}\}/g, (_, key) => {
+      return Reflect.get(ai_task, key);
+    })
+    .replace(/\{\{env.(\w+)\}\}/g, (_, key) => {
+      const envKey = key.toUpperCase();
+      const envValue =
+        Reflect.get(process.env, envKey) ??
+        match(envKey)
+          .with("USER", () => os.userInfo().username)
+          .otherwise(() => "");
+      return envValue;
+    })
+    .replaceAll(
+      "{{allFiles}}",
+      [
+        //
+        `# files dir: ${ai_task.dir}`,
+        `# files count: ${allFiles.length}`,
+        YAML.stringify(allFiles.map((e) => e.relativePath)),
+      ].join("\n"),
+    )
+    .replaceAll(
+      "{{changedFiles}}",
+      [
+        //
+        `# files dir: ${ai_task.dir}`,
+        `# files count: ${changedFiles.length}`,
+        YAML.stringify(changedFiles.map((e) => e.relativePath)),
+      ].join("\n"),
+    );
+  log("USER PROMPT:", userPrompt);
   initialMessages.push({
     role: "user",
-    content: getPromptConfigs()
-      .user.content //
-      .replace(/\{\{task.(\w+)\}\}/g, (key) => Reflect.get(ai_task, key))
-      .replace(/\{\{env.(\w+)\}\}/g, (key) => {
-        const envKey = key.toUpperCase();
-        const envValue =
-          Reflect.get(process.env, envKey) ??
-          match(envKey)
-            .with("USER", () => os.userInfo().username)
-            .otherwise(() => "");
-        return envValue;
-      })
-      .replaceAll(
-        "{{allFiles}}",
-        [
-          //
-          `# files dir: ${ai_task.dir}`,
-          `# files count: ${allFiles.length}`,
-          YAML.stringify(allFiles.map((e) => e.relativePath)),
-        ].join("\n"),
-      )
-      .replaceAll(
-        "{{changedFiles}}",
-        [
-          //
-          `# files dir: ${ai_task.dir}`,
-          `# files count: ${allFiles.length}`,
-          YAML.stringify(changedFiles.map((e) => e.relativePath)),
-        ].join("\n"),
-      ),
+    content: userPrompt,
   });
 
   let currentMessages: ModelMessage[] = [...initialMessages];

@@ -1,5 +1,7 @@
 import {FileEntry, Ignore, normalizeFilePath, walkFiles} from "@gaubee/nodekit";
 import {iter_map_not_null} from "@gaubee/util";
+import fs from "node:fs";
+import path from "node:path";
 import {loadConfig} from "../../config.js";
 import {loadJixoEnv} from "../../env.js";
 import {findChangedFilesSinceCommit} from "../../helper/find-changes.js";
@@ -12,9 +14,17 @@ export const run = async (_cwd: string, options: {nameFilter: string[]; dirFilte
   const ai_tasks = resolveAiTasks(cwd, config.tasks);
   const nameMatcher = options.nameFilter.length ? new Ignore(options.nameFilter, cwd) : {isMatch: () => true};
   const dirMatcher = options.dirFilter.length ? new Ignore(options.dirFilter, cwd) : {isMatch: () => true};
+  const cwdIgnoreFilepath = path.join(cwd, ".gitignore");
+  let ignore: undefined | string[];
+  if (fs.existsSync(cwdIgnoreFilepath)) {
+    ignore = fs.readFileSync(cwdIgnoreFilepath, "utf-8").split("\n");
+  }
 
-  const allFiles = [...walkFiles(cwd)];
-  const changedFiles = await findChangedFilesSinceCommit("@jixo", cwd);
+  const allFiles = [...walkFiles(cwd, {ignore})];
+  const changedFiles = (await findChangedFilesSinceCommit("@jixo", cwd)).filter((file) => {
+    return file.path.startsWith(cwd + "/");
+  });
+
   //   const run_tasks: Array<Func> = [];
   for (const ai_task of ai_tasks) {
     const {dir: task_dir} = ai_task;
@@ -34,7 +44,7 @@ export const run = async (_cwd: string, options: {nameFilter: string[]; dirFilte
             }
           });
 
-    const task_allFiles = cwd === task_dir ? allFiles : [...walkFiles(task_dir)];
+    const task_allFiles = cwd === task_dir ? allFiles : [...walkFiles(task_dir, {ignore})];
 
     loadJixoEnv(cwd);
     await runAiTask(ai_task, task_allFiles, task_changedFiles);
