@@ -23,6 +23,7 @@
     "ai": "alpha",
     "commander": "^14.0.0",
     "cosmiconfig": "^9.0.0",
+    "debug": "^4.4.1",
     "defu": "^6.1.4",
     "dotenv": "^16.5.0",
     "import-meta-ponyfill": "^3.2.1",
@@ -34,6 +35,7 @@
   },
   "devDependencies": {
     "@parcel/watcher": "^2.5.1",
+    "@types/debug": "^4.1.12",
     "@types/json-schema": "^7.0.15",
     "@types/node": "^22.15.30",
     "@types/semver": "^7.7.0",

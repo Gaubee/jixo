@@ -1,6 +1,7 @@
-import {cyan, FileEntry, gray, green, spinner, YAML} from "@gaubee/nodekit";
+import {blue, cyan, FileEntry, gray, green, spinner, YAML} from "@gaubee/nodekit";
 import {func_catch} from "@gaubee/util";
 import {streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart} from "ai";
+import debug from "debug";
 import os from "node:os";
 import path from "node:path";
 import {match, P} from "ts-pattern";
@@ -9,6 +10,7 @@ import {getModelMessage, getPromptConfigs} from "../../helper/prompts-loader.js"
 import type {AiTask} from "../../helper/resolve-ai-tasks.js";
 import {tools} from "./ai-tools.js";
 import {providers} from "./model-providers.js";
+const log = debug("jixo:run-ai-task");
 
 const getModel = (model?: string) => {
   return match(model)
@@ -134,7 +136,8 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
         })
         .with({type: "tool-call"}, (callPart) => {
           loading.prefixText = "🛠️ ";
-          console.log("\nQAQ tool-call", callPart);
+          loading.text = "Requesting tool:" + blue(callPart.toolName) + gray(": " + YAML.stringify(callPart.args));
+          log("\nQAQ tool-call", callPart);
           requestedToolCalls.push(callPart);
           // Update assistant message to include tool calls
           assistantMessageContent.push({
@@ -143,7 +146,6 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
             toolName: callPart.toolName,
             args: callPart.args,
           });
-          loading.text = `Requesting tool: ${callPart.toolName}`;
         })
         .with({type: "error"}, (errorPart) => {
           loading.prefixText = "❌ ";
@@ -158,17 +160,17 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
           loading.text = gray(reasoning.split("\n").slice(-3).join("\n"));
         })
         // Add other console logs for debugging if needed, but keep them minimal for production
-        .with({type: "file"}, (p) => console.log("\nQAQ file", p.file))
-        .with({type: "source"}, (p) => console.log("\nQAQ source", p))
-        .with({type: "tool-result"}, (p) => console.log("\nQAQ tool-result", p))
-        .with({type: "tool-call-streaming-start"}, (p) => console.log("\nQAQ tool-call-streaming-start", p))
-        .with({type: "tool-call-delta"}, (p) => console.log("\nQAQ tool-call-delta", p))
-        .with({type: "reasoning-part-finish"}, (p) => console.log("\nQAQ reasoning-part-finish", p))
-        .with({type: "start-step"}, (p) => console.log("\nQAQ start-step", p))
-        .with({type: "finish-step"}, (p) => console.log("\nQAQ finish-step", p))
-        .with({type: "start"}, (p) => console.log("\nQAQ start", p))
+        .with({type: "file"}, (p) => log("\nQAQ file", p.file))
+        .with({type: "source"}, (p) => log("\nQAQ source", p))
+        .with({type: "tool-result"}, (p) => log("\nQAQ tool-result", p))
+        .with({type: "tool-call-streaming-start"}, (p) => log("\nQAQ tool-call-streaming-start", p))
+        .with({type: "tool-call-delta"}, (p) => log("\nQAQ tool-call-delta", p))
+        .with({type: "reasoning-part-finish"}, (p) => log("\nQAQ reasoning-part-finish", p))
+        .with({type: "start-step"}, (p) => log("\nQAQ start-step", p))
+        .with({type: "finish-step"}, (p) => log("\nQAQ finish-step", p))
+        .with({type: "start"}, (p) => log("\nQAQ start", p))
         .with({type: "finish"}, async (finishPart) => {
-          console.log("\nQAQ finish", finishPart);
+          log("\nQAQ finish", finishPart);
           // Add the assistant's message from this turn to the history
           currentMessages.push(_currentAssistantMessage);
 
