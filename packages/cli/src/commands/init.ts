@@ -5,10 +5,10 @@ import path from "node:path";
 import type {JixoConfig} from "../config.js";
 import {safeEnv} from "../env.js";
 export const init = (dir: string) => {
-  const jixoDirname = path.join(dir, ".jixo");
-  /// 创建 .jixo 目录
-  fs.mkdirSync(jixoDirname, {recursive: true});
   {
+    const jixoDirname = path.join(dir, ".jixo");
+    /// 创建 .jixo 目录
+    fs.mkdirSync(jixoDirname, {recursive: true});
     /// .jixo/readme.task.md
     const readmeTaskFilepath = path.join(jixoDirname, "readme.task.md");
     if (!fs.existsSync(readmeTaskFilepath)) {
@@ -24,9 +24,9 @@ export const init = (dir: string) => {
       );
     }
   }
-  /// 配置文件
+  /// jixo.config.json
   {
-    const jixoConfigFilepath = path.join(jixoDirname, "jixo.config.json");
+    const jixoConfigFilepath = path.join(dir, "jixo.config.json");
     if (!fs.existsSync(jixoConfigFilepath)) {
       writeJson(jixoConfigFilepath, {
         tasks: {type: "dir", dirname: ".jixo"},

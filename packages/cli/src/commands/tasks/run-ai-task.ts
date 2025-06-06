@@ -43,7 +43,7 @@ const getModel = (model?: string) => {
     });
 };
 
-export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedFiles: FileEntry[]) => {
+export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedFilesSet: Record<string, FileEntry[]>) => {
   const model = getModel(ai_task.model);
   const availableTools = {
     ...(await tools.fileSystem(ai_task.cwd)),
@@ -70,21 +70,27 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
     })
     .replaceAll(
       "{{allFiles}}",
-      [
-        //
-        `# files dir: ${ai_task.dir}`,
-        `# files count: ${allFiles.length}`,
-        YAML.stringify(allFiles.map((e) => e.relativePath)),
-      ].join("\n"),
+      YAML.stringify({
+        [ai_task.cwd]: {
+          count: allFiles.length,
+          file: allFiles.map((e) => e.relativePath),
+        },
+      }),
     )
     .replaceAll(
       "{{changedFiles}}",
-      [
-        //
-        `# files dir: ${ai_task.dir}`,
-        `# files count: ${changedFiles.length}`,
-        YAML.stringify(changedFiles.map((e) => e.relativePath)),
-      ].join("\n"),
+      YAML.stringify(
+        Object.entries(changedFilesSet).reduce(
+          (tree, [dir, changedFiles]) => {
+            tree[dir] = {
+              count: changedFiles.length,
+              files: changedFiles.map((e) => e.relativePath),
+            };
+            return tree;
+          },
+          {} as Record<string, {count: number; files: string[]}>,
+        ),
+      ),
     );
   log("USER PROMPT:", userPrompt);
   initialMessages.push({

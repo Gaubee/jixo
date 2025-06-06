@@ -15,9 +15,9 @@ export const run = async (_cwd: string, options: {nameFilter: string[]; dirFilte
   const nameMatcher = options.nameFilter.length ? new Ignore(options.nameFilter, cwd) : {isMatch: () => true};
   const dirMatcher = options.dirFilter.length ? new Ignore(options.dirFilter, cwd) : {isMatch: () => true};
   const cwdIgnoreFilepath = path.join(cwd, ".gitignore");
-  let ignore: undefined | string[];
+  const ignore = [".git"];
   if (fs.existsSync(cwdIgnoreFilepath)) {
-    ignore = fs.readFileSync(cwdIgnoreFilepath, "utf-8").split("\n");
+    ignore.push(...fs.readFileSync(cwdIgnoreFilepath, "utf-8").split("\n"));
   }
 
   const allFiles = [...walkFiles(cwd, {ignore})];
@@ -27,24 +27,30 @@ export const run = async (_cwd: string, options: {nameFilter: string[]; dirFilte
 
   //   const run_tasks: Array<Func> = [];
   for (const ai_task of ai_tasks) {
-    const {dir: task_dir} = ai_task;
-    if (!dirMatcher.isMatch(task_dir)) {
+    const {dirs: task_dirs} = ai_task;
+    if (!task_dirs.some((dir) => dirMatcher.isMatch(dir))) {
       continue;
     }
     if (!nameMatcher.isMatch(ai_task.name)) {
       continue;
     }
+    const isCwdTask = cwd === task_dirs[0] && task_dirs.length === 1;
 
-    const task_changedFiles =
-      cwd === task_dir
-        ? changedFiles
-        : iter_map_not_null(changedFiles, (file) => {
-            if (file.path.startsWith(task_dir + "/")) {
-              return new FileEntry(file.path, {cwd: task_dir, state: file.stats});
-            }
-          });
+    const task_changedFiles = isCwdTask
+      ? {[cwd]: changedFiles}
+      : task_dirs.reduce(
+          (tree, task_dir) => {
+            tree[task_dir] = iter_map_not_null(changedFiles, (file) => {
+              if (file.path.startsWith(task_dirs + "/")) {
+                return new FileEntry(file.path, {cwd: task_dir, state: file.stats});
+              }
+            });
+            return tree;
+          },
+          {} as Record<string, FileEntry[]>,
+        );
 
-    const task_allFiles = cwd === task_dir ? allFiles : [...walkFiles(task_dir, {ignore})];
+    const task_allFiles = isCwdTask ? allFiles : task_dirs.map((task_dir) => [...walkFiles(task_dir, {ignore})]).flat();
 
     loadJixoEnv(cwd);
     await runAiTask(ai_task, task_allFiles, task_changedFiles);

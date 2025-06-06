@@ -29,46 +29,53 @@ export async function findChangedFilesSinceCommit(messagePattern: string, cwd: s
       console.log(`Found target commit SHA: ${targetCommitSha} for message pattern: "${messagePattern}"`);
       baseCommitForDiff = targetCommitSha;
     } else {
-      console.warn(gray(`No commit found with message pattern: "${messagePattern}". Only uncommitted changes will be listed if any.`));
+      console.warn(gray(`No commit found with message pattern: "${messagePattern}". All files (includes uncommitted changes) will be listed.`));
     }
   } catch (error) {
     // git log --grep 通常在没有匹配时返回空输出和退出码0。
     // 如果这里出错，可能是更严重的问题。
     const gitError = error as GitError;
-    console.warn(red(`Could not determine base commit with pattern "${messagePattern}". Only uncommitted changes will be listed. Details:`));
+    console.warn(red(`Could not determine base commit with pattern "${messagePattern}". All files (includes uncommitted changes) will be listed. Details:`));
     console.error(gitError.message);
+  }
+  if (!baseCommitForDiff) {
+    return execSync("git ls-tree HEAD --name-only -r", {cwd, encoding: "utf8", stdio: "pipe"})
+      .toString()
+      .trim()
+      .split("\n")
+      .map((filepath) => {
+        return new FileEntry(path.join(cwd, filepath), {cwd});
+      });
   }
 
   const changedFiles = new Set<string>();
 
   // 2. 列出从该 commit 之后到 HEAD (最新已提交) 的所有变更文件
-  if (baseCommitForDiff) {
-    try {
-      const committedChangesOutput = execSync(`git diff ${baseCommitForDiff} HEAD --name-only`, gitCommandOptions).toString().trim();
-      if (committedChangesOutput) {
-        committedChangesOutput.split("\n").forEach((file) => {
+
+  try {
+    const committedChangesOutput = execSync(`git diff ${baseCommitForDiff} HEAD --name-only`, gitCommandOptions).toString().trim();
+    if (committedChangesOutput) {
+      committedChangesOutput.split("\n").forEach((file) => {
+        if (file.trim()) changedFiles.add(file.trim());
+      });
+    }
+  } catch (error) {
+    const gitError = error as GitError;
+    // `git diff` 在有差异时退出码为1，无差异时为0。execSync 默认在非0时抛错。
+    if (gitError.status === 1 && gitError.stdout) {
+      // 有差异
+      const output = gitError.stdout ?? "";
+      if (output) {
+        output.split("\n").forEach((file) => {
           if (file.trim()) changedFiles.add(file.trim());
         });
       }
-    } catch (error) {
-      const gitError = error as GitError;
-      // `git diff` 在有差异时退出码为1，无差异时为0。execSync 默认在非0时抛错。
-      if (gitError.status === 1 && gitError.stdout) {
-        // 有差异
-        const output = gitError.stdout ?? "";
-        if (output) {
-          output.split("\n").forEach((file) => {
-            if (file.trim()) changedFiles.add(file.trim());
-          });
-        }
-      } else if (gitError.status !== 0) {
-        // 其他错误
-        console.error(`Error getting committed changes since ${baseCommitForDiff}: ${gitError.stderr || gitError.message}`);
-      }
-      // status 0 (无差异) 表示没有输出，是正常情况
+    } else if (gitError.status !== 0) {
+      // 其他错误
+      console.error(`Error getting committed changes since ${baseCommitForDiff}: ${gitError.stderr || gitError.message}`);
     }
+    // status 0 (无差异) 表示没有输出，是正常情况
   }
-
   // 3. 列出工作区中未提交的变更文件
   const uncommittedCommands = [
     {cmd: "git diff --name-only --cached", desc: "staged changes"}, // 已暂存

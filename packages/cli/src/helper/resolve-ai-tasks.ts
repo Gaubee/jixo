@@ -20,7 +20,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
   type AiTask = TaskBase & {
     name: string;
     cwd: string;
-    dir: string;
+    dirs: string[];
     agents: string[];
     model: string;
     useMemory: string;
@@ -35,8 +35,17 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
       defaultName: string;
     },
   ) => {
-    const {name: inner_task_name, dir: _task_dir = cwd} = ai_task.data;
-    const task_dir = normalizeFilePath(path.resolve(cwd, _task_dir));
+    const {name: inner_task_name} = ai_task.data;
+
+    const task_dir = match(z.union([z.string(), z.string().array()]).safeParse(ai_task.data.dirs ?? ai_task.data.dir))
+      .with({success: true}, (it) => {
+        const dirList = Array.isArray(it.data) ? it.data : [it.data];
+        return dirList.map((dir) => normalizeFilePath(path.resolve(cwd, dir)));
+      })
+      .otherwise(() => []);
+    if (task_dir.length === 0) {
+      task_dir.push(cwd);
+    }
 
     const task_name = inner_task_name || options.defaultName;
     const useMemory = ai_task.data.useMemory || task_name;
@@ -54,7 +63,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
       ...ai_task,
       name: task_name,
       cwd: cwd,
-      dir: task_dir,
+      dirs: task_dir,
       agents: match(z.union([z.string(), z.string().array()]).safeParse(ai_task.data.agents))
         .with({success: true, data: P.select()}, (agents) => {
           return Array.isArray(agents) ? agents : agents.split(/\s+/);
