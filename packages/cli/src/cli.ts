@@ -9,6 +9,7 @@ import {run} from "./commands/tasks/run.js";
 
 export const runCli = async (args: string[] = process.argv) => {
   const cli = await yargs(hideBin(args))
+    .scriptName("jixo")
     .command(
       "doctor",
       "Check the requirements for run jixo",
