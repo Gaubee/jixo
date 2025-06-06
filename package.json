@@ -9,7 +9,7 @@
     "build": "rolldown -c ./rolldown.config.mts",
     "build2": "esbuild ./index.ts --format=cjs --outfile=./bundle/index.cjs --platform=node",
     "files-to-prompt": "node ./scripts/files-to-prompt.ts",
-    "test": "node bundle/index.cjs"
+    "jixo": "node bundle/index.cjs"
   },
   "bin": "./bundle/index.cjs",
   "exports": {
