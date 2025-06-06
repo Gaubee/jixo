@@ -106,8 +106,8 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
     let firstStreamPart = true;
     const requestedToolCalls: ToolCallPart[] = []; // Using any for now, should be ToolCallPart from 'ai'
 
-    let assistantMessageContent = "";
-    let currentAssistantMessage: AssistantModelMessage = {role: "assistant", content: ""};
+    const assistantMessageContent: AssistantModelMessage["content"] & unknown[] = [];
+    const _currentAssistantMessage: AssistantModelMessage = {role: "assistant", content: assistantMessageContent};
 
     const LOOP_SIGNALS = {
       RETURN: "RETURN",
@@ -122,8 +122,12 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
       const LOOP_SIGNAL = await match(part)
         .with({type: "text"}, (textPart) => {
           loading.prefixText = "🤖 ";
-          assistantMessageContent += textPart.text;
-          currentAssistantMessage.content = assistantMessageContent;
+          let assistantTextPart = assistantMessageContent.findLast((part) => part.type === "text");
+          if (assistantTextPart == null) {
+            assistantTextPart = {type: "text", text: ""};
+            assistantMessageContent.push(assistantTextPart);
+          }
+          assistantTextPart.text += textPart.text;
           if (fulltext === "") fulltext = "\n"; // For consistent display
           fulltext += textPart.text;
           loading.text = fulltext;
@@ -133,14 +137,12 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
           console.log("\nQAQ tool-call", callPart);
           requestedToolCalls.push(callPart);
           // Update assistant message to include tool calls
-          currentAssistantMessage.content = [
-            {
-              type: "tool-call",
-              toolCallId: callPart.toolCallId,
-              toolName: callPart.toolName,
-              args: callPart.args,
-            },
-          ];
+          assistantMessageContent.push({
+            type: "tool-call",
+            toolCallId: callPart.toolCallId,
+            toolName: callPart.toolName,
+            args: callPart.args,
+          });
           loading.text = `Requesting tool: ${callPart.toolName}`;
         })
         .with({type: "error"}, (errorPart) => {
@@ -168,7 +170,7 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
         .with({type: "finish"}, async (finishPart) => {
           console.log("\nQAQ finish", finishPart);
           // Add the assistant's message from this turn to the history
-          currentMessages.push(currentAssistantMessage);
+          currentMessages.push(_currentAssistantMessage);
 
           if (finishPart.finishReason === "stop" || finishPart.finishReason === "length") {
             loading.prefixText = "✅ ";
