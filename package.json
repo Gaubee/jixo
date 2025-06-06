@@ -35,12 +35,12 @@
     "@parcel/watcher": "^2.5.1",
     "@std/cli": "jsr:^1.0.17",
     "@std/fmt": "jsr:^1.0.8",
-    "@types/node": "^22.15.21",
+    "@types/node": "^22.15.30",
     "esbuild": "^0.25.5",
     "import-meta-ponyfill": "^3.2.1",
     "prettier": "^3.5.3",
     "prettier-plugin-organize-imports": "^4.1.0",
-    "rolldown": "1.0.0-beta.10",
+    "rolldown": "1.0.0-beta.11",
     "typescript": "^5.8.3"
   }
 }

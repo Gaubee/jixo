@@ -21,7 +21,7 @@ export const tools = {
   memory: func_lazy(() => {
     const map = new Map<string, ToolSet>();
     return (memory_filepath: string) => {
-      map_get_or_put_async(map, memory_filepath, async () => {
+      return map_get_or_put_async(map, memory_filepath, async () => {
         const mcpClient = await createMCPClient({
           transport: new Experimental_StdioMCPTransport({
             command: "pnpx",

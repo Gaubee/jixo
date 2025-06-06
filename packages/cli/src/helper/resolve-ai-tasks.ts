@@ -23,7 +23,10 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     dir: string;
     agents: string[];
     model: string;
-    memory: string;
+    useMemory: string;
+    useLog: string;
+    log: string;
+    startTime: string;
   };
   const tasks: AiTask[] = [];
   const addTask = (
@@ -36,19 +39,17 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     const task_dir = normalizeFilePath(path.resolve(cwd, _task_dir));
 
     const task_name = inner_task_name || options.defaultName;
-    const memory_filepath = path.join(cwd, `.jixo/${task_name}.memory.md`);
-    if (!fs.existsSync(memory_filepath)) {
-      writeMarkdown(memory_filepath, ``, {
+    const useMemory = ai_task.data.useMemory || task_name;
+    const useLog = ai_task.data.useLog || task_name;
+
+    const log_filepath = path.join(cwd, `.jixo/${useLog}.log.md`);
+    if (!fs.existsSync(log_filepath)) {
+      writeMarkdown(log_filepath, ``, {
         createTime: new Date().toISOString(),
         updateTime: new Date().toISOString(),
       });
-    } else {
-      const memory = readMarkdown(memory_filepath);
-      writeMarkdown(memory_filepath, memory.content, {
-        ...memory.data,
-        updateTime: new Date().toISOString(),
-      });
     }
+
     tasks.push({
       ...ai_task,
       name: task_name,
@@ -62,7 +63,10 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
       model: match(z.string().safeParse(ai_task.data.model))
         .with({success: true, data: P.select()}, (model) => model)
         .otherwise(() => ""),
-      memory: fs.readFileSync(memory_filepath, "utf-8"),
+      useMemory,
+      useLog,
+      log: fs.readFileSync(log_filepath, "utf-8"),
+      startTime: new Date().toISOString(),
     });
   };
 

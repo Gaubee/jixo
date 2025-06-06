@@ -1,6 +1,8 @@
 import {cyan, FileEntry, gray, green, spinner, YAML} from "@gaubee/nodekit";
 import {func_catch} from "@gaubee/util";
 import {streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart} from "ai";
+import os from "node:os";
+import path from "node:path";
 import {match, P} from "ts-pattern";
 import {safeEnv} from "../../env.js";
 import {getModelMessage, getPromptConfigs} from "../../helper/prompts-loader.js";
@@ -43,6 +45,7 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
   const model = getModel(ai_task.model);
   const availableTools = {
     ...(await tools.fileSystem(ai_task.cwd)),
+    ...(await tools.memory(path.join(ai_task.cwd, `.jixo/${ai_task.name}.memory.json`))),
     // ...(await tools.fetch()),
     // ...(await tools.git(ai_task.cwd)),
   };
@@ -52,8 +55,16 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
     role: "user",
     content: getPromptConfigs()
       .user.content //
-      .replace(/\{\{task.(\w+)\}\}/, (key) => Reflect.get(ai_task, key))
-      .replace(/\{\{env.(\w+)\}\}/, (key) => Reflect.get(process.env, key) ?? "")
+      .replace(/\{\{task.(\w+)\}\}/g, (key) => Reflect.get(ai_task, key))
+      .replace(/\{\{env.(\w+)\}\}/g, (key) => {
+        const envKey = key.toUpperCase();
+        const envValue =
+          Reflect.get(process.env, envKey) ??
+          match(envKey)
+            .with("USER", () => os.userInfo().username)
+            .otherwise(() => "");
+        return envValue;
+      })
       .replaceAll(
         "{{allFiles}}",
         [
