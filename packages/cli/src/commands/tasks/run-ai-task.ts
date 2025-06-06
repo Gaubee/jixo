@@ -98,7 +98,7 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
   loading.prefixText = "⏳ ";
   loading.start();
 
-  for (let turn = 0; turn < maxTurns; turn++) {
+  loop: for (let turn = 0; turn < maxTurns; turn++) {
     loading.text = turn === 0 ? `Connecting To ${model.provider}...` : `Processing turn ${turn + 1}...`;
 
     const result = await streamText({
@@ -247,7 +247,7 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
         .otherwise(() => {}); // Handle any other part types if necessary
 
       if (LOOP_SIGNAL === LOOP_SIGNALS.RETURN) {
-        break;
+        break loop;
       } else if (LOOP_SIGNAL === LOOP_SIGNALS.BREAK) {
         break;
       }

@@ -1,5 +1,8 @@
+memory.json
+*.memory.json
 node_modules/
 .*/
+!.jixo/
 *.bak
 .jixo.env
 dist/
@@ -9,10 +12,7 @@ target/
 .DS_Store
 _coverage/
 *.coverage
-
 *.gen.mbt
 *.prompt-gen.md
-
 !.clinerules/
-
 packages/cli/src/prompts.json

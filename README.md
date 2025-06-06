@@ -1,3 +1,9 @@
+# JIXO
+
+AI 工具集、助手
+
+查看 [@jixo/cli](https://www.npmjs.com/package/@jixo/cli) 来进行使用
+
 ## Dev
 
 需要打开3个终端执行三个监听任务

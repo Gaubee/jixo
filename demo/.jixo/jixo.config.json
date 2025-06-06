@@ -1,0 +1,6 @@
+{
+  "tasks": {
+    "type": "dir",
+    "dirname": ".jixo"
+  }
+}
