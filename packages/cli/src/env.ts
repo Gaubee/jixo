@@ -1,4 +1,14 @@
 import {defineEnv} from "@gaubee/node";
+import fs from "node:fs";
+import path from "node:path";
+
+export const loadJixoEnv = (dir: string) => {
+  const cwdJixoEnvFilepath = path.join(dir, ".jixo.env");
+  if (fs.existsSync(cwdJixoEnvFilepath)) {
+    process.loadEnvFile(cwdJixoEnvFilepath);
+  }
+};
+loadJixoEnv(process.cwd());
 
 export const safeEnv = defineEnv("JIXO", {
   DEEPSEEK_API_KEY: "",

@@ -1,4 +1,4 @@
-import {cyan, FileEntry, gray, green, spinner} from "@gaubee/nodekit";
+import {cyan, FileEntry, gray, green, spinner, YAML} from "@gaubee/nodekit";
 import {func_catch} from "@gaubee/util";
 import {streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart} from "ai";
 import {match, P} from "ts-pattern";
@@ -54,8 +54,24 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
       .user.content //
       .replace(/\{\{task.(\w+)\}\}/, (key) => Reflect.get(ai_task, key))
       .replace(/\{\{env.(\w+)\}\}/, (key) => Reflect.get(process.env, key) ?? "")
-      .replaceAll("{{allFiles}}", allFiles.map((file) => `- ${file.path}`).join("\n"))
-      .replaceAll("{{changedFiles}}", changedFiles.map((file) => `- ${file.path}`).join("\n")),
+      .replaceAll(
+        "{{allFiles}}",
+        [
+          //
+          `# files dir: ${ai_task.dir}`,
+          `# files count: ${allFiles.length}`,
+          YAML.stringify(allFiles.map((e) => e.relativePath)),
+        ].join("\n"),
+      )
+      .replaceAll(
+        "{{changedFiles}}",
+        [
+          //
+          `# files dir: ${ai_task.dir}`,
+          `# files count: ${allFiles.length}`,
+          YAML.stringify(changedFiles.map((e) => e.relativePath)),
+        ].join("\n"),
+      ),
   });
 
   let currentMessages: ModelMessage[] = [...initialMessages];

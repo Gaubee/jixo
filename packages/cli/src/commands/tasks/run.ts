@@ -1,5 +1,7 @@
-import {Ignore, normalizeFilePath, walkFiles} from "@gaubee/nodekit";
+import {FileEntry, Ignore, normalizeFilePath, walkFiles} from "@gaubee/nodekit";
+import {iter_map_not_null} from "@gaubee/util";
 import {loadConfig} from "../../config.js";
+import {loadJixoEnv} from "../../env.js";
 import {findChangedFilesSinceCommit} from "../../helper/find-changes.js";
 import {resolveAiTasks} from "../../helper/resolve-ai-tasks.js";
 import {runAiTask} from "./run-ai-task.js";
@@ -23,8 +25,18 @@ export const run = async (_cwd: string, options: {nameFilter: string[]; dirFilte
       continue;
     }
 
-    const task_changedFiles = changedFiles.filter((file) => file.path.startsWith(task_dir + "/"));
-    // run_tasks.push(() => runAiTask(ai_task, task_changedFiles));
-    await runAiTask(ai_task, allFiles, task_changedFiles);
+    const task_changedFiles =
+      cwd === task_dir
+        ? changedFiles
+        : iter_map_not_null(changedFiles, (file) => {
+            if (file.path.startsWith(task_dir + "/")) {
+              return new FileEntry(file.path, {cwd: task_dir, state: file.stats});
+            }
+          });
+
+    const task_allFiles = cwd === task_dir ? allFiles : [...walkFiles(task_dir)];
+
+    loadJixoEnv(cwd);
+    await runAiTask(ai_task, task_allFiles, task_changedFiles);
   }
 };

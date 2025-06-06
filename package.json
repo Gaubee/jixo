@@ -9,7 +9,7 @@
     "build": "rolldown -c ./rolldown.config.mts",
     "build2": "esbuild ./index.ts --format=cjs --outfile=./bundle/index.cjs --platform=node",
     "files-to-prompt": "node ./scripts/files-to-prompt.ts",
-    "test": "node --env-file=.env  bundle/index.cjs"
+    "test": "node bundle/index.cjs"
   },
   "bin": "./bundle/index.cjs",
   "exports": {
@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "@gaubee/node": "^0.2.1",
-    "@gaubee/nodekit": "^0.8.0",
+    "@gaubee/nodekit": "^0.8.1",
     "@gaubee/util": "^0.32.1",
     "@parcel/watcher": "^2.5.1",
     "@std/cli": "jsr:^1.0.17",
