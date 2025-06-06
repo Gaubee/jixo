@@ -3,8 +3,8 @@ import {func_remember} from "@gaubee/util";
 import {myDoctorConfig} from "./config.js";
 import {runDoctor} from "./doctor.js";
 
-export const doctor = func_remember(async (log = true) => {
-  const report = await runDoctor(myDoctorConfig, log ? undefined : {write: (_log) => {}});
+export const doctor = func_remember(async (enableLog: boolean = true) => {
+  const report = await runDoctor(myDoctorConfig, enableLog);
 
   //   if (log) {
   //     console.log("\n\n--- Structured Report (for programmatic use) ---");

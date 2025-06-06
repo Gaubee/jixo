@@ -76,7 +76,7 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
 
   let currentMessages: ModelMessage[] = [...initialMessages];
   const maxTurns = 10; // Safeguard against infinite loops
-  const loading = spinner.default("Initializing AI task...");
+  const loading = spinner("Initializing AI task...");
   loading.prefixText = "⏳ ";
   loading.start();
 

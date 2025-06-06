@@ -33,14 +33,14 @@ export const init = (dir: string) => {
   }
   /// .jixo/.gitignore
   {
-    const gitignoreFilepath = path.join(jixoDirname, ".gitignore");
+    const gitignoreFilepath = path.join(dir, ".gitignore");
     const gitignoreLines = (
       fs.existsSync(gitignoreFilepath)
         ? fs.readFileSync(gitignoreFilepath, "utf-8")
         : ""
     ).split(/\n+/);
     let changed = false;
-    for (const line of ["*.jixo-memory.md"]) {
+    for (const line of ["*.memory.json","memory.json"]) {
       if (!gitignoreLines.includes(line)) {
         gitignoreLines.unshift(line);
         changed = true;

@@ -3,7 +3,7 @@ import {spinner, writeJson} from "@gaubee/nodekit";
 export const upgradePrompts = async (dir: string, options: {mirrorUrl?: string}) => {
   // TODO 下载最新的提示词集合
   const mirrorUrl = options.mirrorUrl || "https://jixo.ai/jixo-prompts.json";
-  const loading = spinner.default("Upgrading prompts");
+  const loading = spinner("Upgrading prompts");
   loading.start("Downloading...");
   //   await delay(1000);
   try {

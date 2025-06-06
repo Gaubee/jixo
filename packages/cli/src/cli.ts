@@ -39,7 +39,6 @@ export const runCli = async (args: string[] = process.argv) => {
             describe: 'Fliter tasks by name or directory(starts with "./")',
             array: true,
             default: [],
-            
           })
           .option("dir", {
             alias: "D",
@@ -91,5 +90,7 @@ export const runCli = async (args: string[] = process.argv) => {
 
   if (argv._.length === 0) {
     cli.showHelp();
+    console.log("⎯".repeat(Math.max(4, process.stdout.columns)));
+    await doctor();
   }
 };

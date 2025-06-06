@@ -18,6 +18,24 @@ export const tools = {
       });
     };
   }),
+  memory: func_lazy(() => {
+    const map = new Map<string, ToolSet>();
+    return (memory_filepath: string) => {
+      map_get_or_put_async(map, memory_filepath, async () => {
+        const mcpClient = await createMCPClient({
+          transport: new Experimental_StdioMCPTransport({
+            command: "pnpx",
+            args: ["@modelcontextprotocol/server-memory"],
+            env: {
+              MEMORY_FILE_PATH: memory_filepath,
+            },
+          }),
+        });
+        const tools = await mcpClient.tools();
+        return tools;
+      });
+    };
+  }),
   fetch: func_remember(async () => {
     const mcpClient = await createMCPClient({
       transport: new Experimental_StdioMCPTransport({
