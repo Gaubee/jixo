@@ -4,6 +4,7 @@ import path from "node:path";
 import {match, P} from "ts-pattern";
 import z from "zod";
 import {type JixoConfig} from "../config.js";
+import { str_trim_indent } from "@gaubee/util";
 
 /**
  * 将 config.tasks 字段转化成具体的 ai-tasks 信息
@@ -53,7 +54,13 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
 
     const log_filepath = path.join(cwd, `.jixo/${useLog}.log.md`);
     if (!fs.existsSync(log_filepath)) {
-      writeMarkdown(log_filepath, ``, {
+      writeMarkdown(log_filepath, str_trim_indent(`
+        ## 工作计划
+        
+        ---
+
+        ## 工作日志
+        `), {
         createTime: new Date().toISOString(),
         updateTime: new Date().toISOString(),
       });

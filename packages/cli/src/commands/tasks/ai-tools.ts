@@ -38,6 +38,16 @@ export const tools = {
       });
     };
   }),
+  sequentialThinking: func_remember(async () => {
+    const mcpClient = await createMCPClient({
+      transport: new Experimental_StdioMCPTransport({
+        command: "pnpx",
+        args: ["@modelcontextprotocol/server-sequential-thinking"],
+      }),
+    });
+    const tools = await mcpClient.tools();
+    return tools;
+  }),
   fetch: func_remember(async () => {
     const mcpClient = await createMCPClient({
       transport: new Experimental_StdioMCPTransport({

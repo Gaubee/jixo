@@ -1,6 +1,6 @@
 import {blue, cyan, FileEntry, gray, green, red, spinner, YAML, yellow} from "@gaubee/nodekit";
 import {func_catch} from "@gaubee/util";
-import {streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart} from "ai";
+import {streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart, type ToolSet} from "ai";
 import debug from "debug";
 import ms from "ms";
 import os from "node:os";
@@ -24,7 +24,7 @@ const getModel = (model?: string) => {
     .with(P.string.includes("/"), (model) => providers.deepinfra(model))
     .otherwise(() => {
       if (safeEnv.JIXO_DEEPSEEK_API_KEY) {
-        return providers.deepseek("deepseek-chat");
+        return providers.deepseek("deepseek-reasoner");
       }
       if (safeEnv.JIXO_GOOGLE_API_KEY) {
         return providers.google("gemini-2.5-pro-preview-05-06");
@@ -47,64 +47,69 @@ const getModel = (model?: string) => {
 
 export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedFilesSet: Record<string, FileEntry[]>) => {
   const model = getModel(ai_task.model);
-  const availableTools = {
+  const availableTools: ToolSet = {
     ...(await tools.fileSystem(ai_task.cwd)),
-    ...(await tools.memory(path.join(ai_task.cwd, `.jixo/${ai_task.name}.memory.json`))),
+    // ...(await tools.memory(path.join(ai_task.cwd, `.jixo/${ai_task.name}.memory.json`))),
+    ...(await tools.sequentialThinking()),
     ...(await tools.jixoSkill().tools),
     // ...(await tools.git(ai_task.cwd)),
   };
 
   const initialMessages: ModelMessage[] = [];
-  ai_task.startTime;
-  const userPrompt = getPromptConfigs()
-    .user.content //
-    .replace(/\{\{task.(\w+)\}\}/g, (_, key) => {
-      return Reflect.get(ai_task, key);
-    })
-    .replace(/\{\{env.(\w+)\}\}/g, (_, key) => {
-      const envKey = key.toUpperCase();
-      const envValue =
-        Reflect.get(process.env, envKey) ??
-        match(envKey)
-          .with("USER", () => os.userInfo().username)
-          .otherwise(() => "");
-      return envValue;
-    })
-    .replaceAll("{{allSkills}}", (_, key) => {
-      return YAML.stringify(tools.jixoSkill().allSkillNavList);
-    })
-    .replaceAll(
-      "{{allFiles}}",
-      YAML.stringify({
-        [ai_task.cwd]: {
-          count: allFiles.length,
-          file: allFiles.map((e) => e.relativePath),
-        },
-      }),
-    )
-    .replaceAll(
-      "{{changedFiles}}",
-      YAML.stringify(
-        Object.entries(changedFilesSet).reduce(
-          (tree, [dir, changedFiles]) => {
-            tree[dir] = {
-              count: changedFiles.length,
-              files: changedFiles.map((e) => e.relativePath),
-            };
-            return tree;
+
+  const promptConfigs = getPromptConfigs();
+  for (const role of ["system", "user"] as const) {
+    const promptConfig = promptConfigs[role];
+
+    const promptContent = promptConfig.content //
+      .replace(/\{\{task.(\w+)\}\}/g, (_, key) => {
+        return Reflect.get(ai_task, key);
+      })
+      .replace(/\{\{env.(\w+)\}\}/g, (_, key) => {
+        const envKey = key.toUpperCase();
+        const envValue =
+          Reflect.get(process.env, envKey) ??
+          match(envKey)
+            .with("USER", () => os.userInfo().username)
+            .otherwise(() => "");
+        return envValue;
+      })
+      .replaceAll("{{allSkills}}", (_, key) => {
+        return YAML.stringify(tools.jixoSkill().allSkillNavList);
+      })
+      .replaceAll(
+        "{{allFiles}}",
+        YAML.stringify({
+          [ai_task.cwd]: {
+            count: allFiles.length,
+            file: allFiles.map((e) => e.relativePath),
           },
-          {} as Record<string, {count: number; files: string[]}>,
+        }),
+      )
+      .replaceAll(
+        "{{changedFiles}}",
+        YAML.stringify(
+          Object.entries(changedFilesSet).reduce(
+            (tree, [dir, changedFiles]) => {
+              tree[dir] = {
+                count: changedFiles.length,
+                files: changedFiles.map((e) => e.relativePath),
+              };
+              return tree;
+            },
+            {} as Record<string, {count: number; files: string[]}>,
+          ),
         ),
-      ),
-    );
-  log("USER PROMPT:", userPrompt);
-  initialMessages.push({
-    role: "user",
-    content: userPrompt,
-  });
+      );
+    log(`PROMPT ${role}:`, promptContent);
+    initialMessages.push({
+      role: role,
+      content: promptContent,
+    });
+  }
 
   let currentMessages: ModelMessage[] = [...initialMessages];
-  const maxTurns = 20; // Safeguard against infinite loops
+  const maxTurns = 100; // Safeguard against infinite loops
   const loading = spinner("Initializing AI task...");
   loading.prefixText = "⏳ ";
   loading.start();
