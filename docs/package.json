@@ -1,0 +1,14 @@
+{
+  "name": "jixo-docs",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vitepress",
+    "build": "vitepress build",
+    "serve": "vitepress serve"
+  },
+  "devDependencies": {
+    "vitepress": "^1.0.0-rc.44",
+    "vue": "^3.3.4"
+  }
+}

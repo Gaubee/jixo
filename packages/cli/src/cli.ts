@@ -91,7 +91,7 @@ export const runCli = async (args: string[] = process.argv) => {
 
   if (argv._.length === 0) {
     cli.showHelp();
-    console.log("⎯".repeat(Math.max(4, process.stdout.columns)));
+    console.log(" " + "─".repeat(Math.max(4, process.stdout.columns - 2)));
     await doctor();
   }
 };

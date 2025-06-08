@@ -3,7 +3,6 @@ memory.json
 node_modules/
 .*/
 !.jixo/
-!.vitepress/
 *.bak
 .jixo.env
 dist/

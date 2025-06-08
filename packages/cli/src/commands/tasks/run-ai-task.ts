@@ -4,9 +4,9 @@ import {streamText, type AssistantModelMessage, type ModelMessage, type ToolCall
 import debug from "debug";
 import ms from "ms";
 import os from "node:os";
-import path from "node:path";
 import {match, P} from "ts-pattern";
 import {safeEnv} from "../../env.js";
+import {handleRetryError} from "../../helper/ai-retry-error.js";
 import {getPromptConfigs} from "../../helper/prompts-loader.js";
 import type {AiTask} from "../../helper/resolve-ai-tasks.js";
 import {tools} from "./ai-tools.js";
@@ -173,8 +173,10 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
             args: callPart.args,
           });
         })
-        .with({type: "error"}, (errorPart) => {
+        .with({type: "error"}, async (errorPart) => {
           console.error("\nQAQ error", errorPart.error);
+          await handleRetryError(errorPart.error, loading);
+
           loading.prefixText = endInfo.prefixText = "❌ ";
           loading.text = endInfo.text = red(`Error: ${errorPart.error?.toString()}`);
           return LOOP_SIGNALS.BREAK; // Stop processing on error
