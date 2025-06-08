@@ -7,7 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import {match, P} from "ts-pattern";
 import {safeEnv} from "../../env.js";
-import {getModelMessage, getPromptConfigs} from "../../helper/prompts-loader.js";
+import {getPromptConfigs} from "../../helper/prompts-loader.js";
 import type {AiTask} from "../../helper/resolve-ai-tasks.js";
 import {tools} from "./ai-tools.js";
 import {providers} from "./model-providers.js";
@@ -50,11 +50,11 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
   const availableTools = {
     ...(await tools.fileSystem(ai_task.cwd)),
     ...(await tools.memory(path.join(ai_task.cwd, `.jixo/${ai_task.name}.memory.json`))),
-    // ...(await tools.fetch()),
+    ...(await tools.jixoSkill().tools),
     // ...(await tools.git(ai_task.cwd)),
   };
 
-  const initialMessages: ModelMessage[] = getModelMessage(ai_task.agents);
+  const initialMessages: ModelMessage[] = [];
   ai_task.startTime;
   const userPrompt = getPromptConfigs()
     .user.content //
@@ -69,6 +69,9 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
           .with("USER", () => os.userInfo().username)
           .otherwise(() => "");
       return envValue;
+    })
+    .replaceAll("{{allSkills}}", (_, key) => {
+      return YAML.stringify(tools.jixoSkill().allSkillNavList);
     })
     .replaceAll(
       "{{allFiles}}",

@@ -1,6 +1,8 @@
-import {func_lazy, func_remember, map_get_or_put_async} from "@gaubee/util";
-import {experimental_createMCPClient as createMCPClient, type ToolSet} from "ai";
+import {func_lazy, func_remember, map_get_or_put_async, obj_props} from "@gaubee/util";
+import {experimental_createMCPClient as createMCPClient, tool, type ToolSet} from "ai";
 import {Experimental_StdioMCPTransport} from "ai/mcp-stdio";
+import z from "zod";
+import {getPromptConfigs} from "../../helper/prompts-loader.js";
 
 export const tools = {
   fileSystem: func_lazy(() => {
@@ -60,6 +62,35 @@ export const tools = {
         const tools = await mcpClient.tools();
         return tools;
       });
+    };
+  }),
+
+  jixoSkill: func_remember(() => {
+    const configs = getPromptConfigs();
+    const skills = obj_props(configs).filter((key) => key.endsWith(".skill"));
+    const allSkillNavList = skills.reduce(
+      (tree, skill) => {
+        tree[skill] = configs[skill].content.split("\n")[0];
+        return tree;
+      },
+      Object.create(null) as Record<string, string>,
+    );
+    return {
+      allSkillNavList,
+      tools: {
+        get_jixo_skill: tool({
+          description: "Get the JIXO skill prompt by name",
+          parameters: z.object({
+            name: z.string().describe("The name to get the skill for"),
+          }),
+          execute: async ({name}) => {
+            if (name in allSkillNavList) {
+              return Reflect.get(configs, name);
+            }
+            return {type: "error", message: "Skill not found"};
+          },
+        }),
+      },
     };
   }),
 };
