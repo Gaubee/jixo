@@ -1,6 +1,6 @@
 {
   "name": "jixo",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "The AI-Driven Development Foundation for Automated Software Engineering",
   "main": "index.js",
   "type": "module",
