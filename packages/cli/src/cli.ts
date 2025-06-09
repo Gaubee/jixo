@@ -2,6 +2,7 @@ import {cwdResolver} from "@gaubee/node";
 import {match, P} from "ts-pattern";
 import yargs from "yargs";
 import {hideBin} from "yargs/helpers";
+import packageJson from "../package.json" with {type: "json"};
 import {doctor} from "./commands/doctor/index.js";
 import {init} from "./commands/init.js";
 import {listPrompts} from "./commands/prompts/list.js";
@@ -11,6 +12,7 @@ import {run} from "./commands/tasks/run.js";
 export const runCli = async (args: string[] = process.argv) => {
   const cli = await yargs(hideBin(args))
     .scriptName("jixo")
+    .version(packageJson.version)
     .command(
       "doctor",
       "Check the requirements for run jixo",

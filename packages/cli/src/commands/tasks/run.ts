@@ -40,10 +40,13 @@ export const run = async (
 
     try {
       for (const ai_task of ai_tasks) {
-        // 如果进度已经满了，那么跳过
-        if (ai_task.preProgress >= 1 && !force) {
-          continue;
+        // 如果进度已经满了，并且没有任何依赖文件的变更，那么跳过这个任务
+        if (!force) {
+          if (ai_task.preProgress >= 1) {
+            continue;
+          }
         }
+
         const {dirs: task_dirs} = ai_task;
         if (!task_dirs.some((dir) => dirMatcher.isMatch(dir))) {
           continue;

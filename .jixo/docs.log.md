@@ -1,7 +1,7 @@
 ---
  title: 基于 VitePress 搭建 JIXO 项目的文档网站
  createTime: '2025-06-09T04:24:18.155Z'
- updateTime: '2025-06-09T08:22:26.079Z'
+ updateTime: '2025-06-09T10:20:04.799Z'
  progress: 100%
 ---
 
@@ -22,7 +22,11 @@
 
 ---
 
-## 工作日志
+- 时间：`2025-06-09T10:20:04.799Z`，执行者：`@docs`，第12次执行任务：
+    - 更新 `docs/index.md`，增强项目价值介绍，添加“机器人”概念和未来GUI的描述。
+    - 更新 `docs/cli/index.md`，强调使用 `pnpx jixo` 运行 CLI。
+    - 创建 `docs/dependencies.md`，描述 JIXO 的依赖。
+    - 更新 `docs/.vitepress/config.js`，添加 `Dependencies` 到导航栏和侧边栏.
 
 - 时间：`2025-06-09T10:05:37.877Z`，执行者：`@docs`，第11次执行任务：
     - 检查 `docs/.vitepress/config.js` 文件，确认 `base` 选项已设置为 `'/jixo/'`。

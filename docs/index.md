@@ -1,8 +1,6 @@
 # JIXO: The AI-Powered Task Orchestrator for Expert-Level Automation
 
-JIXO is an AI toolset designed to empower users with expert-level automation through skill-driven and system-thinking approaches. It functions as an intelligent task orchestrator, providing a comprehensive suite of AI-powered skills to tackle diverse challenges across various domains.
-
-JIXO is not just a tool; it's a long-term execution partner that understands your goals and helps you achieve them efficiently.
+Imagine JIXO as a tireless robot, constantly working behind the scenes to achieve your goals. It's not just a tool; it's a persistent, expert-level automation engine.
 
 ## Key Benefits
 

@@ -72,7 +72,9 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
   const endInfo = {
     prefixText: "",
     text: "",
-    suffixText: `⏱️ ${gray(ms(new Date().getTime() - new Date(ai_task.startTime).getTime(), {long: true}))}`,
+    get suffixText() {
+      return `⏱️  ${gray(ms(new Date().getTime() - new Date(ai_task.startTime).getTime(), {long: true}))}`;
+    },
   };
   try {
     await _runAiTask(ai_task, allFiles, changedFilesSet, loading, endInfo);
@@ -90,7 +92,7 @@ const _runAiTask = async (
   endInfo: {
     prefixText: string;
     text: string;
-    suffixText: string;
+    readonly suffixText: string;
   },
 ) => {
   const model = getModel(ai_task.model);
