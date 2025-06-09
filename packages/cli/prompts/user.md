@@ -1,35 +1,43 @@
-- 本次任务的 工作空间：`{{task.cwd}}`
-  > 工作空间 是指该目录下有一个 `.jixo` 文件夹，里面包含了一些“执行者”的 日志和记忆
-  > 通常来说不需要读取该文件夹的内容，可以直接忽略
-- 本次任务的 任务目录：`{{task.dirs}}`
-  > 任务目录 是指 “执行者” 执行任务所需的资源文件夹，可能需要在这个目录里读取文件或者写入文件
-- 本次任务的开始时间是：`{{task.startTime}}`
-- 本次任务的执行者是：`{{task.name}}`
+<CONTEXT_DATA>
+    <ENVIRONMENT>
+        - **Executor_Identity**: `{{task.name}}`
+        - **Current_Turn_Quota**: `{{turn.current}}/{{turn.max}}`
+    </ENVIRONMENT>
 
-**IMPORTANT: 你必须通过调用工具来与文件系统交互。例如，读取文件必须使用 'read_file'，写入文件必须使用 'write_file' 或 'edit_file'。任何声称要进行文件操作的意图，都必须紧随一个相应的工具调用。不要仅仅声明意图，然后停止或返回文本。**
+    <ACTIVE_SESSION_STATE>
+        - **Active_Executor_List**:
+            ```yaml
+            {{active_executors}}
+            ```
+    </ACTIVE_SESSION_STATE>
+</CONTEXT_DATA>
 
-**IMPORTANT: 你是一个有独立思考能力的工具，如果没有特别说明，是不需要与用户进行交互的。你的最终目标是使用合理的成本完成指定的任务。如果你觉得任务不合理，那么可以通过对任务做留言的方式，到 `./.jixo/{{task.useLog}}.log.md` 中进行写入，来告知用户。**
+<INPUT_FILES>
+    <FILE id="log_file" path="./.jixo/{{task.useLog}}.log.md">
+        <CONTENT>
+        ```md
+        {{task.log}}
+        ```
+        </CONTENT>
+    </FILE>
 
-### 这是上次执行完任务后的工作日志总结
+    <FILE id="task_file" path="{{task.file}}">
+        <CONTENT>
+        ```md
+        {{task.content}}
+        ```
+        </CONTENT>
+    </FILE>
 
-目前文件 `./.jixo/{{task.useLog}}.log.md` 完整内容如下（你不需要再去读取该文件）：
+    <FILE id="workspace_structure" path="{{task.cwd}}">
+        <CONTENT>
+        ```yaml
+        {{allFiles}}
+        ```
+        </CONTENT>
+    </FILE>
+</INPUT_FILES>
 
-```md
-{{task.log}}
-```
-
-### 这里的当前 任务目录 的文件列表（这里不包含被 .gitignore 忽略的文件）
-
-```yaml
-{{allFiles}}
-```
-
-### 这里的上次任务到现在的变更的文件列表
-
-```yaml
-{{changedFiles}}
-```
-
-### 你的任务内容如下（静默地完成任务，不要对用户做任何询问，如果有疑虑，可以通过留言的方式告知用户）：
-
-{{task.content}}
+<IMPERATIVE>
+Your sole task is to execute one turn according to the `JIXO_EXECUTION_PROTOCOL` defined in your system prompt, using the data provided above. Begin `PROTOCOL 0` now.
+</IMPERATIVE>
