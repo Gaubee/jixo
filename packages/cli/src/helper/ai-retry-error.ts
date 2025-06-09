@@ -24,16 +24,19 @@ export const handleRetryError = async (error: unknown, loading: Spinner) => {
 
         if (typeof retryDelay === "number") {
           const {prefixText, text} = loading;
+          let remainingDelay = retryDelay;
+          const tickInterval = 1000;
           const tick = () => {
             loading.prefixText = "⏲️ ";
             loading.text = str_trim_indent(`
             ${inner_error.message}
             ${" " + "─".repeat(Math.max(4, process.stdout.columns - 2))}
-            Retrying in ${ms(retryDelay)}...`);
+            Retrying in ${ms(remainingDelay)}...`);
+            remainingDelay -= tickInterval;
           };
           tick();
 
-          const ti = setInterval(tick, 1000);
+          const ti = setInterval(tick, tickInterval);
           await delay(retryDelay);
           clearInterval(ti);
 
@@ -42,7 +45,9 @@ export const handleRetryError = async (error: unknown, loading: Spinner) => {
           loading.text = text;
         }
       }
-    } catch {}
+    } catch {
+      console.error("\nQAQ unknown error", error);
+    }
   }
 };
 

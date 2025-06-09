@@ -56,6 +56,7 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
   };
 
   const initialMessages: ModelMessage[] = [];
+  const maxTurns = 40; // Safeguard against infinite loops
 
   const promptConfigs = getPromptConfigs();
   for (const role of ["system", "user"] as const) {
@@ -86,6 +87,7 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
           },
         }),
       )
+      .replaceAll("{{maxTurns}}", () => `${maxTurns}`)
       .replaceAll(
         "{{changedFiles}}",
         YAML.stringify(
@@ -108,8 +110,7 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
     });
   }
 
-  let currentMessages: ModelMessage[] = [...initialMessages];
-  const maxTurns = 100; // Safeguard against infinite loops
+  const currentMessages: ModelMessage[] = [...initialMessages];
   const loading = spinner("Initializing AI task...");
   loading.prefixText = "⏳ ";
   loading.start();
@@ -122,6 +123,10 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
   loop: for (let turn = 0; turn < maxTurns; turn++) {
     loading.text = turn === 0 ? `Connecting To ${model.provider}...` : `Processing turn ${turn + 1}...`;
 
+    currentMessages.push({
+      role: "user",
+      content: `Turns: ${turn}/${maxTurns}`,
+    });
     const result = await streamText({
       model: model,
       messages: currentMessages,
@@ -174,7 +179,6 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
           });
         })
         .with({type: "error"}, async (errorPart) => {
-          console.error("\nQAQ error", errorPart.error);
           await handleRetryError(errorPart.error, loading);
 
           loading.prefixText = endInfo.prefixText = "❌ ";

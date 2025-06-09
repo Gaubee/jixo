@@ -1,10 +1,10 @@
 import {matter, normalizeFilePath, readMarkdown, walkFiles, writeMarkdown} from "@gaubee/nodekit";
+import {str_trim_indent} from "@gaubee/util";
 import fs from "node:fs";
 import path from "node:path";
 import {match, P} from "ts-pattern";
 import z from "zod";
 import {type JixoConfig} from "../config.js";
-import { str_trim_indent } from "@gaubee/util";
 
 /**
  * 将 config.tasks 字段转化成具体的 ai-tasks 信息
@@ -53,17 +53,29 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     const useLog = ai_task.data.useLog || task_name;
 
     const log_filepath = path.join(cwd, `.jixo/${useLog}.log.md`);
-    if (!fs.existsSync(log_filepath)) {
-      writeMarkdown(log_filepath, str_trim_indent(`
+    let log_fileContent = fs.readFileSync(log_filepath, "utf-8");
+    if (!fs.existsSync(log_filepath) || log_fileContent.trim() === "") {
+      writeMarkdown(
+        log_filepath,
+        str_trim_indent(`
         ## 工作计划
         
+        <!--待定-->
+
         ---
 
         ## 工作日志
-        `), {
-        createTime: new Date().toISOString(),
-        updateTime: new Date().toISOString(),
-      });
+
+        <!--暂无-->
+        `),
+        {
+          title: "_待定_",
+          createTime: new Date().toISOString(),
+          updateTime: new Date().toISOString(),
+          progress: "0%",
+        },
+      );
+      log_fileContent = fs.readFileSync(log_filepath, "utf-8");
     }
 
     tasks.push({
@@ -81,7 +93,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
         .otherwise(() => ""),
       useMemory,
       useLog,
-      log: fs.readFileSync(log_filepath, "utf-8"),
+      log: log_fileContent,
       startTime: new Date().toISOString(),
     });
   };
