@@ -5,10 +5,12 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
+    "ci": "echo \"NO CI\"",
+    "test": "pnpm jixo --help",
     "pub": "pnpm publish --access public --no-git-checks -r",
-    "dev": "tsc --build --watch",
-    "build": "rolldown -c ./rolldown.config.mts",
-    "build2": "esbuild ./index.ts --format=cjs --outfile=./bundle/index.cjs --platform=node",
+    "build": "tsc --build",
+    "bundle:json": "cd packages/cli && pnpm gen-prompts",
+    "bundle:js": "esbuild ./index.ts --format=cjs --outfile=./bundle/index.cjs --platform=node",
     "files-to-prompt": "node ./scripts/files-to-prompt.ts",
     "jixo": "node bundle/index.cjs"
   },
