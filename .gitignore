@@ -3,6 +3,7 @@ memory.json
 node_modules/
 .*/
 !.jixo/
+!.github/
 *.bak
 .jixo.env
 dist/
