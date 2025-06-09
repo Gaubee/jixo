@@ -1,7 +1,7 @@
-import {blue, cyan, FileEntry, gray, green, red, spinner, YAML, yellow} from "@gaubee/nodekit";
+import {blue, cyan, FileEntry, gray, green, red, spinner, YAML, yellow, type Spinner} from "@gaubee/nodekit";
 import {func_catch} from "@gaubee/util";
-import {streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart, type ToolSet} from "ai";
-import debug from "debug";
+import {AISDKError, streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart, type ToolSet} from "ai";
+import createDebug from "debug";
 import ms from "ms";
 import os from "node:os";
 import {match, P} from "ts-pattern";
@@ -12,7 +12,28 @@ import type {AiTask} from "../../helper/resolve-ai-tasks.js";
 import {tools} from "./ai-tools.js";
 import {providers} from "./model-providers.js";
 
-const log = debug("jixo:run-ai-task");
+createDebug.formatters.y = (v) => {
+  return JSON.stringify(v, (_k, v) => {
+    if (typeof v === "string") {
+      let slice_len = 0;
+      if (v.length > 200) {
+        slice_len = 50;
+      }
+      if (v.length > 100) {
+        slice_len = 30;
+      }
+      if (slice_len > 0) {
+        return `<string:${v.length}>${v.slice(0, slice_len)}${gray("...")}${v.slice(-slice_len)}`;
+      }
+      return v;
+    }
+    if (AISDKError.isInstance(v)) {
+      return red(v.message);
+    }
+    return v;
+  });
+};
+const log = createDebug("jixo:run-ai-task");
 
 const getModel = (model?: string) => {
   return match(model)
@@ -44,8 +65,34 @@ const getModel = (model?: string) => {
       return providers.deepseek("deepseek-reasoner");
     });
 };
-
 export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedFilesSet: Record<string, FileEntry[]>) => {
+  const loading = spinner(`Initializing AI task: ${cyan(ai_task.name)}...`);
+  loading.prefixText = "⏳ ";
+  loading.start();
+  const endInfo = {
+    prefixText: "",
+    text: "",
+    suffixText: `⏱️ ${gray(ms(new Date().getTime() - new Date(ai_task.startTime).getTime(), {long: true}))}`,
+  };
+  try {
+    await _runAiTask(ai_task, allFiles, changedFilesSet, loading, endInfo);
+  } finally {
+    // Fallback spinner stop if loop exits unexpectedly
+    loading.stopAndPersist(endInfo);
+  }
+};
+
+const _runAiTask = async (
+  ai_task: AiTask,
+  allFiles: FileEntry[],
+  changedFilesSet: Record<string, FileEntry[]>,
+  loading: Spinner,
+  endInfo: {
+    prefixText: string;
+    text: string;
+    suffixText: string;
+  },
+) => {
   const model = getModel(ai_task.model);
   const availableTools: ToolSet = {
     ...(await tools.fileSystem(ai_task.cwd)),
@@ -111,22 +158,17 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
   }
 
   const currentMessages: ModelMessage[] = [...initialMessages];
-  const loading = spinner("Initializing AI task...");
-  loading.prefixText = "⏳ ";
-  loading.start();
-  const endInfo = {
-    prefixText: "",
-    text: "",
-    suffixText: `⏱️ ${gray(ms(new Date().getTime() - new Date(ai_task.startTime).getTime(), {long: true}))}`,
-  };
 
   loop: for (let turn = 0; turn < maxTurns; turn++) {
-    loading.text = turn === 0 ? `Connecting To ${model.provider}...` : `Processing turn ${turn + 1}...`;
-
-    currentMessages.push({
-      role: "user",
-      content: `Turns: ${turn}/${maxTurns}`,
-    });
+    if (turn === 0) {
+      loading.text = `Connecting To ${model.provider}...`;
+    } else {
+      loading.text = `Processing turn ${turn + 1}...`;
+      currentMessages.push({
+        role: "user",
+        content: `Turns: ${turn}/${maxTurns}`,
+      });
+    }
     const result = await streamText({
       model: model,
       messages: currentMessages,
@@ -146,6 +188,7 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
       RETURN: "RETURN",
       BREAK: "BREAK",
       CONTINUE: "CONTINUE",
+      ERROR: "ERROR",
     } as const;
     for await (const part of result.fullStream) {
       if (firstStreamPart) {
@@ -167,8 +210,8 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
         })
         .with({type: "tool-call"}, (callPart) => {
           loading.prefixText = "🛠️ ";
-          loading.text = "Requesting tool:" + blue(callPart.toolName) + gray(": " + YAML.stringify(callPart.args).split("\n").slice(0, 3) + "...");
-          log("\nQAQ tool-call", callPart);
+          loading.text = "Requesting tool: " + blue(callPart.toolName);
+          log("\nQAQ tool-call: %y", callPart);
           requestedToolCalls.push(callPart);
           // Update assistant message to include tool calls
           assistantMessageContent.push({
@@ -179,10 +222,9 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
           });
         })
         .with({type: "error"}, async (errorPart) => {
-          await handleRetryError(errorPart.error, loading);
-
           loading.prefixText = endInfo.prefixText = "❌ ";
-          loading.text = endInfo.text = red(`Error: ${errorPart.error?.toString()}`);
+          loading.text = endInfo.text = red(`${errorPart.error}`);
+          await handleRetryError(errorPart.error, loading);
           return LOOP_SIGNALS.BREAK; // Stop processing on error
         })
         .with({type: "reasoning"}, (reasoningPart) => {
@@ -196,7 +238,7 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
           loading.prefixText = "📃 ";
           loading.text = p.file.mediaType;
 
-          log("\nQAQ file", p.file);
+          log("\nQAQ file: %y", p.file);
         })
         .with({type: "source"}, (p) => {
           loading.prefixText = "🔗 ";
@@ -206,17 +248,17 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
             loading.text = p.url;
           }
 
-          log("\nQAQ source", p);
+          log("\nQAQ source: %y", p);
         })
-        .with({type: "tool-result"}, (p) => log("\nQAQ tool-result", p))
-        .with({type: "tool-call-streaming-start"}, (p) => log("\nQAQ tool-call-streaming-start", p))
-        .with({type: "tool-call-delta"}, (p) => log("\nQAQ tool-call-delta", p))
-        .with({type: "reasoning-part-finish"}, (p) => log("\nQAQ reasoning-part-finish", p))
-        .with({type: "start-step"}, (p) => log("\nQAQ start-step", p))
-        .with({type: "finish-step"}, (p) => log("\nQAQ finish-step", p))
-        .with({type: "start"}, (p) => log("\nQAQ start", p))
+        .with({type: "tool-result"}, (p) => log("\nQAQ tool-result: %y", p))
+        .with({type: "tool-call-streaming-start"}, (p) => log("\nQAQ tool-call-streaming-start: %y", p))
+        .with({type: "tool-call-delta"}, (p) => log("\nQAQ tool-call-delta: %y", p))
+        .with({type: "reasoning-part-finish"}, (p) => log("\nQAQ reasoning-part-finish: %y", p))
+        .with({type: "start-step"}, (p) => log("\nQAQ start-step: %y", p))
+        .with({type: "finish-step"}, (p) => log("\nQAQ finish-step: %y", p))
+        .with({type: "start"}, (p) => log("\nQAQ start: %y", p))
         .with({type: "finish"}, async (finishPart) => {
-          log("\nQAQ finish", finishPart);
+          log("\nQAQ finish: %y", finishPart);
           // Add the assistant's message from this turn to the history
           currentMessages.push(_currentAssistantMessage);
 
@@ -284,11 +326,14 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
             // Other finish reasons, potentially an error or unexpected state
             loading.prefixText = endInfo.prefixText = "🛑 ";
             loading.text = endInfo.text = red(`${cyan(`[${ai_task.name}]`)} task finished with unhandled reason: ${finishPart.finishReason}`);
-            return LOOP_SIGNALS.RETURN;
+            return LOOP_SIGNALS.ERROR;
           }
         })
         .otherwise(() => {}); // Handle any other part types if necessary
 
+      if (LOOP_SIGNAL === LOOP_SIGNALS.ERROR) {
+        throw LOOP_SIGNAL;
+      }
       if (LOOP_SIGNAL === LOOP_SIGNALS.RETURN) {
         break loop;
       } else if (LOOP_SIGNAL === LOOP_SIGNALS.BREAK) {
@@ -302,6 +347,4 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
       break;
     }
   }
-  // Fallback spinner stop if loop exits unexpectedly
-  loading.stopAndPersist(endInfo);
 };

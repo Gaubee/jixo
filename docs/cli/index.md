@@ -38,6 +38,9 @@ jixo run [filter...]
   - To filter by name, provide the task name directly (e.g., `my-task`).
   - To filter by directory, provide a path starting with `./` (e.g., `./scripts`).
 - `-D, --dir`: Specifies the project directory containing the `jixo.config.json` file. Defaults to the current directory.
+- `-F, --force`: Tasks are forced to run, even at 100% progress. It is suitable for running after modifying the content of the task.
+- `-O, --once`: The task is executed only once in the loop, equal to `--step=1`.
+- `-S, --step`: The task is executed N times in the loop.
 
 This command executes JIXO tasks based on the provided filters. It loads the `jixo.config.json` file from the specified directory and runs the tasks that match the specified filters.
 
@@ -93,8 +96,20 @@ Run tasks in the `scripts` directory:
 jixo run ./scripts
 ```
 
-Upgrade builtin prompts:
+Run a task once:
 
 ```bash
-jixo prompts --upgrade
+jixo run my-task --once
+```
+
+Run a task 5 times:
+
+```bash
+jixo run my-task --step=5
+```
+
+Force run a task, even if it's at 100% progress:
+
+```bash
+jixo run my-task --force
 ```

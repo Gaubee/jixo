@@ -1,9 +1,8 @@
-import {spinner} from "@gaubee/nodekit";
+import {gray, yellow, type Spinner} from "@gaubee/nodekit";
 import {delay, str_trim_indent} from "@gaubee/util";
 import {APICallError, RetryError} from "ai";
 import ms from "ms";
 import z from "zod";
-type Spinner = ReturnType<typeof spinner>;
 export const handleRetryError = async (error: unknown, loading: Spinner) => {
   if (!RetryError.isInstance(error)) {
     return;
@@ -29,8 +28,8 @@ export const handleRetryError = async (error: unknown, loading: Spinner) => {
           const tick = () => {
             loading.prefixText = "⏲️ ";
             loading.text = str_trim_indent(`
-            ${inner_error.message}
-            ${" " + "─".repeat(Math.max(4, process.stdout.columns - 2))}
+            ${yellow(inner_error.message)}
+            ${" " + gray("─".repeat(Math.max(4, process.stdout.columns - 2)))}
             Retrying in ${ms(remainingDelay)}...`);
             remainingDelay -= tickInterval;
           };

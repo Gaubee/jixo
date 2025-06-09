@@ -8,7 +8,7 @@ JIXO is not just a tool; it's a long-term execution partner that understands you
 
 - **Skill-Driven Automation:** JIXO leverages a rich library of pre-defined skills, each encapsulating a standardized thought process and execution protocol for specific tasks. This ensures consistent, reliable, and expert-level performance.
 - **System Thinking at its Core:** JIXO promotes a holistic view, encouraging users to consider the interconnectedness of tasks and their long-term impact. It helps you see the bigger picture and make informed decisions.
-- **Intelligent Task Orchestration:** JIXO acts as a central orchestrator, intelligently selecting and chaining the right skills to solve complex problems. It automates not just individual tasks, but entire workflows.
+- **Intelligent Task Orchestration:** JIXO acts as a central orchestrator, intelligently selecting and chaining the right skills to solve complex problems. It employs a 'Central Dispatching Chain of Thought' to analyze requests, select appropriate skills, and orchestrate their execution. This automates not just individual tasks, but entire workflows.
 - **Evolvable & Adaptable:** JIXO's architecture is designed for continuous learning and adaptation. As your needs evolve, JIXO evolves with you, ensuring long-term value and relevance.
 
 ## Core Skills

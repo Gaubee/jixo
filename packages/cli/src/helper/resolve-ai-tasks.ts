@@ -5,6 +5,7 @@ import path from "node:path";
 import {match, P} from "ts-pattern";
 import z from "zod";
 import {type JixoConfig} from "../config.js";
+import {parseProgress} from "./parse-progress.js";
 
 /**
  * 将 config.tasks 字段转化成具体的 ai-tasks 信息
@@ -28,6 +29,9 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     useLog: string;
     log: string;
     startTime: string;
+    createTime: string;
+    preUpdateTime: string;
+    preProgress: number;
   };
   const tasks: AiTask[] = [];
   const addTask = (
@@ -53,8 +57,8 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     const useLog = ai_task.data.useLog || task_name;
 
     const log_filepath = path.join(cwd, `.jixo/${useLog}.log.md`);
-    let log_fileContent = fs.readFileSync(log_filepath, "utf-8");
-    if (!fs.existsSync(log_filepath) || log_fileContent.trim() === "") {
+    let log_fileContent = fs.existsSync(log_filepath) ? fs.readFileSync(log_filepath, "utf-8").trim() : "";
+    if (log_fileContent === "") {
       writeMarkdown(
         log_filepath,
         str_trim_indent(`
@@ -77,6 +81,8 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
       );
       log_fileContent = fs.readFileSync(log_filepath, "utf-8");
     }
+    const log_fileData = matter(log_fileContent).data;
+    const startTime = new Date().toISOString();
 
     tasks.push({
       ...ai_task,
@@ -93,8 +99,11 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
         .otherwise(() => ""),
       useMemory,
       useLog,
+      createTime: log_fileData.createTime ?? startTime,
+      preUpdateTime: log_fileData.updateTime ?? startTime,
+      preProgress: parseProgress(log_fileData.progress),
       log: log_fileContent,
-      startTime: new Date().toISOString(),
+      startTime: startTime,
     });
   };
 

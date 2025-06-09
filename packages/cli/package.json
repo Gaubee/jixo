@@ -24,7 +24,7 @@
     "@ai-sdk/openai": "alpha",
     "@ai-sdk/xai": "alpha",
     "@gaubee/node": "^0.2.1",
-    "@gaubee/nodekit": "^0.8.2",
+    "@gaubee/nodekit": "^0.9.1",
     "@gaubee/util": "^0.32.1",
     "ai": "alpha",
     "commander": "^14.0.0",

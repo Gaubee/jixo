@@ -16,8 +16,8 @@ importers:
         specifier: ^0.2.1
         version: 0.2.1(@gaubee/util@0.32.1)
       '@gaubee/nodekit':
-        specifier: ^0.8.2
-        version: 0.8.2(@gaubee/node@0.2.1(@gaubee/util@0.32.1))(@gaubee/util@0.32.1)(@types/node@22.15.30)
+        specifier: ^0.9.1
+        version: 0.9.1(@gaubee/node@0.2.1(@gaubee/util@0.32.1))(@gaubee/util@0.32.1)(@types/node@22.15.30)
       '@gaubee/util':
         specifier: ^0.32.1
         version: 0.32.1
@@ -85,8 +85,8 @@ importers:
         specifier: ^0.2.1
         version: 0.2.1(@gaubee/util@0.32.1)
       '@gaubee/nodekit':
-        specifier: ^0.8.2
-        version: 0.8.2(@gaubee/node@0.2.1(@gaubee/util@0.32.1))(@gaubee/util@0.32.1)(@types/node@22.15.30)
+        specifier: ^0.9.1
+        version: 0.9.1(@gaubee/node@0.2.1(@gaubee/util@0.32.1))(@gaubee/util@0.32.1)(@types/node@22.15.30)
       '@gaubee/util':
         specifier: ^0.32.1
         version: 0.32.1
@@ -636,8 +636,8 @@ packages:
     peerDependencies:
       '@gaubee/util': '*'
 
-  '@gaubee/nodekit@0.8.2':
-    resolution: {integrity: sha512-4dJvNk7VQR+taYRDAQhx91mWdcTjA4ES3FD5QqZM4TdJv3CrWUn5FGMrc5K7XcyPfKS1IfdjOfGkrjkio0p0Qw==}
+  '@gaubee/nodekit@0.9.1':
+    resolution: {integrity: sha512-rpQlRGNokmamhtGFD7tsMUQv7VWNN0Yj9dhRLJK+BnDnzdIvGksqUZHW7kf08PJ8BcV8+uJBflksBrl4JIHR8A==}
     peerDependencies:
       '@gaubee/node': '*'
       '@gaubee/util': '*'
@@ -2282,7 +2282,7 @@ snapshots:
       '@gaubee/util': 0.32.1
       tslib: 2.8.1
 
-  '@gaubee/nodekit@0.8.2(@gaubee/node@0.2.1(@gaubee/util@0.32.1))(@gaubee/util@0.32.1)(@types/node@22.15.30)':
+  '@gaubee/nodekit@0.9.1(@gaubee/node@0.2.1(@gaubee/util@0.32.1))(@gaubee/util@0.32.1)(@types/node@22.15.30)':
     dependencies:
       '@gaubee/node': 0.2.1(@gaubee/util@0.32.1)
       '@gaubee/util': 0.32.1

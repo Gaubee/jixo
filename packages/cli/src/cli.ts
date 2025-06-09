@@ -1,4 +1,5 @@
 import {cwdResolver} from "@gaubee/node";
+import {match, P} from "ts-pattern";
 import yargs from "yargs";
 import {hideBin} from "yargs/helpers";
 import {doctor} from "./commands/doctor/index.js";
@@ -45,13 +46,43 @@ export const runCli = async (args: string[] = process.argv) => {
             alias: "D",
             type: "string",
             description: "The project directory with JIXO config",
+          })
+          .option("force", {
+            alias: "F",
+            type: "boolean",
+            description: "Tasks are forced to run, even at 100% progress. It is suitable for running after modifying the content of the task",
+          })
+          .option("once", {
+            alias: "O",
+            type: "boolean",
+            description: "The task is executed only once in the loop, equal to --step=1",
+          })
+          .option("step", {
+            alias: "S",
+            type: "number",
+            description: "The task is executed N times in the loop",
           });
       },
       (argv) => {
         const filters = argv.filter.map((v) => v.toString().split(/[\s,]+/)).flat();
-        const nameFilter = filters.filter((f) => !f.startsWith("./"));
-        const dirFilter = filters.filter((f) => f.startsWith("./"));
-        run(cwdResolver(argv.dir ?? ""), {nameFilter, dirFilter});
+        const nameFilter: string[] = [];
+        const dirFilter: string[] = [];
+        for (const f of filters) {
+          if (f.startsWith("./") || f.startsWith("../") || f.startsWith("~/")) {
+            dirFilter.push(f);
+          } else {
+            nameFilter.push(f);
+          }
+        }
+        run(cwdResolver(argv.dir ?? ""), {
+          nameFilter,
+          dirFilter,
+          force: argv.force,
+          loopTimes: match(argv)
+            .with({step: P.number.gt(0).select()}, (step) => step)
+            .with({once: P.boolean.select()}, (once) => (once ? 1 : Infinity))
+            .otherwise(() => Infinity),
+        });
       },
     )
     .command(
