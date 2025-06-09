@@ -1,6 +1,7 @@
 module.exports = {
   title: 'JIXO',
   description: 'JIXO Documentation',
+  base: '/jixo/',
   themeConfig: {
     nav: [
       { text: 'CLI Usage', link: '/cli/' }

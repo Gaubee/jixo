@@ -24,6 +24,10 @@
 
 ## 工作日志
 
+- 时间：`2025-06-09T10:05:37.877Z`，执行者：`@docs`，第11次执行任务：
+    - 检查 `docs/.vitepress/config.js` 文件，确认 `base` 选项已设置为 `'/jixo/'`。
+    - 建议用户检查部署过程，以确保网站正确地从 `https://gaubee.github.io/jixo/` 路径提供服务。
+
 - 时间：`2025-06-09T08:22:26.079Z`，执行者：`@docs`，第10次执行任务：
     - 更新 `docs/index.md`，增强 JIXO 项目的价值介绍，添加了关于 'Central Dispatching Chain of Thought' 的描述。
     - 更新 `docs/cli/index.md`，详细介绍 CLI 的使用方法，包括 `--force`、`--once` 和 `--step` 选项，并添加了使用示例。

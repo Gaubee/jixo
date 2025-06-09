@@ -1,12 +1,14 @@
 ---
 model: gemini-2.0-flash
 ---
+
 在docs目录下，基于vitepress平台搭建当前项目的文档网站。
 
 关于项目管理：
 
-1. docs是一个独立的项目
-1. 使用pnpm-workspace.yaml来统一管理这个docs项目
+1. docs 是一个独立的项目
+1. 使用 pnpm-workspace.yaml 来统一管理这个 docs 项目
+1. 因为要发布到 github-page 上，链接是 `https://gaubee.github.io/jixo/`
 
 在网站中需要展现以下内容：
 
