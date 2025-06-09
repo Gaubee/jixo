@@ -11,26 +11,26 @@ AI 工具集、助手
 1. **Build**
 
    ```shell
-   # 编译出 js 代码
-   pnpm build
-
    # 打包资源文件
    pnpm bundle:json
 
-   # 代码和资源打包
+   # 编译出 js 代码
+   pnpm build
+
+   # 打包 nodejs 程序
    pnpm bundle:js
    ```
 
 1. **Dev**
 
    ```shell
-   # 编译出 js 代码
-   pnpm build --watch
-
    # 打包资源文件
    pnpm bundle:json --watch
 
-   # 代码和资源打包
+   # 编译出 js 代码
+   pnpm build --watch
+
+   # 打包 nodejs 程序
    pnpm bundle:js --watch
    ```
 
