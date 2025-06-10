@@ -69,7 +69,7 @@ export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: Fi
   const availableTools: ToolSet = {
     ...(await tools.fileSystem(ai_task.cwd)),
     // ...(await tools.memory(path.join(ai_task.cwd, `.jixo/${ai_task.name}.memory.json`))),
-    // ...(await tools.sequentialThinking()),
+    ...(await tools.pnpm()),
     ...(await tools.jixo(ai_task)),
     ...(await tools.git(ai_task.cwd)),
   };
@@ -237,11 +237,11 @@ const _runAiTask = async (
       ERROR: "ERROR",
     } as const;
     for await (const part of result.fullStream) {
-      debugger;
       if (firstStreamPart) {
         firstStreamPart = false;
         loading.text = ""; // Clear initial connecting/processing message
       }
+
       const LOOP_SIGNAL = await match(part)
         .with({type: "text"}, (textPart) => {
           loading.prefixText = "🤖 ";
@@ -290,10 +290,18 @@ const _runAiTask = async (
         })
         .with({type: "source"}, (p) => {
           loading.prefixText = "🔗 ";
-          if (p.title) {
-            loading.text = `[${p.title}](${p.url})`;
+          if (p.sourceType === "url") {
+            if (p.title) {
+              loading.text = `[${p.title}](${p.url})`;
+            } else {
+              loading.text = p.url;
+            }
           } else {
-            loading.text = p.url;
+            if (p.filename) {
+              loading.text = `[${p.title}](${p.filename})`;
+            } else {
+              loading.text = p.title;
+            }
           }
 
           log("\nQAQ source: %y", p);

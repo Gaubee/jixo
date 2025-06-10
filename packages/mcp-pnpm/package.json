@@ -1,0 +1,29 @@
+{
+  "name": "@jixo/mcp-pnpm",
+  "version": "1.0.0",
+  "description": "Your friendly pnpm CLI pal. Helps you find commands and configs quickly.",
+  "main": "dist/cli.js",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "bin": {
+    "mcp-pnpm": "./dist/index.js"
+  },
+  "scripts": {
+    "test": "node --test dist/test/*.test.js"
+  },
+  "keywords": [
+    "pnpm",
+    "mcp"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "import-meta-ponyfill": "^3.2.2",
+    "react": "^19.1.0",
+    "typescript": "^5.8.3",
+    "zod": "^3.25.57"
+  }
+}

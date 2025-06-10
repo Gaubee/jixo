@@ -2,6 +2,9 @@
     "references": [
         {
             "path": "./packages/cli/tsconfig.json"
+        },
+        {
+            "path": "./packages/mcp-pnpm/tsconfig.json"
         }
     ],
     "files": [],

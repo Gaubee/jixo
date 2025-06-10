@@ -45,7 +45,7 @@
     "@std/fmt": "jsr:^1.0.8",
     "@types/node": "^22.15.30",
     "esbuild": "^0.25.5",
-    "import-meta-ponyfill": "^3.2.1",
+    "import-meta-ponyfill": "^3.2.2",
     "prettier": "^3.5.3",
     "prettier-plugin-organize-imports": "^4.1.0",
     "rolldown": "1.0.0-beta.11",

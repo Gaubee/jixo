@@ -39,6 +39,16 @@ export const tools = {
       });
     };
   }),
+  pnpm: func_remember(async () => {
+    const mcpClient = await createMCPClient({
+      transport: new Experimental_StdioMCPTransport({
+        command: "pnpm",
+        args: ["mcp-pnpm"],
+      }),
+    });
+    const tools = await mcpClient.tools();
+    return tools;
+  }),
   sequentialThinking: func_remember(async () => {
     const mcpClient = await createMCPClient({
       transport: new Experimental_StdioMCPTransport({
