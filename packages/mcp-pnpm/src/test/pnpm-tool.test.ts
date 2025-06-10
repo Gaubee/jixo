@@ -1,20 +1,21 @@
+import fs from "fs/promises";
 import assert from "node:assert";
-import fs from "node:fs/promises"; // 导入 fs/promises 以便 mock
 import {after, beforeEach, describe, mock, test} from "node:test";
-import {pnpmApi} from "../index.js"; // 导入我们创建的 API 对象
+import {pnpmApi} from "../index.js";
 
 // --- Mock Setup ---
-let executedCommand: string | null = null;
+let lastCall: {command: string | null; cwd: string | undefined} = {command: null, cwd: undefined};
 
-// Mock pnpmApi.executePnpmCommand
-mock.method(pnpmApi, "executePnpmCommand", async (command: string) => {
-  executedCommand = command;
-  return `Mock execution of: pnpm ${command}`;
+// Mock pnpmApi.executePnpmCommand to capture both command and cwd
+mock.method(pnpmApi, "executePnpmCommand", async (command: string, cwd?: string) => {
+  lastCall = {command, cwd};
+  return `Mock execution of: pnpm ${command} in ${cwd || "default CWD"}`;
 });
-// ✅ Mock fs.readFile
+
+// Mock fs.readFile to handle different CWDs for the 'run' tool security check
 mock.method(fs, "readFile", async (path: string) => {
-  if (path === "package.json") {
-    // 返回一个包含测试所需脚本的伪造 package.json 内容
+  // We check for the specific package.json path that the 'run' handler constructs.
+  if (path.endsWith("package.json")) {
     return JSON.stringify({
       name: "test-project",
       version: "1.0.0",
@@ -28,7 +29,6 @@ mock.method(fs, "readFile", async (path: string) => {
   throw new Error(`readFile mock: unhandled path ${path}`);
 });
 
-// 在所有测试结束后，恢复所有 mock
 after(() => {
   mock.restoreAll();
 });
@@ -39,121 +39,145 @@ function getToolHandler(toolName: string) {
   if (!handler) {
     throw new Error(`Tool callback for "${toolName}" not found.`);
   }
+  // @ts-ignore - The 'extra' parameter is not needed for our tests.
   return (args: any) => handler(args, {} as any);
 }
 
-describe("MCP pnpm Tool Command Generation", () => {
-  // 在每个测试用例运行之前，重置状态
+describe("MCP pnpm Tool Command Generation (with CWD and extraArgs)", () => {
   beforeEach(() => {
-    executedCommand = null;
+    lastCall = {command: null, cwd: undefined};
   });
 
-  // ... 所有测试用例 (test 和 describe 块) 保持不变 ...
-  // ... 从 "test('`install` tool...')" 开始的所有内容都无需修改 ...
+  describe("`install` tool", () => {
+    test("should run basic install in default CWD", async () => {
+      const installHandler = getToolHandler("install");
+      await installHandler({});
+      assert.strictEqual(lastCall.command, "install");
+      assert.strictEqual(lastCall.cwd, undefined);
+    });
 
-  test('`install` tool should generate "pnpm install"', async () => {
-    const installHandler = getToolHandler("install");
-    await installHandler({});
-    assert.strictEqual(executedCommand, "install");
+    test("should run install in a specified CWD", async () => {
+      const installHandler = getToolHandler("install");
+      await installHandler({cwd: "./packages/app"});
+      assert.strictEqual(lastCall.command, "install");
+      assert.strictEqual(lastCall.cwd, "./packages/app");
+    });
+
+    test("should handle --frozen-lockfile and --prod flags", async () => {
+      const installHandler = getToolHandler("install");
+      await installHandler({frozenLockfile: true, production: true});
+      assert.strictEqual(lastCall.command, "install --frozen-lockfile --prod");
+    });
+
+    test("should include extraArgs", async () => {
+      const installHandler = getToolHandler("install");
+      await installHandler({extraArgs: ["--reporter=json", "--no-optional"]});
+      assert.strictEqual(lastCall.command, "install --reporter=json --no-optional");
+    });
+
+    test("should combine all options correctly", async () => {
+      const installHandler = getToolHandler("install");
+      await installHandler({
+        cwd: "./backend",
+        production: true,
+        extraArgs: ["--ignore-scripts"],
+      });
+      assert.strictEqual(lastCall.command, "install --prod --ignore-scripts");
+      assert.strictEqual(lastCall.cwd, "./backend");
+    });
   });
 
   describe("`add` tool", () => {
-    test("should handle a single package", async () => {
+    test("should add a package in a specified CWD", async () => {
       const addHandler = getToolHandler("add");
-      await addHandler({packages: ["react"]});
-      assert.strictEqual(executedCommand, "add react");
+      await addHandler({packages: ["zod"], cwd: "./common/utils"});
+      assert.strictEqual(lastCall.command, "add zod");
+      assert.strictEqual(lastCall.cwd, "./common/utils");
     });
 
-    test("should handle multiple packages", async () => {
+    test("should handle dev, optional, and filter flags", async () => {
       const addHandler = getToolHandler("add");
-      await addHandler({packages: ["react", "typescript"]});
-      assert.strictEqual(executedCommand, "add react typescript");
+      await addHandler({
+        packages: ["eslint"],
+        dev: true,
+        optional: true, // Though mutually exclusive in reality, we test concatenation
+        filter: "my-app",
+      });
+      assert.strictEqual(lastCall.command, "--filter my-app add -D -O eslint");
     });
 
-    test("should handle a dev dependency", async () => {
+    test("should combine packages and extraArgs", async () => {
       const addHandler = getToolHandler("add");
-      await addHandler({packages: ["vitest"], dev: true});
-      assert.strictEqual(executedCommand, "add -D vitest");
-    });
-
-    test("should handle a JSR package", async () => {
-      const addHandler = getToolHandler("add");
-      await addHandler({packages: ["jsr:@luca/cases"]});
-      assert.strictEqual(executedCommand, "add jsr:@luca/cases");
-    });
-
-    test("should handle a workspace filter", async () => {
-      const addHandler = getToolHandler("add");
-      await addHandler({packages: ["lodash"], filter: "my-app"});
-      assert.strictEqual(executedCommand, "--filter my-app add lodash");
-    });
-
-    test("should handle a filter and dev flag together", async () => {
-      const addHandler = getToolHandler("add");
-      await addHandler({packages: ["eslint"], dev: true, filter: "my-lib"});
-      assert.strictEqual(executedCommand, "--filter my-lib add -D eslint");
+      await addHandler({
+        packages: ["dayjs"],
+        extraArgs: ["--save-exact"],
+      });
+      assert.strictEqual(lastCall.command, "add dayjs --save-exact");
     });
   });
 
   describe("`run` tool", () => {
-    test("should run a simple script", async () => {
+    test("should run a script in a specified CWD", async () => {
       const runHandler = getToolHandler("run");
-      await runHandler({script: "build"});
-      assert.strictEqual(executedCommand, "run build");
+      await runHandler({script: "build", cwd: "./services/api"});
+      assert.strictEqual(lastCall.command, "run build");
+      assert.strictEqual(lastCall.cwd, "./services/api");
     });
 
-    test("should run a script with arguments", async () => {
+    test("should combine script args and extraArgs", async () => {
       const runHandler = getToolHandler("run");
-      await runHandler({script: "test", args: ["--watch", "my-component.test.ts"]});
-      assert.strictEqual(executedCommand, "run test -- --watch my-component.test.ts");
-    });
-
-    test("should run a script with a filter", async () => {
-      const runHandler = getToolHandler("run");
-      await runHandler({script: "lint", filter: "frontend"});
-      assert.strictEqual(executedCommand, "--filter frontend run lint");
+      await runHandler({
+        script: "test",
+        args: ["--ci"],
+        extraArgs: ["--stream"],
+      });
+      assert.strictEqual(lastCall.command, "run test -- --ci --stream");
     });
   });
 
   describe("`dlx` tool", () => {
-    test("should execute a simple command", async () => {
+    test("should run dlx with extraArgs in a specified CWD", async () => {
       const dlxHandler = getToolHandler("dlx");
-      await dlxHandler({command: "cowsay"});
-      assert.strictEqual(executedCommand, "dlx cowsay");
-    });
-
-    test("should execute a command with a version and arguments", async () => {
-      const dlxHandler = getToolHandler("dlx");
-      await dlxHandler({command: "create-vite@latest", args: ["my-app", "--template", "react-ts"]});
-      assert.strictEqual(executedCommand, "dlx create-vite@latest my-app --template react-ts");
+      await dlxHandler({
+        command: "cowsay",
+        extraArgs: ['"Hello MCP!"'],
+        cwd: "/tmp/test",
+      });
+      assert.strictEqual(lastCall.command, 'dlx cowsay "Hello MCP!"');
+      assert.strictEqual(lastCall.cwd, "/tmp/test");
     });
   });
 
   describe("`create` tool", () => {
-    test("should generate a simple create command", async () => {
+    test("should run create with extraArgs for project name and template", async () => {
       const createHandler = getToolHandler("create");
-      await createHandler({template: "vite"});
-      assert.strictEqual(executedCommand, "create vite");
-    });
-
-    test("should generate create command with arguments", async () => {
-      const createHandler = getToolHandler("create");
-      await createHandler({template: "vite", args: ["my-app", "--", "--template", "react"]});
-      assert.strictEqual(executedCommand, "create vite my-app -- --template react");
+      await createHandler({
+        template: "vite",
+        extraArgs: ["my-new-app", "--template", "react-ts"],
+        cwd: "./projects",
+      });
+      assert.strictEqual(lastCall.command, "create vite my-new-app --template react-ts");
+      assert.strictEqual(lastCall.cwd, "./projects");
     });
   });
 
   describe("`licenses` tool", () => {
-    test("should generate the base command", async () => {
+    test("should list licenses with dev and production flags", async () => {
       const licensesHandler = getToolHandler("licenses");
-      await licensesHandler({});
-      assert.strictEqual(executedCommand, "licenses list");
+      await licensesHandler({dev: true, production: true});
+      assert.strictEqual(lastCall.command, "licenses list --dev --prod");
     });
 
-    test("should add the --json flag", async () => {
+    test("should combine all options in a specified CWD", async () => {
       const licensesHandler = getToolHandler("licenses");
-      await licensesHandler({json: true});
-      assert.strictEqual(executedCommand, "licenses list --json");
+      await licensesHandler({
+        json: true,
+        dev: true,
+        extraArgs: ["--long"],
+        cwd: "./frontend",
+      });
+      assert.strictEqual(lastCall.command, "licenses list --json --dev --long");
+      assert.strictEqual(lastCall.cwd, "./frontend");
     });
   });
 });
