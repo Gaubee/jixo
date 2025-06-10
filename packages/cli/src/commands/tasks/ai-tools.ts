@@ -42,8 +42,8 @@ export const tools = {
   pnpm: func_remember(async () => {
     const mcpClient = await createMCPClient({
       transport: new Experimental_StdioMCPTransport({
-        command: "pnpm",
-        args: ["mcp-pnpm"],
+        command: "pnpx",
+        args: ["@jixo/mcp-pnpm"],
       }),
     });
     const tools = await mcpClient.tools();
