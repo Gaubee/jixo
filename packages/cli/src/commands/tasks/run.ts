@@ -82,7 +82,7 @@ export const run = async (
 
         /// 只要有一个任务执行了，那么allDone就要标记成false，进入下一次循环来判断
         allDone = false;
-        await runAiTask(ai_task, task_allFiles, task_changedFiles);
+        await runAiTask(ai_task, currentTimes, task_allFiles, task_changedFiles);
 
         if (ai_task.exited) {
           exitedTasks.add(ai_task.name);

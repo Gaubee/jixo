@@ -65,8 +65,9 @@ const getModel = (model?: string) => {
       return providers.deepseek("deepseek-reasoner");
     });
 };
-export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedFilesSet: Record<string, FileEntry[]>) => {
+export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: FileEntry[], changedFilesSet: Record<string, FileEntry[]>) => {
   const loading = spinner(`Initializing AI task: ${cyan(ai_task.name)}...`);
+
   loading.prefixText = "⏳ ";
   loading.start();
   const endInfo = {
@@ -76,10 +77,37 @@ export const runAiTask = async (ai_task: AiTask, allFiles: FileEntry[], changedF
       return `⏱️  ${gray(ms(new Date().getTime() - new Date(ai_task.startTime).getTime(), {long: true}))}`;
     },
   };
+  let prefixText = loading.prefixText;
+  const updatePrefixText = () => {
+    loading.prefixText = `${green(`[${loopTimes}]`)} ${cyan(`+${ms(Date.now() - new Date(ai_task.startTime).getTime())}`)}\n${prefixText}`;
+  };
+  const ti = setInterval(updatePrefixText, 1000);
+  updatePrefixText();
   try {
-    await _runAiTask(ai_task, allFiles, changedFilesSet, loading, endInfo);
+    await _runAiTask(
+      ai_task,
+      allFiles,
+      changedFilesSet,
+      {
+        get text() {
+          return loading.text;
+        },
+        set text(v) {
+          loading.text = v;
+        },
+        get prefixText() {
+          return prefixText;
+        },
+        set prefixText(v) {
+          prefixText = v;
+          updatePrefixText();
+        },
+      },
+      endInfo,
+    );
   } finally {
     // Fallback spinner stop if loop exits unexpectedly
+    clearInterval(ti);
     loading.stopAndPersist(endInfo);
   }
 };
@@ -88,7 +116,7 @@ const _runAiTask = async (
   ai_task: AiTask,
   allFiles: FileEntry[],
   changedFilesSet: Record<string, FileEntry[]>,
-  loading: Spinner,
+  loading: Pick<Spinner, "prefixText" | "text">,
   endInfo: {
     prefixText: string;
     text: string;
@@ -99,9 +127,9 @@ const _runAiTask = async (
   const availableTools: ToolSet = {
     ...(await tools.fileSystem(ai_task.cwd)),
     // ...(await tools.memory(path.join(ai_task.cwd, `.jixo/${ai_task.name}.memory.json`))),
-    ...(await tools.sequentialThinking()),
+    // ...(await tools.sequentialThinking()),
     ...(await tools.jixo(ai_task)),
-    // ...(await tools.git(ai_task.cwd)),
+    ...(await tools.git(ai_task.cwd)),
   };
 
   const initialMessages: ModelMessage[] = [];
@@ -218,9 +246,9 @@ const _runAiTask = async (
             assistantMessageContent.push(assistantTextPart);
           }
           assistantTextPart.text += textPart.text;
-          if (fullText === "") fullText = "\n"; // For consistent display
+          if (fullText === "") loading.text = "";
           fullText += textPart.text;
-          loading.text = fullText.split("\n").slice(-10).join("\n");
+          loading.text = "\n" + fullText.split("\n").slice(-10).join("\n");
         })
         .with({type: "tool-call"}, (callPart) => {
           loading.prefixText = "🛠️ ";
@@ -245,7 +273,7 @@ const _runAiTask = async (
           loading.prefixText = "🤔 ";
           if (fullReasoningText === "") loading.text = "";
           fullReasoningText += reasoningPart.text;
-          loading.text = gray(fullReasoningText.split("\n").slice(-3).join("\n"));
+          loading.text = "\n" + gray(fullReasoningText.split("\n").slice(-3).join("\n"));
         })
         // Add other console logs for debugging if needed, but keep them minimal for production
         .with({type: "file"}, (p) => {

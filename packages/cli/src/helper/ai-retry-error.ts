@@ -3,7 +3,7 @@ import {delay, str_trim_indent} from "@gaubee/util";
 import {APICallError, RetryError} from "ai";
 import ms from "ms";
 import z from "zod";
-export const handleRetryError = async (error: unknown, loading: Spinner) => {
+export const handleRetryError = async (error: unknown, loading: Pick<Spinner, "prefixText" | "text">) => {
   if (!RetryError.isInstance(error)) {
     return;
   }

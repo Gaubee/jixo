@@ -1,0 +1,11 @@
+{
+  "name": "@jixo/core",
+  "version": "0.0.1",
+  "description": "Shared core functionality for JIXO CLI and WebUI",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {}
+}

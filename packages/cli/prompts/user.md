@@ -3,7 +3,8 @@
 
 - **Executor_Identity**: `{{task.executor}}`
 - **Executor_Name**: `{{task.name}}`
-- **Current_Tasl_Max_Turn_Quota**: `{{task.maxTurns}}`
+- **Current_Task_Max_Turn_Quota**: `{{task.maxTurns}}`
+- **Task_Start_Time**: `{{task.startTime}}`
 
 </ENVIRONMENT>
 
