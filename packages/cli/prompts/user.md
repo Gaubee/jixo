@@ -1,41 +1,55 @@
 <CONTEXT_DATA>
-    <ENVIRONMENT>
-        - **Executor_Identity**: `{{task.name}}`
-        - **Current_Turn_Quota**: `{{turn.current}}/{{turn.max}}`
-    </ENVIRONMENT>
+<ENVIRONMENT>
 
-    <ACTIVE_SESSION_STATE>
-        - **Active_Executor_List**:
-            ```yaml
-            {{active_executors}}
-            ```
-    </ACTIVE_SESSION_STATE>
+- **Executor_Identity**: `{{task.currentExecutor}}`
+- **Executor_Name**: `{{task.name}}`
+- **Current_Tasl_Max_Turn_Quota**: `{{task.maxTurns}}`
+
+</ENVIRONMENT>
+
+<ACTIVE_SESSION_STATE>
+
+- **Active_Executor_List**:
+  ```yaml
+  {{task.allExecutors}}
+  ```
+
+</ACTIVE_SESSION_STATE>
 </CONTEXT_DATA>
 
 <INPUT_FILES>
-    <FILE id="log_file" path="./.jixo/{{task.useLog}}.log.md">
-        <CONTENT>
-        ```md
-        {{task.log}}
-        ```
-        </CONTENT>
-    </FILE>
+<FILE id="log_file" path="{{task.log.filepath}}">
+<CONTENT>
 
-    <FILE id="task_file" path="{{task.file}}">
-        <CONTENT>
-        ```md
-        {{task.content}}
-        ```
-        </CONTENT>
-    </FILE>
+```md
+{{task.log.content}}
+```
 
-    <FILE id="workspace_structure" path="{{task.cwd}}">
-        <CONTENT>
-        ```yaml
-        {{allFiles}}
-        ```
-        </CONTENT>
-    </FILE>
+</CONTENT>
+</FILE>
+
+<FILE id="task_file" path="{{task.filepath}}">
+<CONTENT>
+```md
+{{task.content}}
+```
+</CONTENT>
+</FILE>
+
+<FILE id="workspace_structure" path="{{task.cwd}}">
+<CONTENT>
+```yaml
+{{allFiles}}
+```
+</CONTENT>
+</FILE>
+<FILE id="change_files" path="{{task.dirs}}">
+<CONTENT>
+```yaml
+{{changedFiles}}
+```
+</CONTENT>
+</FILE>
 </INPUT_FILES>
 
 <IMPERATIVE>

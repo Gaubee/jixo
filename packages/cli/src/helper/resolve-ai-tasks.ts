@@ -19,24 +19,36 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     data: {[key: string]: any};
     content: string;
   };
-  type AiTask = TaskBase & {
-    name: string;
-    cwd: string;
-    dirs: string[];
-    agents: string[];
-    model: string;
-    useMemory: string;
-    useLog: string;
-    log: string;
-    startTime: string;
-    createTime: string;
-    preUpdateTime: string;
-    preProgress: number;
-  };
+  type AiTask = TaskBase &
+    Readonly<{
+      name: string;
+      filepath: string;
+
+      cwd: string;
+      dirs: string[];
+      agents: string[];
+      model: string;
+      startTime: string;
+      maxTurns: number;
+      currentExecutor: string;
+      allExecutors: string[];
+
+      log: Readonly<{
+        name: string;
+        filepath: string;
+        content: string;
+        data: {[key: string]: any};
+        createTime: string;
+        preUpdateTime: string;
+        preProgress: number;
+      }>;
+      reloadLog: () => void;
+    }>;
   const tasks: AiTask[] = [];
   const addTask = (
     ai_task: TaskBase,
     options: {
+      filepath?: string;
       defaultName: string;
     },
   ) => {
@@ -53,15 +65,29 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     }
 
     const task_name = inner_task_name || options.defaultName;
-    const useMemory = ai_task.data.useMemory || task_name;
     const useLog = ai_task.data.useLog || task_name;
 
-    const log_filepath = path.join(cwd, `.jixo/${useLog}.log.md`);
-    let log_fileContent = fs.existsSync(log_filepath) ? fs.readFileSync(log_filepath, "utf-8").trim() : "";
-    if (log_fileContent === "") {
-      writeMarkdown(
-        log_filepath,
-        str_trim_indent(`
+    const log = {
+      name: useLog,
+      filepath: path.join(cwd, `.jixo/${useLog}.log.md`),
+      content: "",
+      data: {} as {[key: string]: any},
+      get createTime(): string {
+        return log.data.createTime ?? startTime;
+      },
+      get preUpdateTime(): string {
+        return log.data.updateTime ?? startTime;
+      },
+      get preProgress(): number {
+        return parseProgress(log.data.progress);
+      },
+    } satisfies AiTask["log"];
+    const reloadLog = () => {
+      log.content = fs.existsSync(log.filepath) ? fs.readFileSync(log.filepath, "utf-8").trim() : "";
+      if (log.content === "") {
+        writeMarkdown(
+          log.filepath,
+          str_trim_indent(`
         ## 工作计划
         
         <!--待定-->
@@ -72,21 +98,25 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
 
         <!--暂无-->
         `),
-        {
-          title: "_待定_",
-          createTime: new Date().toISOString(),
-          updateTime: new Date().toISOString(),
-          progress: "0%",
-        },
-      );
-      log_fileContent = fs.readFileSync(log_filepath, "utf-8");
-    }
-    const log_fileData = matter(log_fileContent).data;
+          {
+            title: "_待定_",
+            createTime: new Date().toISOString(),
+            updateTime: new Date().toISOString(),
+            progress: "0%",
+          },
+        );
+        log.content = fs.readFileSync(log.filepath, "utf-8");
+      }
+      log.data = matter(log.content).data;
+    };
+    reloadLog();
     const startTime = new Date().toISOString();
+    const currentExecutor = `${task_name}-${crypto.randomUUID()}`;
 
     tasks.push({
       ...ai_task,
       name: task_name,
+      filepath: options.filepath ?? path.join(cwd, `.jixo/${task_name}.task.md`),
       cwd: cwd,
       dirs: task_dir,
       agents: match(z.union([z.string(), z.string().array()]).safeParse(ai_task.data.agents))
@@ -94,16 +124,15 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
           return Array.isArray(agents) ? agents : agents.split(/\s+/);
         })
         .otherwise(() => []),
+      maxTurns: 40,
+      currentExecutor: currentExecutor,
+      allExecutors: [currentExecutor],
       model: match(z.string().safeParse(ai_task.data.model))
         .with({success: true, data: P.select()}, (model) => model)
         .otherwise(() => ""),
-      useMemory,
-      useLog,
-      createTime: log_fileData.createTime ?? startTime,
-      preUpdateTime: log_fileData.updateTime ?? startTime,
-      preProgress: parseProgress(log_fileData.progress),
-      log: log_fileContent,
       startTime: startTime,
+      reloadLog: reloadLog,
+      log: log,
     });
   };
 
@@ -121,6 +150,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
             },
           })) {
             addTask(readMarkdown(entry.path), {
+              filepath: entry.path,
               defaultName: entry.name.slice(0, -".task.md".length),
             });
           }
@@ -134,6 +164,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
         },
         (m) => {
           addTask(readMarkdown(m.filename), {
+            filepath: m.filename,
             defaultName: m.name ?? m.filename.slice(0, -".task.md".length),
           });
         },

@@ -7,7 +7,7 @@ import os from "node:os";
 import {match, P} from "ts-pattern";
 import {safeEnv} from "../../env.js";
 import {handleRetryError} from "../../helper/ai-retry-error.js";
-import {getPromptConfigs} from "../../helper/prompts-loader.js";
+import {getAllPromptConfigs, getAllSkillMap as getAllSkillNavMap} from "../../helper/prompts-loader.js";
 import type {AiTask} from "../../helper/resolve-ai-tasks.js";
 import {tools} from "./ai-tools.js";
 import {providers} from "./model-providers.js";
@@ -100,20 +100,32 @@ const _runAiTask = async (
     ...(await tools.fileSystem(ai_task.cwd)),
     // ...(await tools.memory(path.join(ai_task.cwd, `.jixo/${ai_task.name}.memory.json`))),
     ...(await tools.sequentialThinking()),
-    ...(await tools.jixoSkill().tools),
+    ...(await tools.jixo(ai_task)),
     // ...(await tools.git(ai_task.cwd)),
   };
 
   const initialMessages: ModelMessage[] = [];
   const maxTurns = 40; // Safeguard against infinite loops
 
-  const promptConfigs = getPromptConfigs();
+  const promptConfigs = getAllPromptConfigs();
   for (const role of ["system", "user"] as const) {
     const promptConfig = promptConfigs[role];
 
     const promptContent = promptConfig.content //
-      .replace(/\{\{task.(\w+)\}\}/g, (_, key) => {
-        return Reflect.get(ai_task, key);
+      .replace(/\{\{task.([\.\w]+)\}\}/g, (_, key) => {
+        if (key.includes(".")) {
+          const paths = key.split(".");
+          let res: any = ai_task;
+          for (const p of paths) {
+            res = Reflect.get(res, p);
+            if (!res) {
+              break;
+            }
+          }
+          return res;
+        } else {
+          return Reflect.get(ai_task, key);
+        }
       })
       .replace(/\{\{env.(\w+)\}\}/g, (_, key) => {
         const envKey = key.toUpperCase();
@@ -125,7 +137,7 @@ const _runAiTask = async (
         return envValue;
       })
       .replaceAll("{{allSkills}}", (_, key) => {
-        return YAML.stringify(tools.jixoSkill().allSkillNavList);
+        return YAML.stringify(getAllSkillNavMap());
       })
       .replaceAll(
         "{{allFiles}}",

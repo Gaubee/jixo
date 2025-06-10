@@ -42,7 +42,7 @@ export const run = async (
       for (const ai_task of ai_tasks) {
         // 如果进度已经满了，并且没有任何依赖文件的变更，那么跳过这个任务
         if (!force) {
-          if (ai_task.preProgress >= 1) {
+          if (ai_task.log.preProgress >= 1) {
             continue;
           }
         }
@@ -56,7 +56,7 @@ export const run = async (
         }
         const isCwdTask = cwd === task_dirs[0] && task_dirs.length === 1;
 
-        const changedFiles = (await findChangedFilesSinceTime(ai_task.preUpdateTime, cwd)) ?? allFiles;
+        const changedFiles = (await findChangedFilesSinceTime(ai_task.log.preUpdateTime, cwd)) ?? allFiles;
 
         const task_changedFiles = isCwdTask
           ? {[cwd]: changedFiles}
