@@ -164,13 +164,11 @@ progress: "55%"
 
 - [ ] **阶段一: 系统架构**
   - [x] 1.1. 定义用户故事
-  - status: Completed
-  - turn: 1
-  - executor: system-designer
+    - status: Completed
+    - executor: system-designer
   - [ ] 1.2. 设计数据库模式
-  - status: Locked
-  - turn: 3
-  - executor: db-architect
+    - status: Locked
+    - executor: db-architect
 
 ## 工作日志 (Work Log)
 

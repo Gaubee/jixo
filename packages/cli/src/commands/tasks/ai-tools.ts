@@ -113,6 +113,14 @@ export const tools = {
                 return {type: "success"};
               },
             }),
+            jixo_task_exit: tool({
+              description: "Exit the task.",
+              parameters: z.object({reason: z.string()}),
+              execute: async ({reason}) => {
+                ai_task.exit(reason);
+                return {type: "success"};
+              },
+            }),
           };
         })(),
       };

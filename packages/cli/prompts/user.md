@@ -1,7 +1,7 @@
 <CONTEXT_DATA>
 <ENVIRONMENT>
 
-- **Executor_Identity**: `{{task.currentExecutor}}`
+- **Executor_Identity**: `{{task.executor}}`
 - **Executor_Name**: `{{task.name}}`
 - **Current_Tasl_Max_Turn_Quota**: `{{task.maxTurns}}`
 

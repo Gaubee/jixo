@@ -23,6 +23,9 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     Readonly<{
       name: string;
       filepath: string;
+      exited: boolean;
+      exitReason: string;
+      exit: (reason: string) => void;
 
       cwd: string;
       dirs: string[];
@@ -30,7 +33,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
       model: string;
       startTime: string;
       maxTurns: number;
-      currentExecutor: string;
+      executor: string;
       allExecutors: string[];
 
       log: Readonly<{
@@ -111,7 +114,19 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     };
     reloadLog();
     const startTime = new Date().toISOString();
-    const currentExecutor = `${task_name}-${crypto.randomUUID()}`;
+    const executor = `${task_name}-${crypto.randomUUID()}`;
+
+    const task_process = {
+      exited: false,
+      reason: "",
+      exit(reason: string) {
+        if (task_process.exited) {
+          return;
+        }
+        task_process.exited = true;
+        task_process.reason = reason;
+      },
+    };
 
     tasks.push({
       ...ai_task,
@@ -125,14 +140,24 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
         })
         .otherwise(() => []),
       maxTurns: 40,
-      currentExecutor: currentExecutor,
-      allExecutors: [currentExecutor],
+      executor: executor,
+      allExecutors: [executor],
       model: match(z.string().safeParse(ai_task.data.model))
         .with({success: true, data: P.select()}, (model) => model)
         .otherwise(() => ""),
       startTime: startTime,
       reloadLog: reloadLog,
       log: log,
+
+      get exited() {
+        return task_process.exited;
+      },
+      get exitReason() {
+        return task_process.reason;
+      },
+      exit(reason) {
+        task_process.exit(reason);
+      },
     });
   };
 

@@ -19,21 +19,22 @@ export const run = async (
   const cwd = normalizeFilePath(_cwd);
   const config = await loadConfig(cwd);
 
+  const nameMatcher = options.nameFilter.length ? new Ignore(options.nameFilter, cwd) : {isMatch: () => true};
+  const dirMatcher = options.dirFilter.length ? new Ignore(options.dirFilter, cwd) : {isMatch: () => true};
+  const cwdIgnoreFilepath = path.join(cwd, ".gitignore");
+  const ignore = [".git"];
+  if (fs.existsSync(cwdIgnoreFilepath)) {
+    ignore.push(...fs.readFileSync(cwdIgnoreFilepath, "utf-8").split("\n"));
+  }
+  const exitedTasks = new Set<string>();
+
   let {force = false} = options;
   const {loopTimes: MAX_LOOP_TIMES = Infinity} = options;
   let currentTimes = 1;
   let retryTimes = 0;
   const MAX_RETRY_TIMES = 3;
-
   while (currentTimes <= MAX_LOOP_TIMES) {
     const ai_tasks = resolveAiTasks(cwd, config.tasks);
-    const nameMatcher = options.nameFilter.length ? new Ignore(options.nameFilter, cwd) : {isMatch: () => true};
-    const dirMatcher = options.dirFilter.length ? new Ignore(options.dirFilter, cwd) : {isMatch: () => true};
-    const cwdIgnoreFilepath = path.join(cwd, ".gitignore");
-    const ignore = [".git"];
-    if (fs.existsSync(cwdIgnoreFilepath)) {
-      ignore.push(...fs.readFileSync(cwdIgnoreFilepath, "utf-8").split("\n"));
-    }
 
     const allFiles = [...walkFiles(cwd, {ignore})];
     let allDone = true;
@@ -45,6 +46,9 @@ export const run = async (
           if (ai_task.log.preProgress >= 1) {
             continue;
           }
+        }
+        if (exitedTasks.has(ai_task.name)) {
+          continue;
         }
 
         const {dirs: task_dirs} = ai_task;
@@ -79,6 +83,10 @@ export const run = async (
         /// 只要有一个任务执行了，那么allDone就要标记成false，进入下一次循环来判断
         allDone = false;
         await runAiTask(ai_task, task_allFiles, task_changedFiles);
+
+        if (ai_task.exited) {
+          exitedTasks.add(ai_task.name);
+        }
       }
     } catch {
       // 遇到异常，那么重试

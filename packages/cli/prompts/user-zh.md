@@ -1,7 +1,7 @@
 <CONTEXT_DATA>
 <ENVIRONMENT>
 
-- **执行者身份 (Executor_Identity)**: `{{task.currentExecutor}}`
+- **执行者身份 (Executor_Identity)**: `{{task.executor}}`
 - **执行者名称 (Executor_Name)**: `{{task.name}}`
 - **本任务最大请求配额 (Current_Tasl_Max_Turn_Quota)**: `{{task.maxTurns}}`
 
