@@ -6,7 +6,7 @@ import ms from "ms";
 import os from "node:os";
 import {match, P} from "ts-pattern";
 import {safeEnv} from "../../env.js";
-import {handleRetryError} from "../../helper/ai-retry-error.js";
+import {handleError} from "../../helper/handle-ai-error.js";
 import {getAllPromptConfigs, getAllSkillMap as getAllSkillNavMap} from "../../helper/prompts-loader.js";
 import type {AiTask} from "../../helper/resolve-ai-tasks.js";
 import {tools} from "./ai-tools.js";
@@ -66,6 +66,14 @@ const getModel = (model?: string) => {
     });
 };
 export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: FileEntry[], changedFilesSet: Record<string, FileEntry[]>) => {
+  const availableTools: ToolSet = {
+    ...(await tools.fileSystem(ai_task.cwd)),
+    // ...(await tools.memory(path.join(ai_task.cwd, `.jixo/${ai_task.name}.memory.json`))),
+    // ...(await tools.sequentialThinking()),
+    ...(await tools.jixo(ai_task)),
+    ...(await tools.git(ai_task.cwd)),
+  };
+
   const loading = spinner(`Initializing AI task: ${cyan(ai_task.name)}...`);
 
   loading.prefixText = "⏳ ";
@@ -86,6 +94,7 @@ export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: Fi
   try {
     await _runAiTask(
       ai_task,
+      availableTools,
       allFiles,
       changedFilesSet,
       {
@@ -114,6 +123,7 @@ export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: Fi
 
 const _runAiTask = async (
   ai_task: AiTask,
+  availableTools: ToolSet,
   allFiles: FileEntry[],
   changedFilesSet: Record<string, FileEntry[]>,
   loading: Pick<Spinner, "prefixText" | "text">,
@@ -124,13 +134,6 @@ const _runAiTask = async (
   },
 ) => {
   const model = getModel(ai_task.model);
-  const availableTools: ToolSet = {
-    ...(await tools.fileSystem(ai_task.cwd)),
-    // ...(await tools.memory(path.join(ai_task.cwd, `.jixo/${ai_task.name}.memory.json`))),
-    // ...(await tools.sequentialThinking()),
-    ...(await tools.jixo(ai_task)),
-    ...(await tools.git(ai_task.cwd)),
-  };
 
   const initialMessages: ModelMessage[] = [];
   const maxTurns = 40; // Safeguard against infinite loops
@@ -216,6 +219,7 @@ const _runAiTask = async (
       messages: currentMessages,
       tools: availableTools,
       toolChoice: "auto", // Changed to auto for more flexibility
+      onError: () => {},
     });
 
     let fullReasoningText = "";
@@ -233,6 +237,7 @@ const _runAiTask = async (
       ERROR: "ERROR",
     } as const;
     for await (const part of result.fullStream) {
+      debugger;
       if (firstStreamPart) {
         firstStreamPart = false;
         loading.text = ""; // Clear initial connecting/processing message
@@ -266,7 +271,8 @@ const _runAiTask = async (
         .with({type: "error"}, async (errorPart) => {
           loading.prefixText = endInfo.prefixText = "❌ ";
           loading.text = endInfo.text = red(`${errorPart.error}`);
-          await handleRetryError(errorPart.error, loading);
+          const _handled = await handleError(errorPart.error, loading);
+
           return LOOP_SIGNALS.BREAK; // Stop processing on error
         })
         .with({type: "reasoning"}, (reasoningPart) => {
