@@ -1,16 +1,14 @@
 ---
 model: gemini-2.0-flash
-dirs:
-  - packages/core
-  - packages/cli
-  - packages/webui
+-model: deepseek-chat
 ---
 
 你是一个软件工程师，帮我完成jixo的重构开发工作
 
-最终目标：将目前的 cli 这个包拆分成 core + cli + webui 三个包
+最终目标：将目前的 cli 这个包的代码拆分成 core + cli2，然后再 core 基础上，实现 webui 这个包。
+注意，原本的cli不作任何修改，只是复制其中的代码到 core+cli2 中。
 
-1.  core 是用来让 cli/webui 共享代码的
+1.  core 是用来让 cli2/webui 共享代码的
 2.  webui 这个包是一个后端项目
     1. 我建议用 react-server 相关的技术来构建
     1. 应该尽可能规划组件化的开发来减少复杂度。同时我建议用 shadcn ui，配合tailwindcss来做前端开发。
@@ -18,14 +16,14 @@ dirs:
        1. 在 `/configtion` 页面下，配置 `.jixo.env` 的文件
        1. 可以在 `/tasks` 页面下，看到所有的任务，并且可以启动它、暂停它。
        1. `/doctor` 页面应该和和 `jixo doctor` 命令一样，能看到检测报告，并且提供了一些建议帮助。
-          > 我目前为 doctor 的底层提供了 json 的输出，但为了更好的一致性，我们在做 doctor/config.ts 配置的时候，应该提供 markdown 格式的支持。这样 webui 和 cli 在基于 config.ts 的配置做输出时，可以使用markdown格式标准做渲染。
+          > 我目前为 doctor 的底层提供了 json 的输出，但为了更好的一致性，我们在做 doctor/config.ts 配置的时候，应该提供 markdown 格式的支持。这样 webui 和 cli2 在基于 config.ts 的配置做输出时，可以使用markdown格式标准做渲染。
     1. 我们可以进入到 `/tasks/:task_name` 页面中，看到这个任务更加详细的信息。可以控制任务，同时可以看到这些任务的输出。
        1. 为了能做到更加友好的任务输出，我们可能需要构建一些针对视觉化的组件，从而和cli共享日志展示的，还有一些状态展示。
        1. 为了能做到暂停与恢复功能，我们可能得将一些原本使用内存的状态持久化来管理，nodejs内置了 `node:sqlite` 模块，我建议直接用它，或者用更加先进的封装比如`drizzle`。
     1. 当然也可以添加新的任务 `/tasks/new`
        1. 在这个页面中，提供了一些输入框来引导用户生成提示词，我们可以内置一些常见的任务模板，让用户根据模板规则来填入提示词，然后可以基于我们内置的提示词，来优化用户输入的提示词，用户可以在这个页面上微调优化它的提示词，直到满意为止。
        1. 这样编辑页面同样也可以用于 `/tasks/:task_name/edit` 的编辑
-3.  cli 需要添加一个 `webui` 的命令，用来将 @jixo/webui 这个后端项目启动起来
+3.  cli2 需要添加一个 `webui` 的命令，用来将 @jixo/webui 这个后端项目启动起来
     1. 可以自定义端口或者域 `--port | -P`(默认是7180，看着像JIXO这个英文，方便记忆，哈哈) 、`--host | -H`(默认是 0.0.0.0，局域网也可以访问)
     2. 可以用 `--open | -O` 来打开浏览器进行访问，同时也要打印出可用于访问的链接
     3. `--dir | -D` 指定目录，同 `run --dir` 的参数含义
