@@ -28,9 +28,9 @@ const gen_prompt = async (input: string, output: string, once: boolean) => {
   const inputContent = getFileState(input, once).get();
   const ouputContent = inputContent
     ///
-    .replace(/@#([\w\.\-]+\.md)/g, (_, filename) => {
+    .replace(/@#([\w\.\-\/]+)/g, (_, filepath) => {
       try {
-        return "````md\n" + getFileState(rootResolver("packages/cli/prompts", filename), once).get() + "\n````";
+        return "````" + path.parse(filepath).ext.slice(1) + "\n" + getFileState(rootResolver(filepath), once).get() + "\n````";
       } catch (e) {
         return _;
       }
