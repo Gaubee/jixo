@@ -3,7 +3,7 @@
 
 - **Executor_Identity**: `{{task.executor}}`
 - **Executor_Name**: `{{task.name}}`
-- **Current_Task_Max_Turn_Quota**: `{{task.maxTurns}}`
+- **Current_Task_Max_Turn_Quota**: `{{task.maxSteps}}`
 - **Task_Start_Time**: `{{task.startTime}}`
 
 </ENVIRONMENT>
@@ -54,5 +54,5 @@
 </INPUT_FILES>
 
 <IMPERATIVE>
-Your sole task is to execute one turn according to the `JIXO_EXECUTION_PROTOCOL` defined in your system prompt, using the data provided above. Begin `PROTOCOL 0` now.
+Your sole task is to execute one step according to the `JIXO_EXECUTION_PROTOCOL` defined in your system prompt, using the data provided above. Begin `PROTOCOL 0` now.
 </IMPERATIVE>

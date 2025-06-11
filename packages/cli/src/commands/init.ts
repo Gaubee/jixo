@@ -23,6 +23,9 @@ export const init = (dir: string) => {
         },
       );
     }
+    /// .jixo/.gitignore
+    const gitignoreFilepath = path.join(jixoDirname, ".gitignore");
+    addRulesToGitIgnore(gitignoreFilepath, ["*.log.jsonl"]);
   }
   /// jixo.config.json
   {
@@ -49,16 +52,20 @@ export const init = (dir: string) => {
   /// .gitignore
   {
     const gitignoreFilepath = path.join(dir, ".gitignore");
-    const gitignoreLines = (fs.existsSync(gitignoreFilepath) ? fs.readFileSync(gitignoreFilepath, "utf-8") : "").split(/\n+/);
-    let changed = false;
-    for (const line of ["*.memory.json", "memory.json", ".jixo.env"]) {
-      if (!gitignoreLines.includes(line)) {
-        gitignoreLines.unshift(line);
-        changed = true;
-      }
+    addRulesToGitIgnore(gitignoreFilepath, ["*.memory.json", "memory.json", ".jixo.env"]);
+  }
+};
+
+const addRulesToGitIgnore = (gitignoreFilepath: string, rules: string[]) => {
+  const gitignoreLines = (fs.existsSync(gitignoreFilepath) ? fs.readFileSync(gitignoreFilepath, "utf-8") : "").split(/\n+/);
+  let changed = false;
+  for (const line of rules) {
+    if (!gitignoreLines.includes(line)) {
+      gitignoreLines.unshift(line);
+      changed = true;
     }
-    if (changed) {
-      fs.writeFileSync(gitignoreFilepath, gitignoreLines.join("\n"));
-    }
+  }
+  if (changed) {
+    fs.writeFileSync(gitignoreFilepath, gitignoreLines.join("\n"));
   }
 };

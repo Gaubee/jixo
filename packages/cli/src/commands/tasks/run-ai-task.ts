@@ -3,7 +3,9 @@ import {func_catch} from "@gaubee/util";
 import {AISDKError, streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart, type ToolSet} from "ai";
 import createDebug from "debug";
 import ms from "ms";
+import {createWriteStream} from "node:fs";
 import os from "node:os";
+import path from "node:path";
 import {match, P} from "ts-pattern";
 import {safeEnv} from "../../env.js";
 import {handleError} from "../../helper/handle-ai-error.js";
@@ -74,6 +76,15 @@ export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: Fi
     ...(await tools.git(ai_task.cwd)),
   };
 
+  const json_line_log_file_stream = createWriteStream(path.join(ai_task.cwd, ".jixo", `${ai_task.executor}.${loopTimes.toString().padStart(2, "0")}.jsonl`));
+  const __writeJsonLineLog = (...lineDatas: any[]) => {
+    for (const lineData of lineDatas) {
+      try {
+        json_line_log_file_stream.write(JSON.stringify(lineData) + "\n");
+      } catch {}
+    }
+  };
+
   const loading = spinner(`Initializing AI task: ${cyan(ai_task.name)}...`);
 
   loading.prefixText = "⏳ ";
@@ -113,11 +124,13 @@ export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: Fi
         },
       },
       endInfo,
+      __writeJsonLineLog,
     );
   } finally {
     // Fallback spinner stop if loop exits unexpectedly
     clearInterval(ti);
     loading.stopAndPersist(endInfo);
+    json_line_log_file_stream.close();
   }
 };
 
@@ -132,13 +145,15 @@ const _runAiTask = async (
     text: string;
     readonly suffixText: string;
   },
+  __writeJsonLineLog: (...lineDatas: any[]) => void,
 ) => {
   const model = getModel(ai_task.model);
 
   const initialMessages: ModelMessage[] = [];
-  const maxTurns = 40; // Safeguard against infinite loops
+  const maxSteps = 40; // Safeguard against infinite loops
 
   const promptConfigs = getAllPromptConfigs();
+
   for (const role of ["system", "user"] as const) {
     const promptConfig = promptConfigs[role];
 
@@ -179,7 +194,7 @@ const _runAiTask = async (
           },
         }),
       )
-      .replaceAll("{{maxTurns}}", () => `${maxTurns}`)
+      .replaceAll("{{maxSteps}}", () => `${maxSteps}`)
       .replaceAll(
         "{{changedFiles}}",
         YAML.stringify(
@@ -204,15 +219,19 @@ const _runAiTask = async (
 
   const currentMessages: ModelMessage[] = [...initialMessages];
 
-  loop: for (let turn = 0; turn < maxTurns; turn++) {
-    if (turn === 0) {
+  __writeJsonLineLog(...currentMessages);
+
+  loop: for (let step = 0; step < maxSteps; step++) {
+    if (step === 0) {
       loading.text = `Connecting To ${model.provider}...`;
     } else {
-      loading.text = `Processing turn ${turn + 1}...`;
-      currentMessages.push({
+      loading.text = `Processing step ${step + 1}...`;
+      const userStepMessage: ModelMessage = {
         role: "user",
-        content: `Turns: ${turn}/${maxTurns}`,
-      });
+        content: `Steps: ${step}/${maxSteps}`,
+      };
+      currentMessages.push(userStepMessage);
+      __writeJsonLineLog(userStepMessage);
     }
     const result = await streamText({
       model: model,
@@ -237,6 +256,8 @@ const _runAiTask = async (
       ERROR: "ERROR",
     } as const;
     for await (const part of result.fullStream) {
+      __writeJsonLineLog(part);
+
       if (firstStreamPart) {
         firstStreamPart = false;
         loading.text = ""; // Clear initial connecting/processing message
@@ -271,9 +292,10 @@ const _runAiTask = async (
         .with({type: "error"}, async (errorPart) => {
           loading.prefixText = endInfo.prefixText = "❌ ";
           loading.text = endInfo.text = red(`${errorPart.error}`);
-          const _handled = await handleError(errorPart.error, loading);
-
-          return LOOP_SIGNALS.BREAK; // Stop processing on error
+          const handled = await handleError(errorPart.error, loading);
+          if (!handled) {
+            return LOOP_SIGNALS.BREAK; // Stop processing on error
+          }
         })
         .with({type: "reasoning"}, (reasoningPart) => {
           loading.prefixText = "🤔 ";
@@ -315,8 +337,9 @@ const _runAiTask = async (
         .with({type: "start"}, (p) => log("\nQAQ start: %y", p))
         .with({type: "finish"}, async (finishPart) => {
           log("\nQAQ finish: %y", finishPart);
-          // Add the assistant's message from this turn to the history
+          // Add the assistant's message from this step to the history
           currentMessages.push(_currentAssistantMessage);
+          __writeJsonLineLog(_currentAssistantMessage);
 
           if (finishPart.finishReason === "stop" || finishPart.finishReason === "length") {
             loading.prefixText = endInfo.prefixText = "✅ ";
@@ -377,7 +400,8 @@ const _runAiTask = async (
               }
             }
             currentMessages.push(...toolResultMessages);
-            // Loop continues for the next turn
+            __writeJsonLineLog(...toolResultMessages);
+            // Loop continues for the next step
           } else {
             // Other finish reasons, potentially an error or unexpected state
             loading.prefixText = endInfo.prefixText = "🛑 ";
@@ -397,9 +421,9 @@ const _runAiTask = async (
       }
     }
     // If the stream finishes without a 'finish' part (e.g. error thrown inside), this loop might exit. Ensure spinner stops.
-    if (turn === maxTurns - 1) {
+    if (step === maxSteps - 1) {
       loading.prefixText = endInfo.prefixText = "🚧 ";
-      loading.text = endInfo.text = yellow(`${cyan(`[${ai_task.name}]`)} Max interaction turns reached.`);
+      loading.text = endInfo.text = yellow(`${cyan(`[${ai_task.name}]`)} Max interaction steps reached.`);
       break;
     }
   }

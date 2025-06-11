@@ -9,7 +9,7 @@ const promptsDir = rootResolver("./prompts");
 const writePromptsJson = () => {
   const prompts_json: any = {};
   for (const mdfile of walkFiles(promptsDir, {
-    matchFile: (entry) => entry.name.endsWith(".md"),
+    matchFile: (entry) => entry.name.endsWith(".md") && !entry.name.endsWith("-zh.md"),
   })) {
     prompts_json[mdfile.name.replace(".md", "")] = defu(obj_pick(mdfile.readMarkdown(), "content", "data"), {data: {parent: []}});
   }

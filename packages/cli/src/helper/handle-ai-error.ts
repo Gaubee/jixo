@@ -33,7 +33,7 @@ const handleAPICallError = async (error: unknown, loading: Loading) => {
   }
   try {
     if (error.isRetryable) {
-      const safeData = geminiErrorSchema.safeParse(error.data);
+      const safeData = geminiErrorSchema.safeParse(JSON.parse(error.responseBody!));
       if (!safeData.success) {
         throw safeData.error;
       }

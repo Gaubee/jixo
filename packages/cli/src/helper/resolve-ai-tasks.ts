@@ -3,9 +3,12 @@ import {str_trim_indent} from "@gaubee/util";
 import fs from "node:fs";
 import path from "node:path";
 import {match, P} from "ts-pattern";
+import {uuidv7} from "uuidv7";
 import z from "zod";
 import {type JixoConfig} from "../config.js";
 import {parseProgress} from "./parse-progress.js";
+
+const process_executor_id = uuidv7();
 
 /**
  * 将 config.tasks 字段转化成具体的 ai-tasks 信息
@@ -32,7 +35,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
       agents: string[];
       model: string;
       startTime: string;
-      maxTurns: number;
+      maxSteps: number;
       executor: string;
       allExecutors: string[];
 
@@ -114,7 +117,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     };
     reloadLog();
     const startTime = new Date().toISOString();
-    const executor = `${task_name}-${crypto.randomUUID()}`;
+    const executor = `${task_name}-${process_executor_id}`;
 
     const task_process = {
       exited: false,
@@ -139,7 +142,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
           return Array.isArray(agents) ? agents : agents.split(/\s+/);
         })
         .otherwise(() => []),
-      maxTurns: 40,
+      maxSteps: 40,
       executor: executor,
       allExecutors: [executor],
       model: match(z.string().safeParse(ai_task.data.model))
