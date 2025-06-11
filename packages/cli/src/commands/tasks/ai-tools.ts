@@ -125,9 +125,12 @@ export const tools = {
             }),
             jixo_task_exit: tool({
               description: "Exit the task.",
-              parameters: z.object({reason: z.string()}),
-              execute: async ({reason}) => {
-                ai_task.exit(reason);
+              parameters: z.object({
+                code: z.number({description: "Exit code: 0 is Success; 1 is Error; 2 is No Tasks"}),
+                reason: z.string({description: "Exit reasons that provide human-readable information"}),
+              }),
+              execute: async ({code, reason}) => {
+                ai_task.exit(code, reason);
                 return {type: "success"};
               },
             }),

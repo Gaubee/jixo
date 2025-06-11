@@ -26,9 +26,9 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     Readonly<{
       name: string;
       filepath: string;
-      exited: boolean;
+      exitCode: number | null;
       exitReason: string;
-      exit: (reason: string) => void;
+      exit: (code: number, reason: string) => void;
 
       cwd: string;
       dirs: string[];
@@ -37,7 +37,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
       startTime: string;
       maxSteps: number;
       executor: string;
-      allExecutors: string[];
+      otherExecutors: string[];
 
       log: Readonly<{
         name: string;
@@ -120,13 +120,13 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     const executor = `${task_name}-${process_executor_id}`;
 
     const task_process = {
-      exited: false,
+      code: null as number | null,
       reason: "",
-      exit(reason: string) {
-        if (task_process.exited) {
+      exit(code: number, reason: string) {
+        if (task_process.code) {
           return;
         }
-        task_process.exited = true;
+        task_process.code = code;
         task_process.reason = reason;
       },
     };
@@ -144,7 +144,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
         .otherwise(() => []),
       maxSteps: 40,
       executor: executor,
-      allExecutors: [executor],
+      otherExecutors: [],
       model: match(z.string().safeParse(ai_task.data.model))
         .with({success: true, data: P.select()}, (model) => model)
         .otherwise(() => ""),
@@ -152,14 +152,14 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
       reloadLog: reloadLog,
       log: log,
 
-      get exited() {
-        return task_process.exited;
+      get exitCode() {
+        return task_process.code;
       },
       get exitReason() {
         return task_process.reason;
       },
-      exit(reason) {
-        task_process.exit(reason);
+      exit(code, reason) {
+        task_process.exit(code, reason);
       },
     });
   };

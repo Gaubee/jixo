@@ -10,9 +10,9 @@
 
 <ACTIVE_SESSION_STATE>
 
-- **Active_Executor_List**:
+- **Other_Executor_List**:
   ```yaml
-  {{task.allExecutors}}
+  {{task.otherExecutors}}
   ```
 
 </ACTIVE_SESSION_STATE>

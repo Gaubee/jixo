@@ -84,7 +84,7 @@ export const run = async (
         allDone = false;
         await runAiTask(ai_task, currentTimes, task_allFiles, task_changedFiles);
 
-        if (ai_task.exited) {
+        if (ai_task.exitCode != null) {
           exitedTasks.add(ai_task.name);
         }
       }
