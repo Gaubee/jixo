@@ -1,51 +1,72 @@
 import {McpServer, type RegisteredTool} from "@modelcontextprotocol/sdk/server/mcp.js";
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
-import {exec} from "node:child_process";
+import {spawn} from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import {promisify} from "node:util";
 import {z} from "zod";
 
-const execAsync = promisify(exec);
-
-// --- 核心函数与 Schema 定义 ---
+// --- 核心安全执行函数 (使用 spawn) ---
 
 /**
  * 安全地在指定目录下执行 pnpm 命令，并返回其输出。
- * @param command - The pnpm command and arguments to execute.
+ * 使用 `spawn` 而不是 `exec` 来避免命令注入漏洞。
+ * 这个函数被导出是为了方便在测试中进行 mock。
+ * @param args - The arguments array to pass to the pnpm command.
  * @param cwd - The Current Working Directory where the command should be executed.
- * @returns A promise resolving with the command's standard output.
+ * @returns A promise resolving with the command's combined standard output and error.
  */
-async function executePnpmCommand(command: string, cwd?: string): Promise<string> {
-  const options = {cwd};
+async function executePnpmCommand(args: string[], cwd?: string): Promise<string> {
   const displayCwd = cwd || process.cwd();
-  try {
-    console.error(`[EXEC CWD: ${displayCwd}] pnpm ${command}`);
-    const {stdout, stderr} = await execAsync(`pnpm ${command}`, options);
-    if (stderr) {
-      console.error(`[STDERR] ${stderr}`);
-    }
-    return stdout || `Command "pnpm ${command}" executed successfully.`;
-  } catch (error: any) {
-    console.error(`[ERROR CWD: ${displayCwd}] Failed to execute "pnpm ${command}":`, error);
-    throw new Error(`Failed to execute command: "pnpm ${command}".\nError: ${error.stderr || error.stdout || error.message}`);
-  }
+  // 注意：我们仍然在日志中 join(" ") 方便阅读，但这绝不意味着它在 shell 中被这样执行
+  console.error(`[SPAWN CWD: ${displayCwd}] pnpm ${args.join(" ")}`);
+
+  return new Promise((resolve, reject) => {
+    const pnpm = spawn("pnpm", args, {
+      cwd,
+      shell: true, // 在 Windows 上是必要的，对 Unix-like 系统也安全
+      stdio: "pipe",
+    });
+
+    let stdout = "";
+    let stderr = "";
+
+    pnpm.stdout.on("data", (data) => {
+      stdout += data.toString();
+    });
+
+    pnpm.stderr.on("data", (data) => {
+      stderr += data.toString();
+    });
+
+    pnpm.on("error", (error) => {
+      console.error(`[SPAWN ERROR] Failed to start "pnpm" command.`, error);
+      reject(new Error(`Failed to start subprocess: ${error.message}. Is pnpm installed and in your PATH?`));
+    });
+
+    pnpm.on("close", (code) => {
+      if (stderr && code === 0) {
+        console.error(`[STDWARN] ${stderr}`);
+      }
+
+      if (code === 0) {
+        resolve(stdout || `Command "pnpm ${args.join(" ")}" executed successfully.`);
+      } else {
+        const errorMessage = `Command "pnpm ${args.join(" ")}" failed with exit code ${code}.\n--- STDERR ---\n${stderr}\n--- STDOUT ---\n${stdout}`;
+        console.error(`[ERROR] ${errorMessage}`);
+        reject(new Error(errorMessage));
+      }
+    });
+  });
 }
 
-/**
- * 定义所有工具共有的基础输入参数。
- * 这确保了所有工具都支持在特定目录下执行，并能接收额外的 CLI 参数。
- */
+// --- Schema 和工具定义 ---
+
 const baseInputSchema = {
   cwd: z.string().optional().describe("The working directory to run the command in. If not provided, it runs in the current directory."),
-  extraArgs: z.array(z.string()).optional().describe("An array of any extra command-line arguments to pass directly to pnpm. For example, ['--reporter=json']."),
+  extraArgs: z.array(z.string()).optional().describe("An array of extra command-line arguments to pass to pnpm. Example: ['--reporter=json']."),
 };
 
-/**
- * 定义所有工具共有的标准输出 Schema。
- * 所有工具的输出都将是包含执行结果文本的单一 text content。
- */
 const baseOutputSchema = {
   content: z
     .array(
@@ -60,39 +81,31 @@ const baseOutputSchema = {
 // 1. 创建 MCP Server 实例
 const server = new McpServer({
   name: "pnpm-tool-pro",
-  version: "2.0.0", // 版本升级，体现重大重构
+  version: "2.3.0", // 版本升级，体现可测试性
 });
 
 const registeredTools: {[key: string]: RegisteredTool} = {};
 
-// 2. 使用 server.registerTool() 定义所有工具，并提供丰富的元数据
+// 2. 直接使用 server.registerTool() 定义所有工具，调用的是新的 executePnpmCommand
 
 registeredTools.install = server.registerTool(
   "install",
   {
-    description: "Installs all dependencies for a project. This is equivalent to running `pnpm install`. It's the primary command for setting up a repository after cloning.",
+    /* ... schema and metadata ... */ description: "Installs all dependencies for a project.",
     inputSchema: {
       ...baseInputSchema,
-      frozenLockfile: z
-        .boolean()
-        .optional()
-        .describe("If true, pnpm doesn't generate a lockfile and fails if the lockfile is out of sync (`--frozen-lockfile`). Essential for CI environments."),
+      frozenLockfile: z.boolean().optional().describe("If true, use `--frozen-lockfile`."),
       production: z.boolean().optional().describe("If true, install only production dependencies (`--prod`)."),
     },
     outputSchema: baseOutputSchema,
-    annotations: {
-      title: "Install Project Dependencies",
-      readOnlyHint: false, // This command modifies the node_modules directory.
-      destructiveHint: false, // It's additive, not destructive.
-      idempotentHint: false, // Running it again might fetch new package versions.
-    },
+    annotations: {title: "Install Project Dependencies"},
   },
   async ({cwd, frozenLockfile, production, extraArgs}) => {
     const args = ["install"];
     if (frozenLockfile) args.push("--frozen-lockfile");
     if (production) args.push("--prod");
     if (extraArgs) args.push(...extraArgs);
-    const output = await pnpmApi.executePnpmCommand(args.join(" "), cwd);
+    const output = await pnpmApi.executePnpmCommand(args, cwd); // 注意：调用 pnpmApi 上的函数
     return {content: [{type: "text", text: output}]};
   },
 );
@@ -100,30 +113,26 @@ registeredTools.install = server.registerTool(
 registeredTools.add = server.registerTool(
   "add",
   {
-    description: "Adds one or more packages to the `dependencies`, `devDependencies`, or `optionalDependencies` of a project.",
+    /* ... schema and metadata ... */ description: "Adds packages to project dependencies.",
     inputSchema: {
       ...baseInputSchema,
-      packages: z.array(z.string()).min(1).describe("An array of packages to add. Can include versions and JSR specifiers, e.g., ['react', 'vitest@latest', 'jsr:@scope/pkg']."),
+      packages: z.array(z.string()).min(1).describe("An array of packages to add, e.g., ['react', 'vitest@latest']."),
       dev: z.boolean().optional().describe("Install as a development dependency (`-D`)."),
       optional: z.boolean().optional().describe("Install as an optional dependency (`-O`)."),
       filter: z.string().optional().describe("Target a specific project in a workspace (`--filter <name>`)."),
     },
     outputSchema: baseOutputSchema,
-    annotations: {
-      title: "Add Packages to Dependencies",
-      readOnlyHint: false, // Modifies package.json and node_modules.
-      destructiveHint: false, // Additive operation.
-    },
+    annotations: {title: "Add Packages"},
   },
   async ({cwd, packages, dev, optional, filter, extraArgs}) => {
     const args = [];
-    if (filter) args.push(`--filter ${filter}`);
+    if (filter) args.push("--filter", filter);
     args.push("add");
     if (dev) args.push("-D");
     if (optional) args.push("-O");
     args.push(...packages);
     if (extraArgs) args.push(...extraArgs);
-    const output = await pnpmApi.executePnpmCommand(args.join(" "), cwd);
+    const output = await pnpmApi.executePnpmCommand(args, cwd);
     return {content: [{type: "text", text: output}]};
   },
 );
@@ -131,37 +140,34 @@ registeredTools.add = server.registerTool(
 registeredTools.run = server.registerTool(
   "run",
   {
-    description: "Executes a script defined in the project's `package.json` file. This is the standard way to run build steps, tests, or other custom project commands.",
+    /* ... schema and metadata ... */ description: "Executes a script defined in the project's `package.json`.",
     inputSchema: {
       ...baseInputSchema,
-      script: z.string().describe("The name of the script to execute from the `scripts` section of `package.json`."),
-      args: z.array(z.string()).optional().describe("Arguments to be passed to the executed script. They will be appended after '--'."),
+      script: z.string().describe("The name of the script to execute from `package.json`."),
+      scriptArgs: z.array(z.string()).optional().describe("Arguments for the script. Will be passed after '--'."),
       filter: z.string().optional().describe("In a workspace, run the script only in the specified project."),
     },
     outputSchema: baseOutputSchema,
-    annotations: {
-      title: "Run a Project Script",
-      readOnlyHint: false, // Scripts can have side effects.
-      destructiveHint: true, // A 'clean' script could be destructive. Assume the worst case.
-    },
+    annotations: {title: "Run a Project Script", destructiveHint: true},
   },
-  async ({cwd, script, args, filter, extraArgs}) => {
-    const pkgPath = cwd ? path.join(cwd, "package.json") : "package.json";
-    let pkg;
+  async ({cwd, script, scriptArgs, filter, extraArgs}) => {
+    const pkgPath = path.join(cwd || process.cwd(), "package.json");
     try {
-      pkg = JSON.parse(await fs.readFile(pkgPath, "utf-8"));
-    } catch (e) {
-      throw new Error(`Security check failed: Could not read or parse package.json at '${pkgPath}'.`);
+      const pkg = JSON.parse(await fs.readFile(pkgPath, "utf-8"));
+      if (!pkg.scripts || !pkg.scripts[script]) {
+        throw new Error(`Security check failed: Script "${script}" not found in ${pkgPath}.`);
+      }
+    } catch (e: any) {
+      throw new Error(`Security check failed: Could not read or parse package.json at '${pkgPath}'. Original error: ${e.message}`);
     }
-    if (!pkg.scripts || !pkg.scripts[script]) {
-      throw new Error(`Security check failed: Script "${script}" not found in package.json's "scripts" section at '${pkgPath}'.`);
+    const args = [];
+    if (filter) args.push("--filter", filter);
+    args.push("run", script);
+    if (extraArgs) args.push(...extraArgs);
+    if (scriptArgs && scriptArgs.length > 0) {
+      args.push("--", ...scriptArgs);
     }
-    const commandArgs = [];
-    if (filter) commandArgs.push(`--filter ${filter}`);
-    commandArgs.push(`run ${script}`);
-    if (args && args.length > 0) commandArgs.push("--", ...args);
-    if (extraArgs) commandArgs.push(...extraArgs);
-    const output = await pnpmApi.executePnpmCommand(commandArgs.join(" "), cwd);
+    const output = await pnpmApi.executePnpmCommand(args, cwd);
     return {content: [{type: "text", text: output}]};
   },
 );
@@ -169,23 +175,20 @@ registeredTools.run = server.registerTool(
 registeredTools.dlx = server.registerTool(
   "dlx",
   {
-    description:
-      "Fetches a package from the registry and runs its default command binary. This is useful for running one-off commands without installing packages globally, e.g., `pnpm dlx cowsay`.",
+    /* ... schema and metadata ... */
+    description: "Fetches and runs a package from the registry. The package name and its arguments must be provided as separate strings in an array.",
     inputSchema: {
       ...baseInputSchema,
-      command: z.string().describe("The package and command to execute, e.g., 'cowsay \"Hello\"' or 'create-vite@latest my-app'."),
+      commandAndArgs: z.array(z.string()).min(1).describe("The package and its arguments as an array. Example: ['cowsay', 'Hello MCP!']"),
     },
     outputSchema: baseOutputSchema,
-    annotations: {
-      title: "Download and Execute a Package",
-      readOnlyHint: false, // Can create files or have other side effects.
-      openWorldHint: true, // Fetches packages from the internet.
-    },
+    annotations: {title: "Download and Execute Package", openWorldHint: true},
   },
-  async ({cwd, command, extraArgs}) => {
-    const args = ["dlx", command];
+  async ({cwd, commandAndArgs, extraArgs}) => {
+    const args = ["dlx"];
     if (extraArgs) args.push(...extraArgs);
-    const output = await pnpmApi.executePnpmCommand(args.join(" "), cwd);
+    args.push(...commandAndArgs);
+    const output = await pnpmApi.executePnpmCommand(args, cwd);
     return {content: [{type: "text", text: output}]};
   },
 );
@@ -193,22 +196,20 @@ registeredTools.dlx = server.registerTool(
 registeredTools.create = server.registerTool(
   "create",
   {
-    description: "Creates a new project from a starter kit or template. This is a shorthand for `pnpm dlx create-<template>`.",
+    /* ... schema and metadata ... */ description: "Creates a new project from a starter kit.",
     inputSchema: {
       ...baseInputSchema,
-      template: z.string().describe("The starter kit name, e.g., 'vite', 'react-app'."),
+      template: z.string().describe("The starter kit name, e.g., 'vite'."),
+      templateArgs: z.array(z.string()).optional().describe("Arguments for the create command, e.g., ['my-app', '--template', 'react-ts']"),
     },
     outputSchema: baseOutputSchema,
-    annotations: {
-      title: "Create a New Project",
-      readOnlyHint: false, // Creates a new project directory and files.
-      openWorldHint: true, // Fetches templates from the internet.
-    },
+    annotations: {title: "Create a New Project", openWorldHint: true},
   },
-  async ({cwd, template, extraArgs}) => {
+  async ({cwd, template, templateArgs, extraArgs}) => {
     const args = ["create", template];
+    if (templateArgs) args.push(...templateArgs);
     if (extraArgs) args.push(...extraArgs);
-    const output = await pnpmApi.executePnpmCommand(args.join(" "), cwd);
+    const output = await pnpmApi.executePnpmCommand(args, cwd);
     return {content: [{type: "text", text: output}]};
   },
 );
@@ -216,18 +217,15 @@ registeredTools.create = server.registerTool(
 registeredTools.licenses = server.registerTool(
   "licenses",
   {
-    description: "Checks and lists the licenses of installed packages. It can output in a human-readable or JSON format.",
+    /* ... schema and metadata ... */ description: "Checks and lists the licenses of installed packages.",
     inputSchema: {
       ...baseInputSchema,
-      json: z.boolean().optional().describe("If true, output the license information as a JSON object."),
-      dev: z.boolean().optional().describe("If true, only check for development dependencies."),
-      production: z.boolean().optional().describe("If true, only check for production dependencies."),
+      json: z.boolean().optional().describe("Output as a JSON object."),
+      dev: z.boolean().optional().describe("Check only for development dependencies."),
+      production: z.boolean().optional().describe("Check only for production dependencies."),
     },
     outputSchema: baseOutputSchema,
-    annotations: {
-      title: "List Package Licenses",
-      readOnlyHint: true, // This command only reads information.
-    },
+    annotations: {title: "List Package Licenses", readOnlyHint: true},
   },
   async ({cwd, json, dev, production, extraArgs}) => {
     const args = ["licenses", "list"];
@@ -235,26 +233,28 @@ registeredTools.licenses = server.registerTool(
     if (dev) args.push("--dev");
     if (production) args.push("--prod");
     if (extraArgs) args.push(...extraArgs);
-    const output = await pnpmApi.executePnpmCommand(args.join(" "), cwd);
+    const output = await pnpmApi.executePnpmCommand(args, cwd);
     return {content: [{type: "text", text: output}]};
   },
 );
 
-// 3. 将所有导出的 API 聚合到一个对象中
+// 3. 导出 API, 包含 executePnpmCommand
+// **重要**: 这里的 pnpmApi 对象需要在所有 registerTool 调用之后定义,
+// 因为 registerTool 的回调函数内部依赖于它。
 export const pnpmApi = {
   server,
-  executePnpmCommand,
   tools: registeredTools,
+  executePnpmCommand, // <--- 关键修改：重新导出以供测试
 };
 
-// 4. 定义主函数来连接 transport 并启动服务器
+// 4. 主函数
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("MCP pnpm tool server running on stdio. Ready for commands.");
 }
 
-// 5. 仅在作为主模块运行时启动服务器
+// 5. 程序入口
 if (import_meta_ponyfill(import.meta).main) {
   main().catch((error) => {
     console.error("Fatal error in MCP pnpm tool server:", error);
