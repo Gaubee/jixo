@@ -51,6 +51,14 @@
 ```
 </CONTENT>
 </FILE>
+
+<FILE id="jixo_all_skills">
+<CONTENT>
+```yaml
+{{allSkills}}
+```
+</CONTENT>
+</FILE>
 </INPUT_FILES>
 
 <IMPERATIVE>

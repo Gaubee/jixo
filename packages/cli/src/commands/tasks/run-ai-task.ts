@@ -1,9 +1,9 @@
-import {blue, cyan, FileEntry, gray, green, red, spinner, YAML, yellow, type Spinner} from "@gaubee/nodekit";
+import {blue, cyan, FileEntry, gray, green, red, spinner, YAML, yellow} from "@gaubee/nodekit";
 import {func_catch} from "@gaubee/util";
 import {AISDKError, streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart, type ToolSet} from "ai";
 import createDebug from "debug";
 import ms from "ms";
-import {createWriteStream} from "node:fs";
+import {open} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {match, P} from "ts-pattern";
@@ -11,6 +11,7 @@ import {safeEnv} from "../../env.js";
 import {handleError} from "../../helper/handle-ai-error.js";
 import {getAllPromptConfigs, getAllSkillMap as getAllSkillNavMap} from "../../helper/prompts-loader.js";
 import type {AiTask} from "../../helper/resolve-ai-tasks.js";
+import {AiTaskTui} from "./ai-tasl-tui.js";
 import {tools} from "./ai-tools.js";
 import {providers} from "./model-providers.js";
 
@@ -76,61 +77,29 @@ export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: Fi
     ...(await tools.git(ai_task.cwd)),
   };
 
-  const json_line_log_file_stream = createWriteStream(path.join(ai_task.cwd, ".jixo", `${ai_task.executor}.${loopTimes.toString().padStart(2, "0")}.log.jsonl`));
+  const json_line_log_file_handle = await open(path.join(ai_task.cwd, ".jixo", `${ai_task.executor}.${loopTimes.toString().padStart(2, "0")}.log.jsonl`));
   const __writeJsonLineLog = (...lineDatas: any[]) => {
     for (const lineData of lineDatas) {
       try {
-        json_line_log_file_stream.write(JSON.stringify(lineData) + "\n");
+        json_line_log_file_handle.appendFile(JSON.stringify(lineData) + "\n");
       } catch {}
     }
   };
 
-  const loading = spinner(`Initializing AI task: ${cyan(ai_task.name)}...`);
-
-  loading.prefixText = "⏳ ";
-  loading.start();
-  const endInfo = {
-    prefixText: "",
-    text: "",
-    get suffixText() {
-      return `⏱️  ${gray(ms(new Date().getTime() - new Date(ai_task.startTime).getTime(), {long: true}))}`;
-    },
+  const tui = new AiTaskTui(ai_task, spinner({text: `Initializing AI task: ${cyan(ai_task.name)}...`, prefixText: "⏳ "}));
+  tui.spinner.start();
+  const updateTuiState = () => {
+    tui.setStatus("loop and time", `${green(`[${loopTimes}]`)} ${cyan(`+${ms(Date.now() - new Date(ai_task.startTime).getTime())}`)}`);
   };
-  let prefixText = loading.prefixText;
-  const updatePrefixText = () => {
-    loading.prefixText = `${green(`[${loopTimes}]`)} ${cyan(`+${ms(Date.now() - new Date(ai_task.startTime).getTime())}`)}\n${prefixText}`;
-  };
-  const ti = setInterval(updatePrefixText, 1000);
-  updatePrefixText();
+  const ti = setInterval(updateTuiState, 1000);
+  updateTuiState();
   try {
-    await _runAiTask(
-      ai_task,
-      availableTools,
-      allFiles,
-      changedFilesSet,
-      {
-        get text() {
-          return loading.text;
-        },
-        set text(v) {
-          loading.text = v;
-        },
-        get prefixText() {
-          return prefixText;
-        },
-        set prefixText(v) {
-          prefixText = v;
-          updatePrefixText();
-        },
-      },
-      endInfo,
-      __writeJsonLineLog,
-    );
+    await _runAiTask(ai_task, availableTools, allFiles, changedFilesSet, tui, __writeJsonLineLog);
   } finally {
     // Fallback spinner stop if loop exits unexpectedly
     clearInterval(ti);
-    loading.stopAndPersist(endInfo);
-    json_line_log_file_stream.close();
+    tui.stop();
+    json_line_log_file_handle.close();
   }
 };
 
@@ -139,12 +108,7 @@ const _runAiTask = async (
   availableTools: ToolSet,
   allFiles: FileEntry[],
   changedFilesSet: Record<string, FileEntry[]>,
-  loading: Pick<Spinner, "prefixText" | "text">,
-  endInfo: {
-    prefixText: string;
-    text: string;
-    readonly suffixText: string;
-  },
+  tui: AiTaskTui,
   __writeJsonLineLog: (...lineDatas: any[]) => void,
 ) => {
   const model = getModel(ai_task.model);
@@ -223,9 +187,9 @@ const _runAiTask = async (
 
   loop: for (let step = 0; step < maxSteps; step++) {
     if (step === 0) {
-      loading.text = `Connecting To ${model.provider}...`;
+      tui.setStatus("turns", `Connecting To ${model.provider}...`);
     } else {
-      loading.text = `Processing step ${step + 1}...`;
+      tui.setStatus("turns", `Processing step ${step + 1}/${maxSteps}...`);
       const userStepMessage: ModelMessage = {
         role: "user",
         content: `Steps: ${step}/${maxSteps}`,
@@ -260,25 +224,25 @@ const _runAiTask = async (
 
       if (firstStreamPart) {
         firstStreamPart = false;
-        loading.text = ""; // Clear initial connecting/processing message
+        tui.text = ""; // Clear initial connecting/processing message
       }
 
       const LOOP_SIGNAL = await match(part)
         .with({type: "text"}, (textPart) => {
-          loading.prefixText = "🤖 ";
+          tui.prefixText = "🤖 ";
           let assistantTextPart = assistantMessageContent.findLast((part) => part.type === "text");
           if (assistantTextPart == null) {
             assistantTextPart = {type: "text", text: ""};
             assistantMessageContent.push(assistantTextPart);
           }
           assistantTextPart.text += textPart.text;
-          if (fullText === "") loading.text = "";
+          if (fullText === "") tui.text = "";
           fullText += textPart.text;
-          loading.text = "\n" + fullText.split("\n").slice(-10).join("\n");
+          tui.text = "\n" + fullText.split("\n").slice(-10).join("\n");
         })
         .with({type: "tool-call"}, (callPart) => {
-          loading.prefixText = "🛠️ ";
-          loading.text = "Requesting tool: " + blue(callPart.toolName);
+          tui.prefixText = "🛠️ ";
+          tui.text = "Requesting tool: " + blue(callPart.toolName);
           log("\nQAQ tool-call: %y", callPart);
           requestedToolCalls.push(callPart);
           // Update assistant message to include tool calls
@@ -290,39 +254,39 @@ const _runAiTask = async (
           });
         })
         .with({type: "error"}, async (errorPart) => {
-          loading.prefixText = endInfo.prefixText = "❌ ";
-          loading.text = endInfo.text = red(`${errorPart.error}`);
-          const handled = await handleError(errorPart.error, loading);
+          tui.prefixText = tui.endInfo.prefixText = "❌ ";
+          tui.text = tui.endInfo.text = red(`${errorPart.error}`);
+          const handled = await handleError(errorPart.error, tui);
           if (!handled) {
             return LOOP_SIGNALS.BREAK; // Stop processing on error
           }
         })
         .with({type: "reasoning"}, (reasoningPart) => {
-          loading.prefixText = "🤔 ";
-          if (fullReasoningText === "") loading.text = "";
+          tui.prefixText = "🤔 ";
+          if (fullReasoningText === "") tui.text = "";
           fullReasoningText += reasoningPart.text;
-          loading.text = "\n" + gray(fullReasoningText.split("\n").slice(-3).join("\n"));
+          tui.text = "\n" + gray(fullReasoningText.split("\n").slice(-3).join("\n"));
         })
         // Add other console logs for debugging if needed, but keep them minimal for production
         .with({type: "file"}, (p) => {
-          loading.prefixText = "📃 ";
-          loading.text = p.file.mediaType;
+          tui.prefixText = "📃 ";
+          tui.text = p.file.mediaType;
 
           log("\nQAQ file: %y", p.file);
         })
         .with({type: "source"}, (p) => {
-          loading.prefixText = "🔗 ";
+          tui.prefixText = "🔗 ";
           if (p.sourceType === "url") {
             if (p.title) {
-              loading.text = `[${p.title}](${p.url})`;
+              tui.text = `[${p.title}](${p.url})`;
             } else {
-              loading.text = p.url;
+              tui.text = p.url;
             }
           } else {
             if (p.filename) {
-              loading.text = `[${p.title}](${p.filename})`;
+              tui.text = `[${p.title}](${p.filename})`;
             } else {
-              loading.text = p.title;
+              tui.text = p.title;
             }
           }
 
@@ -333,7 +297,36 @@ const _runAiTask = async (
         .with({type: "tool-call-delta"}, (p) => log("\nQAQ tool-call-delta: %y", p))
         .with({type: "reasoning-part-finish"}, (p) => log("\nQAQ reasoning-part-finish: %y", p))
         .with({type: "start-step"}, (p) => log("\nQAQ start-step: %y", p))
-        .with({type: "finish-step"}, (p) => log("\nQAQ finish-step: %y", p))
+        // --- START: MODIFIED SECTION ---
+        .with({type: "finish-step"}, (p) => {
+          log("\nQAQ finish-step: %y", p);
+          /**
+           * This event marks the end of an intermediate step, not the entire turn.
+           * We handle potential issues here, but the main logic for continuing or
+           * stopping the loop is in the final 'finish' event handler.
+           */
+          return match(p)
+            .with({finishReason: P.union("content-filter", "error")}, (part) => {
+              // A step finishing due to an error or content filter is a serious issue.
+              // Update the TUI to reflect this problem immediately.
+              const reasonText = part.finishReason === "content-filter" ? "Content filter violation" : "Model error";
+              tui.prefixText = tui.endInfo.prefixText = "⚠️ ";
+              tui.text = tui.endInfo.text = red(`Step failed due to ${reasonText}. Will be retry.`);
+              log(red(`Step finished with critical reason: ${part.finishReason}`));
+              return LOOP_SIGNALS.RETURN;
+            })
+            .with({finishReason: P.union("other", "unknown")}, (part) => {
+              // Log unusual finish reasons for debugging purposes.
+              log(yellow(`Step finished with an unusual reason: ${part.finishReason}`));
+            })
+            .otherwise(() => {
+              // This covers 'stop', 'length', and 'tool-calls'. These are normal
+              // reasons for a step to finish. The final 'finish' event will
+              // determine the overall outcome of the turn. No special action is needed here.
+              log(`Step finished with normal reason: ${p.finishReason}. Awaiting end of turn.`);
+            });
+        })
+        // --- END: MODIFIED SECTION ---
         .with({type: "start"}, (p) => log("\nQAQ start: %y", p))
         .with({type: "finish"}, async (finishPart) => {
           log("\nQAQ finish: %y", finishPart);
@@ -342,16 +335,16 @@ const _runAiTask = async (
           __writeJsonLineLog(_currentAssistantMessage);
 
           if (finishPart.finishReason === "stop" || finishPart.finishReason === "length") {
-            loading.prefixText = endInfo.prefixText = "✅ ";
-            loading.text = endInfo.text = green(`${cyan(`[${ai_task.name}]`)} Completed`);
+            tui.prefixText = tui.endInfo.prefixText = "✅ ";
+            tui.text = tui.endInfo.text = green(`${cyan(`[${ai_task.name}]`)} Completed`);
             // Task finished without tool calls or after tool calls that didn't lead to more calls.
             return LOOP_SIGNALS.RETURN; // Exit the outer loop and function
           }
 
           if (finishPart.finishReason === "tool-calls") {
             if (requestedToolCalls.length === 0) {
-              loading.prefixText = endInfo.prefixText = "🚧 ";
-              loading.text = endInfo.text = yellow(`${cyan(`[${ai_task.name}]`)} finished with 'tool-calls' but no tools were requested.`);
+              tui.prefixText = tui.endInfo.prefixText = "🚧 ";
+              tui.text = tui.endInfo.text = yellow(`${cyan(`[${ai_task.name}]`)} finished with 'tool-calls' but no tools were requested.`);
               return LOOP_SIGNALS.RETURN; // Exit, something is off
             }
 
@@ -374,7 +367,7 @@ const _runAiTask = async (
                 });
                 continue;
               }
-              loading.text = `Executing tool: ${toolCall.toolName}...`;
+              tui.text = `Executing tool: ${toolCall.toolName}...`;
               const executionResult = await func_catch(() =>
                 toolToExecute.execute!(toolCall.args, {
                   toolCallId: toolCall.toolCallId,
@@ -394,9 +387,9 @@ const _runAiTask = async (
                 ],
               });
               if (executionResult.success) {
-                loading.text = `Tool ${toolCall.toolName} executed.`;
+                tui.text = `Tool ${toolCall.toolName} executed.`;
               } else {
-                loading.text = `Error executing tool ${toolCall.toolName}.`;
+                tui.text = `Error executing tool ${toolCall.toolName}.`;
               }
             }
             currentMessages.push(...toolResultMessages);
@@ -404,8 +397,8 @@ const _runAiTask = async (
             // Loop continues for the next step
           } else {
             // Other finish reasons, potentially an error or unexpected state
-            loading.prefixText = endInfo.prefixText = "🛑 ";
-            loading.text = endInfo.text = red(`${cyan(`[${ai_task.name}]`)} task finished with unhandled reason: ${finishPart.finishReason}`);
+            tui.prefixText = tui.endInfo.prefixText = "🛑 ";
+            tui.text = tui.endInfo.text = red(`${cyan(`[${ai_task.name}]`)} task finished with unhandled reason: ${finishPart.finishReason}`);
             return LOOP_SIGNALS.ERROR;
           }
         })
@@ -422,8 +415,8 @@ const _runAiTask = async (
     }
     // If the stream finishes without a 'finish' part (e.g. error thrown inside), this loop might exit. Ensure spinner stops.
     if (step === maxSteps - 1) {
-      loading.prefixText = endInfo.prefixText = "🚧 ";
-      loading.text = endInfo.text = yellow(`${cyan(`[${ai_task.name}]`)} Max interaction steps reached.`);
+      tui.prefixText = tui.endInfo.prefixText = "🚧 ";
+      tui.text = tui.endInfo.text = yellow(`${cyan(`[${ai_task.name}]`)} Max interaction steps reached.`);
       break;
     }
   }
