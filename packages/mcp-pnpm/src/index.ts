@@ -6,38 +6,38 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import {z} from "zod";
 
-// --- 核心安全执行函数 (使用 spawn) ---
+// --- 自定义错误类 (保持不变) ---
+// 这个类依然很有用，用于在代码内部传递结构化的 pnpm 错误。
+class PnpmExecutionError extends Error {
+  constructor(
+    message: string,
+    public readonly stdout: string,
+    public readonly stderr: string,
+    public readonly exitCode: number | null,
+  ) {
+    super(message);
+    this.name = "PnpmExecutionError";
+  }
+}
 
-/**
- * 安全地在指定目录下执行 pnpm 命令，并返回其输出。
- * 使用 `spawn` 而不是 `exec` 来避免命令注入漏洞。
- * 这个函数被导出是为了方便在测试中进行 mock。
- * @param args - The arguments array to pass to the pnpm command.
- * @param cwd - The Current Working Directory where the command should be executed.
- * @returns A promise resolving with the command's combined standard output and error.
- */
+// --- 核心安全执行函数 (保持不变) ---
 async function executePnpmCommand(args: string[], cwd?: string): Promise<string> {
   const displayCwd = cwd || process.cwd();
-  // 注意：我们仍然在日志中 join(" ") 方便阅读，但这绝不意味着它在 shell 中被这样执行
   console.error(`[SPAWN CWD: ${displayCwd}] pnpm ${args.join(" ")}`);
 
   return new Promise((resolve, reject) => {
+    // ... (spawn logic remains identical)
     const pnpm = spawn("pnpm", args, {
       cwd,
-      shell: true, // 在 Windows 上是必要的，对 Unix-like 系统也安全
+      shell: true,
       stdio: "pipe",
     });
 
     let stdout = "";
     let stderr = "";
 
-    pnpm.stdout.on("data", (data) => {
-      stdout += data.toString();
-    });
-
-    pnpm.stderr.on("data", (data) => {
-      stderr += data.toString();
-    });
+    pnpm.stdout.on("data", (data) => (stdout += data.toString()));
+    pnpm.stderr.on("data", (data) => (stderr += data.toString()));
 
     pnpm.on("error", (error) => {
       console.error(`[SPAWN ERROR] Failed to start "pnpm" command.`, error);
@@ -52,9 +52,10 @@ async function executePnpmCommand(args: string[], cwd?: string): Promise<string>
       if (code === 0) {
         resolve(stdout || `Command "pnpm ${args.join(" ")}" executed successfully.`);
       } else {
-        const errorMessage = `Command "pnpm ${args.join(" ")}" failed with exit code ${code}.\n--- STDERR ---\n${stderr}\n--- STDOUT ---\n${stdout}`;
-        console.error(`[ERROR] ${errorMessage}`);
-        reject(new Error(errorMessage));
+        const errorMessage = `Command "pnpm ${args.join(" ")}" failed with exit code ${code}.`;
+        console.error(`[ERROR] ${errorMessage}\n--- STDERR ---\n${stderr}\n--- STDOUT ---\n${stdout}`);
+        // Rejecting our custom error instance is still the correct internal mechanism.
+        reject(new PnpmExecutionError(errorMessage, stdout, stderr, code));
       }
     });
   });
@@ -67,194 +68,245 @@ const baseInputSchema = {
   extraArgs: z.array(z.string()).optional().describe("An array of extra command-line arguments to pass to pnpm. Example: ['--reporter=json']."),
 };
 
+// --- 修正点 1: 定义一个类型安全的、更丰富的输出 Schema ---
+// 我们不再尝试向 `content` 中添加自定义类型。
+// 而是利用 `structuredContent` 字段来携带机器可读的错误信息。
+
+// 这是错误信息的结构化 schema
+const errorStructureSchema = z.object({
+  commandFailed: z.literal(true).describe("A flag indicating that the pnpm command did not exit successfully."),
+  exitCode: z.number().nullable().describe("The exit code of the failed command."),
+  stdout: z.string().describe("The standard output from the failed command."),
+  stderr: z.string().describe("The standard error output from the failed command, often containing the most useful error details."),
+});
+
+// 这是所有工具共用的输出 schema
 const baseOutputSchema = {
+  // `content` 只包含标准的 'text' 类型。失败时，它将容纳一个人类可读的错误摘要。
   content: z
     .array(
       z.object({
         type: z.literal("text"),
-        text: z.string().describe("The standard output (stdout) from the executed pnpm command."),
+        text: z.string(),
       }),
     )
-    .describe("The result of the tool call, containing the command's output."),
+    .describe("The result of the tool call, containing the command's standard output on success, or a formatted error message on failure."),
+  // `structuredContent` 是可选的，并且只在命令执行失败时填充。
+  structuredContent: errorStructureSchema
+    .optional()
+    .describe("On command failure, this object contains machine-readable details about the error, such as stdout, stderr, and the exit code."),
 };
 
-// 1. 创建 MCP Server 实例
 const server = new McpServer({
   name: "pnpm-tool-pro",
-  version: "2.3.0", // 版本升级，体现可测试性
+  version: "2.5.0", // 版本升级，体现类型安全和鲁棒性
 });
 
 const registeredTools: {[key: string]: RegisteredTool} = {};
 
-// 2. 直接使用 server.registerTool() 定义所有工具，调用的是新的 executePnpmCommand
+// --- 修正点 2: 更新所有工具处理器以符合新的 Schema ---
+// 每个 catch 块现在都会返回一个合法的 ToolOutput 对象，
+// 其中 `content` 包含文本错误，`structuredContent` 包含详细信息。
 
 registeredTools.install = server.registerTool(
-  "install",
+  "pnpm_install",
   {
-    /* ... schema and metadata ... */ description: "Installs all dependencies for a project.",
-    inputSchema: {
-      ...baseInputSchema,
-      frozenLockfile: z.boolean().optional().describe("If true, use `--frozen-lockfile`."),
-      production: z.boolean().optional().describe("If true, install only production dependencies (`--prod`)."),
-    },
+    description: "Installs all dependencies for a project.",
+    inputSchema: {...baseInputSchema, frozenLockfile: z.boolean().optional(), production: z.boolean().optional()},
     outputSchema: baseOutputSchema,
     annotations: {title: "Install Project Dependencies"},
   },
   async ({cwd, frozenLockfile, production, extraArgs}) => {
-    const args = ["install"];
-    if (frozenLockfile) args.push("--frozen-lockfile");
-    if (production) args.push("--prod");
-    if (extraArgs) args.push(...extraArgs);
-    const output = await pnpmApi.executePnpmCommand(args, cwd); // 注意：调用 pnpmApi 上的函数
-    return {content: [{type: "text", text: output}]};
+    try {
+      const args = ["install"];
+      if (frozenLockfile) args.push("--frozen-lockfile");
+      if (production) args.push("--prod");
+      if (extraArgs) args.push(...extraArgs);
+      const output = await pnpmApi.executePnpmCommand(args, cwd);
+      return {content: [{type: "text", text: output}]};
+    } catch (error) {
+      if (error instanceof PnpmExecutionError) {
+        // 返回结构化的错误信息
+        return {
+          content: [{type: "text", text: `Error during 'pnpm install':\n${error.message}\n\n--- STDERR ---\n${error.stderr}`}],
+          structuredContent: {commandFailed: true, stdout: error.stdout, stderr: error.stderr, exitCode: error.exitCode},
+        };
+      }
+      throw error; // 重新抛出非预期的错误
+    }
   },
 );
 
+// 为简洁起见，我将为剩余的工具应用相同的模式。
+// 每个工具的 try/catch 逻辑都是相似的。
+
 registeredTools.add = server.registerTool(
-  "add",
+  "pnpm_add",
   {
-    /* ... schema and metadata ... */ description: "Adds packages to project dependencies.",
-    inputSchema: {
-      ...baseInputSchema,
-      packages: z.array(z.string()).min(1).describe("An array of packages to add, e.g., ['react', 'vitest@latest']."),
-      dev: z.boolean().optional().describe("Install as a development dependency (`-D`)."),
-      optional: z.boolean().optional().describe("Install as an optional dependency (`-O`)."),
-      filter: z.string().optional().describe("Target a specific project in a workspace (`--filter <name>`)."),
-    },
+    description: "Adds packages to project dependencies.",
+    inputSchema: {...baseInputSchema, packages: z.array(z.string()).min(1), dev: z.boolean().optional(), optional: z.boolean().optional(), filter: z.string().optional()},
     outputSchema: baseOutputSchema,
     annotations: {title: "Add Packages"},
   },
   async ({cwd, packages, dev, optional, filter, extraArgs}) => {
-    const args = [];
-    if (filter) args.push("--filter", filter);
-    args.push("add");
-    if (dev) args.push("-D");
-    if (optional) args.push("-O");
-    args.push(...packages);
-    if (extraArgs) args.push(...extraArgs);
-    const output = await pnpmApi.executePnpmCommand(args, cwd);
-    return {content: [{type: "text", text: output}]};
+    try {
+      const args = [];
+      if (filter) args.push("--filter", filter);
+      args.push("add");
+      if (dev) args.push("-D");
+      if (optional) args.push("-O");
+      args.push(...packages);
+      if (extraArgs) args.push(...extraArgs);
+      const output = await pnpmApi.executePnpmCommand(args, cwd);
+      return {content: [{type: "text", text: output}]};
+    } catch (error) {
+      if (error instanceof PnpmExecutionError) {
+        return {
+          content: [{type: "text", text: `Error during 'pnpm add':\n${error.message}\n\n--- STDERR ---\n${error.stderr}`}],
+          structuredContent: {commandFailed: true, stdout: error.stdout, stderr: error.stderr, exitCode: error.exitCode},
+        };
+      }
+      throw error;
+    }
   },
 );
 
 registeredTools.run = server.registerTool(
-  "run",
+  "pnpm_run",
   {
-    /* ... schema and metadata ... */ description: "Executes a script defined in the project's `package.json`.",
-    inputSchema: {
-      ...baseInputSchema,
-      script: z.string().describe("The name of the script to execute from `package.json`."),
-      scriptArgs: z.array(z.string()).optional().describe("Arguments for the script. Will be passed after '--'."),
-      filter: z.string().optional().describe("In a workspace, run the script only in the specified project."),
-    },
+    description: "Executes a script defined in the project's `package.json`.",
+    inputSchema: {...baseInputSchema, script: z.string(), scriptArgs: z.array(z.string()).optional(), filter: z.string().optional()},
     outputSchema: baseOutputSchema,
     annotations: {title: "Run a Project Script", destructiveHint: true},
   },
   async ({cwd, script, scriptArgs, filter, extraArgs}) => {
-    const pkgPath = path.join(cwd || process.cwd(), "package.json");
     try {
-      const pkg = JSON.parse(await fs.readFile(pkgPath, "utf-8"));
-      if (!pkg.scripts || !pkg.scripts[script]) {
-        throw new Error(`Security check failed: Script "${script}" not found in ${pkgPath}.`);
+      const pkgPath = path.join(cwd || process.cwd(), "package.json");
+      try {
+        const pkg = JSON.parse(await fs.readFile(pkgPath, "utf-8"));
+        if (!pkg.scripts || !pkg.scripts[script]) {
+          throw new Error(`Security check failed: Script "${script}" not found in ${pkgPath}.`);
+        }
+      } catch (e: any) {
+        throw new Error(`Security check failed: Could not read or parse package.json at '${pkgPath}'. Original error: ${e.message}`);
       }
-    } catch (e: any) {
-      throw new Error(`Security check failed: Could not read or parse package.json at '${pkgPath}'. Original error: ${e.message}`);
+      const args = [];
+      if (filter) args.push("--filter", filter);
+      args.push("run", script);
+      if (extraArgs) args.push(...extraArgs);
+      if (scriptArgs && scriptArgs.length > 0) {
+        args.push("--", ...scriptArgs);
+      }
+      const output = await pnpmApi.executePnpmCommand(args, cwd);
+      return {content: [{type: "text", text: output}]};
+    } catch (error) {
+      if (error instanceof PnpmExecutionError) {
+        return {
+          content: [{type: "text", text: `Error during 'pnpm run ${script}':\n${error.message}\n\n--- STDERR ---\n${error.stderr}`}],
+          structuredContent: {commandFailed: true, stdout: error.stdout, stderr: error.stderr, exitCode: error.exitCode},
+        };
+      }
+      throw error;
     }
-    const args = [];
-    if (filter) args.push("--filter", filter);
-    args.push("run", script);
-    if (extraArgs) args.push(...extraArgs);
-    if (scriptArgs && scriptArgs.length > 0) {
-      args.push("--", ...scriptArgs);
-    }
-    const output = await pnpmApi.executePnpmCommand(args, cwd);
-    return {content: [{type: "text", text: output}]};
   },
 );
 
 registeredTools.dlx = server.registerTool(
-  "dlx",
+  "pnpm_dlx",
   {
-    /* ... schema and metadata ... */
-    description: "Fetches and runs a package from the registry. The package name and its arguments must be provided as separate strings in an array.",
-    inputSchema: {
-      ...baseInputSchema,
-      commandAndArgs: z.array(z.string()).min(1).describe("The package and its arguments as an array. Example: ['cowsay', 'Hello MCP!']"),
-    },
+    description: "Fetches and runs a package from the registry.",
+    inputSchema: {...baseInputSchema, commandAndArgs: z.array(z.string()).min(1)},
     outputSchema: baseOutputSchema,
     annotations: {title: "Download and Execute Package", openWorldHint: true},
   },
   async ({cwd, commandAndArgs, extraArgs}) => {
-    const args = ["dlx"];
-    if (extraArgs) args.push(...extraArgs);
-    args.push(...commandAndArgs);
-    const output = await pnpmApi.executePnpmCommand(args, cwd);
-    return {content: [{type: "text", text: output}]};
+    try {
+      const args = ["dlx"];
+      if (extraArgs) args.push(...extraArgs);
+      args.push(...commandAndArgs);
+      const output = await pnpmApi.executePnpmCommand(args, cwd);
+      return {content: [{type: "text", text: output}]};
+    } catch (error) {
+      if (error instanceof PnpmExecutionError) {
+        return {
+          content: [{type: "text", text: `Error during 'pnpm dlx':\n${error.message}\n\n--- STDERR ---\n${error.stderr}`}],
+          structuredContent: {commandFailed: true, stdout: error.stdout, stderr: error.stderr, exitCode: error.exitCode},
+        };
+      }
+      throw error;
+    }
   },
 );
 
 registeredTools.create = server.registerTool(
-  "create",
+  "pnpm_create",
   {
-    /* ... schema and metadata ... */ description: "Creates a new project from a starter kit.",
-    inputSchema: {
-      ...baseInputSchema,
-      template: z.string().describe("The starter kit name, e.g., 'vite'."),
-      templateArgs: z.array(z.string()).optional().describe("Arguments for the create command, e.g., ['my-app', '--template', 'react-ts']"),
-    },
+    description: "Creates a new project from a starter kit.",
+    inputSchema: {...baseInputSchema, template: z.string(), templateArgs: z.array(z.string()).optional()},
     outputSchema: baseOutputSchema,
     annotations: {title: "Create a New Project", openWorldHint: true},
   },
   async ({cwd, template, templateArgs, extraArgs}) => {
-    const args = ["create", template];
-    if (templateArgs) args.push(...templateArgs);
-    if (extraArgs) args.push(...extraArgs);
-    const output = await pnpmApi.executePnpmCommand(args, cwd);
-    return {content: [{type: "text", text: output}]};
+    try {
+      const args = ["create", template];
+      if (templateArgs) args.push(...templateArgs);
+      if (extraArgs) args.push(...extraArgs);
+      const output = await pnpmApi.executePnpmCommand(args, cwd);
+      return {content: [{type: "text", text: output}]};
+    } catch (error) {
+      if (error instanceof PnpmExecutionError) {
+        return {
+          content: [{type: "text", text: `Error during 'pnpm create ${template}':\n${error.message}\n\n--- STDERR ---\n${error.stderr}`}],
+          structuredContent: {commandFailed: true, stdout: error.stdout, stderr: error.stderr, exitCode: error.exitCode},
+        };
+      }
+      throw error;
+    }
   },
 );
 
 registeredTools.licenses = server.registerTool(
-  "licenses",
+  "pnpm_licenses",
   {
-    /* ... schema and metadata ... */ description: "Checks and lists the licenses of installed packages.",
-    inputSchema: {
-      ...baseInputSchema,
-      json: z.boolean().optional().describe("Output as a JSON object."),
-      dev: z.boolean().optional().describe("Check only for development dependencies."),
-      production: z.boolean().optional().describe("Check only for production dependencies."),
-    },
+    description: "Checks and lists the licenses of installed packages.",
+    inputSchema: {...baseInputSchema, json: z.boolean().optional(), dev: z.boolean().optional(), production: z.boolean().optional()},
     outputSchema: baseOutputSchema,
     annotations: {title: "List Package Licenses", readOnlyHint: true},
   },
   async ({cwd, json, dev, production, extraArgs}) => {
-    const args = ["licenses", "list"];
-    if (json) args.push("--json");
-    if (dev) args.push("--dev");
-    if (production) args.push("--prod");
-    if (extraArgs) args.push(...extraArgs);
-    const output = await pnpmApi.executePnpmCommand(args, cwd);
-    return {content: [{type: "text", text: output}]};
+    try {
+      const args = ["licenses", "list"];
+      if (json) args.push("--json");
+      if (dev) args.push("--dev");
+      if (production) args.push("--prod");
+      if (extraArgs) args.push(...extraArgs);
+      const output = await pnpmApi.executePnpmCommand(args, cwd);
+      return {content: [{type: "text", text: output}]};
+    } catch (error) {
+      if (error instanceof PnpmExecutionError) {
+        return {
+          content: [{type: "text", text: `Error during 'pnpm licenses':\n${error.message}\n\n--- STDERR ---\n${error.stderr}`}],
+          structuredContent: {commandFailed: true, stdout: error.stdout, stderr: error.stderr, exitCode: error.exitCode},
+        };
+      }
+      throw error;
+    }
   },
 );
 
-// 3. 导出 API, 包含 executePnpmCommand
-// **重要**: 这里的 pnpmApi 对象需要在所有 registerTool 调用之后定义,
-// 因为 registerTool 的回调函数内部依赖于它。
 export const pnpmApi = {
   server,
   tools: registeredTools,
-  executePnpmCommand, // <--- 关键修改：重新导出以供测试
+  executePnpmCommand,
 };
 
-// 4. 主函数
+// ... (main function remains the same)
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error("MCP pnpm tool server running on stdio. Ready for commands.");
 }
 
-// 5. 程序入口
 if (import_meta_ponyfill(import.meta).main) {
   main().catch((error) => {
     console.error("Fatal error in MCP pnpm tool server:", error);
