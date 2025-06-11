@@ -13,6 +13,7 @@
     "bundle:json": "cd packages/cli && pnpm gen-prompts",
     "bundle:js": "esbuild ./index.ts --format=cjs --outfile=./bundle/index.cjs --platform=node",
     "files-to-prompt": "node ./scripts/files-to-prompt.ts",
+    "gen-prompt": "node ./scripts/gen-prompt.ts",
     "jixo": "node bundle/index.cjs"
   },
   "bin": "./bundle/index.cjs",
