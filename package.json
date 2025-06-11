@@ -50,6 +50,8 @@
     "prettier": "^3.5.3",
     "prettier-plugin-organize-imports": "^4.1.0",
     "rolldown": "1.0.0-beta.11",
+    "signal-polyfill": "^0.2.2",
+    "signal-utils": "^0.21.1",
     "typescript": "^5.8.3"
   }
 }

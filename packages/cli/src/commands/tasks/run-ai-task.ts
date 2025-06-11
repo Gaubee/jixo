@@ -76,7 +76,7 @@ export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: Fi
     ...(await tools.git(ai_task.cwd)),
   };
 
-  const json_line_log_file_stream = createWriteStream(path.join(ai_task.cwd, ".jixo", `${ai_task.executor}.${loopTimes.toString().padStart(2, "0")}.jsonl`));
+  const json_line_log_file_stream = createWriteStream(path.join(ai_task.cwd, ".jixo", `${ai_task.executor}.${loopTimes.toString().padStart(2, "0")}.log.jsonl`));
   const __writeJsonLineLog = (...lineDatas: any[]) => {
     for (const lineData of lineDatas) {
       try {

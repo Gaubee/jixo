@@ -48,6 +48,12 @@ importers:
       rolldown:
         specifier: 1.0.0-beta.11
         version: 1.0.0-beta.11
+      signal-polyfill:
+        specifier: ^0.2.2
+        version: 0.2.2
+      signal-utils:
+        specifier: ^0.21.1
+        version: 0.21.1(signal-polyfill@0.2.2)
       typescript:
         specifier: ^5.8.3
         version: 5.8.3
@@ -2115,6 +2121,14 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
 
+  signal-polyfill@0.2.2:
+    resolution: {integrity: sha512-p63Y4Er5/eMQ9RHg0M0Y64NlsQKpiu6MDdhBXpyywRuWiPywhJTpKJ1iB5K2hJEbFZ0BnDS7ZkJ+0AfTuL37Rg==}
+
+  signal-utils@0.21.1:
+    resolution: {integrity: sha512-i9cdLSvVH4j8ql8mz2lyrA93xL499P8wEbIev3ldSriXeUwqh+wM4Q5VPhIZ19gPtIS4BOopJuKB8l1+wH9LCg==}
+    peerDependencies:
+      signal-polyfill: ^0.2.0
+
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
     engines: {node: '>=0.10.0'}
@@ -4178,6 +4192,12 @@ snapshots:
       side-channel-weakmap: 1.0.2
 
   signal-exit@4.1.0: {}
+
+  signal-polyfill@0.2.2: {}
+
+  signal-utils@0.21.1(signal-polyfill@0.2.2):
+    dependencies:
+      signal-polyfill: 0.2.2
 
   source-map-js@1.2.1: {}
 

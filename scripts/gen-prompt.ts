@@ -3,14 +3,34 @@ import {parseArgs} from "@std/cli/parse-args";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import {readFileSync, watch, writeFileSync} from "node:fs";
 import path from "node:path";
+import {Signal} from "signal-polyfill";
+import {effect} from "signal-utils/subtle/microtask-effect";
 const rootResolver = createResolverByRootFile(import.meta.url);
-const gen_prompt = async (input: string, output: string) => {
-  const inputContent = readFileSync(input, "utf8");
+
+const getFileState = (filepath: string, once: boolean) => {
+  const fileState = new Signal.State(readFileSync(filepath, "utf-8"));
+  if (!once) {
+    const off = effect(() => {
+      const watcher = watch(filepath, () => {
+        try {
+          fileState.set(readFileSync(filepath, "utf-8"));
+        } catch {
+          watcher.close();
+          off();
+        }
+      });
+    });
+  }
+  return fileState;
+};
+
+const gen_prompt = async (input: string, output: string, once: boolean) => {
+  const inputContent = getFileState(input, once).get();
   const ouputContent = inputContent
     ///
     .replace(/@#([\w\.\-]+\.md)/g, (_, filename) => {
       try {
-        return "````md\n" + readFileSync(rootResolver("packages/cli/prompts", filename), "utf8") + "\n````";
+        return "````md\n" + getFileState(rootResolver("packages/cli/prompts", filename), once).get() + "\n````";
       } catch (e) {
         return _;
       }
@@ -26,8 +46,11 @@ if (import_meta_ponyfill(import.meta).main) {
   }
   const inputFile = cwdResolver(args._[0].toString());
   const outputFile = args._[1] ? cwdResolver(args._[1].toString()) : inputFile.replace(/\.md$/, ".gen.md");
-  gen_prompt(inputFile, outputFile);
-  if (args.watch) {
-    watch(inputFile, () => gen_prompt(inputFile, outputFile));
+  const once = !args.watch;
+  const off = effect(() => {
+    gen_prompt(inputFile, outputFile, once);
+  });
+  if (once) {
+    off();
   }
 }
