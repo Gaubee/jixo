@@ -69,6 +69,11 @@ const getModel = (model?: string) => {
     });
 };
 export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: FileEntry[], changedFilesSet: Record<string, FileEntry[]>) => {
+  const tool_spinner = spinner({
+    prefixText: "🧰",
+    text: "正在准备环境工具...",
+  });
+  tool_spinner.start();
   const availableTools: ToolSet = {
     ...(await tools.fileSystem(ai_task.cwd)),
     // ...(await tools.memory(path.join(ai_task.cwd, `.jixo/${ai_task.name}.memory.json`))),
@@ -76,8 +81,10 @@ export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: Fi
     ...(await tools.jixo(ai_task)),
     ...(await tools.git(ai_task.cwd)),
   };
+  tool_spinner.clear();
+  tool_spinner.stop();
 
-  const json_line_log_file_handle = await open(path.join(ai_task.cwd, ".jixo", `${ai_task.executor}.${loopTimes.toString().padStart(2, "0")}.log.jsonl`));
+  const json_line_log_file_handle = await open(path.join(ai_task.cwd, ".jixo", `${ai_task.executor}.${loopTimes.toString().padStart(2, "0")}.log.jsonl`), "a");
   const __writeJsonLineLog = (...lineDatas: any[]) => {
     for (const lineData of lineDatas) {
       try {

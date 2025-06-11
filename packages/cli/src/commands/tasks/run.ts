@@ -88,7 +88,8 @@ export const run = async (
           exitedTasks.add(ai_task.name);
         }
       }
-    } catch {
+    } catch (e) {
+      console.error(e);
       // 遇到异常，那么重试
       if (retryTimes < MAX_RETRY_TIMES) {
         retryTimes += 1;
