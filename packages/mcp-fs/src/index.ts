@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import {McpServer, type RegisteredTool} from "@modelcontextprotocol/sdk/server/mcp.js";
+import {McpServer, type RegisteredTool, type ToolCallback} from "@modelcontextprotocol/sdk/server/mcp.js";
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
 import {createTwoFilesPatch} from "diff";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
@@ -8,8 +8,30 @@ import {minimatch} from "minimatch";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import {z} from "zod";
+import {z, type ZodObject, type ZodRawShape} from "zod";
 import pkg from "../package.json" with {type: "json"};
+
+// --- Custom Error Classes ---
+/**
+ * Thrown when a file operation attempts to access a path outside the allowed directories.
+ */
+export class AccessDeniedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AccessDeniedError";
+  }
+}
+
+/**
+ * Thrown when an edit operation cannot find the text it's supposed to replace,
+ * indicating the file's content is not what the AI model expects.
+ */
+export class EditConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EditConflictError";
+  }
+}
 
 // --- 1. Startup and Configuration ---
 let allowedDirectories: string[] = [];
@@ -20,11 +42,11 @@ const expandHome = (filepath: string): string => {
 };
 
 // --- 2. Core API and Helper Functions ---
-
-const _fsApi = {
+// Encapsulated in an object to ensure stable references.
+const helpers = {
   /**
    * Validates if a given path is within the allowed directories, handling symbolic links.
-   * @throws {Error} If the path is invalid or not allowed.
+   * @throws {AccessDeniedError} If the path is invalid or not allowed.
    * @returns {Promise<string>} The validated and resolved absolute path.
    */
   async validatePath(requestedPath: string): Promise<string> {
@@ -33,21 +55,30 @@ const _fsApi = {
     const normalizedRequested = path.normalize(absolute);
 
     if (allowedDirectories.length > 0 && !allowedDirectories.some((dir) => normalizedRequested.startsWith(dir))) {
-      throw new Error(`Access denied: Path '${absolute}' is outside the allowed directories.`);
+      throw new AccessDeniedError(`Access denied: Path '${absolute}' is outside the allowed directories.`);
     }
 
     try {
       const realPath = await fs.realpath(absolute);
-      const normalizedReal = path.normalize(realPath);
-      if (allowedDirectories.length > 0 && !allowedDirectories.some((dir) => normalizedReal.startsWith(dir))) {
-        throw new Error("Access denied: Symbolic link points to a location outside the allowed directories.");
+      if (allowedDirectories.length > 0 && !allowedDirectories.some((dir) => realPath.startsWith(dir))) {
+        throw new AccessDeniedError("Access denied: Symbolic link points to a location outside the allowed directories.");
       }
       return realPath;
     } catch (error: any) {
       if (error.code === "ENOENT") {
-        const parentDir = path.dirname(absolute);
-        await this.validatePath(parentDir);
-        return absolute;
+        const parentDir = path.dirname(normalizedRequested);
+        try {
+          const realParentDir = await fs.realpath(parentDir);
+          if (allowedDirectories.length > 0 && !allowedDirectories.some((dir) => realParentDir.startsWith(dir))) {
+            throw new AccessDeniedError(`Access denied: Cannot create item in directory '${parentDir}' as it is outside the allowed sandbox.`);
+          }
+          return normalizedRequested;
+        } catch (parentError: any) {
+          if (parentError.code === "ENOENT") {
+            throw new Error(`Parent directory does not exist: ${parentDir}`);
+          }
+          throw parentError;
+        }
       }
       throw error;
     }
@@ -55,6 +86,7 @@ const _fsApi = {
 
   /**
    * Applies a series of edits to a file's content and returns the original and modified states.
+   * @throws {EditConflictError} If the text to be replaced is not found.
    * @returns {Promise<{originalContent: string; modifiedContent: string}>}
    */
   async applyFileEdits(filePath: string, edits: {oldText: string; newText: string}[]): Promise<{originalContent: string; modifiedContent: string}> {
@@ -65,8 +97,8 @@ const _fsApi = {
     for (const edit of edits) {
       const normalizedOld = normalize(edit.oldText);
       const normalizedNew = normalize(edit.newText);
-      if (!modifiedContent.includes(normalizedOld)) {
-        throw new Error(`Could not apply edit: The text to be replaced was not found in the file.\n--- TEXT NOT FOUND ---\n${edit.oldText}`);
+      if (modifiedContent.indexOf(normalizedOld) === -1) {
+        throw new EditConflictError(`Could not apply edit: The text to be replaced was not found in the file.\n--- TEXT NOT FOUND ---\n${edit.oldText}`);
       }
       modifiedContent = modifiedContent.replace(normalizedOld, normalizedNew);
     }
@@ -76,6 +108,7 @@ const _fsApi = {
 
 // --- 3. Schema Definitions ---
 
+// --- Input Schemas ---
 const ReadFileArgsSchema = {path: z.string().describe("The full path to the file to read.")};
 const WriteFileArgsSchema = {
   path: z.string().describe("The full path to the file to write."),
@@ -113,10 +146,79 @@ const SearchFilesArgsSchema = {
 };
 const GetFileInfoArgsSchema = {path: z.string().describe("The path to the file or directory to get info for.")};
 
-// Unified output schema for all tools.
-const outputSchema = {
-  content: z.array(z.object({type: z.literal("text"), text: z.string()})),
-  isError: z.boolean().optional(),
+// --- Output Schemas ---
+// A reusable error structure for all tool outputs.
+const GenericErrorSchema = {
+  error: z
+    .object({
+      name: z.string().describe("The type of error, e.g., 'AccessDeniedError'."),
+      message: z.string().describe("A detailed description of what went wrong."),
+    })
+    .optional()
+    .describe("Included only when 'success' is false."),
+};
+
+const SuccessOutputSchema = {
+  success: z.boolean().describe("Indicates if the operation was successful."),
+  path: z.string().optional(),
+  message: z.string().optional(),
+  ...GenericErrorSchema,
+};
+
+const ReadFileOutputSchema = {
+  success: z.boolean().describe("Indicates if the operation was successful."),
+  path: z.string().optional(),
+  content: z.string().optional(),
+  ...GenericErrorSchema,
+};
+
+const EditFileOutputSchema = {
+  success: z.boolean().describe("Indicates if the operation was successful."),
+  path: z.string().optional(),
+  changesApplied: z.boolean().optional(),
+  diff: z.string().nullable().optional(),
+  newContent: z.string().optional().nullable(),
+  message: z.string().optional(),
+  ...GenericErrorSchema,
+};
+
+const ListDirectoryOutputSchema = {
+  success: z.boolean().describe("Indicates if the operation was successful."),
+  path: z.string().optional(),
+  entries: z
+    .array(
+      z.object({
+        name: z.string(),
+        type: z.enum(["file", "directory"]),
+      }),
+    )
+    .optional(),
+  ...GenericErrorSchema,
+};
+
+const SearchFilesOutputSchema = {
+  success: z.boolean().describe("Indicates if the operation was successful."),
+  path: z.string().optional(),
+  pattern: z.string().optional(),
+  matches: z.array(z.string()).optional(),
+  ...GenericErrorSchema,
+};
+
+const FileInfoOutputSchema = {
+  success: z.boolean().describe("Indicates if the operation was successful."),
+  path: z.string().optional(),
+  type: z.enum(["file", "directory", "other"]).optional(),
+  size: z.number().optional(),
+  permissions: z.string().optional(),
+  created: z.string().datetime().optional(),
+  modified: z.string().datetime().optional(),
+  ...GenericErrorSchema,
+};
+
+const ListAllowedDirectoriesOutputSchema = {
+  success: z.boolean().describe("Indicates if the operation was successful."),
+  directories: z.array(z.string()).optional(),
+  ...GenericErrorSchema,
 };
 
 // --- 4. Server and Tool Registration ---
@@ -126,164 +228,264 @@ const server = new McpServer({
   version: pkg.version,
 });
 
-const registeredTools: {[key: string]: RegisteredTool} = {};
+/**
+ * A type-safe wrapper for `server.registerTool`.
+ * It captures the specific Zod shapes for input and output, returning a strongly-typed object
+ * that preserves this metadata, unlike the generic `RegisteredTool` from the SDK.
+ */
+function safeRegisterTool<I extends ZodRawShape, O extends ZodRawShape>(
+  name: string,
+  config: {
+    description?: string;
+    inputSchema?: I;
+    outputSchema?: O;
+  },
+  callback: ToolCallback<I>,
+): {
+  underlying: RegisteredTool;
+  inputSchema: ZodObject<I>;
+  outputSchema: ZodObject<O>;
+  callback: ToolCallback<I>;
+} {
+  // The SDK's registerTool does the actual registration.
+  const underlying = server.registerTool(name, config, callback);
+  // We return a new object that includes the typed schemas for compile-time safety.
+  return {
+    underlying,
+    inputSchema: z.object(config.inputSchema ?? ({} as I)),
+    outputSchema: z.object(config.outputSchema ?? ({} as O)),
+    callback,
+  };
+}
 
+/**
+ * Centralized error handler for all tools.
+ * It formats the error message and provides specific suggestions for certain error types,
+ * returning a structured response that conforms to the tool's output schema.
+ * @param toolName The name of the tool that failed.
+ * @param error The caught error object.
+ * @returns A structured error object for the MCP client.
+ */
 const handleToolError = (toolName: string, error: unknown) => {
-  const errorMessage = error instanceof Error ? error.message : String(error);
+  let errorMessage: string;
+
+  if (error instanceof EditConflictError) {
+    // For EditConflictError, provide a specific suggestion.
+    errorMessage = `${error.message}\n\nSuggestion: The file content may have changed. Use the 'read_file' tool to get the latest version before trying to edit again.`;
+  } else if (error instanceof Error) {
+    // For AccessDeniedError and other standard errors, use their message.
+    errorMessage = error.message;
+  } else {
+    // Fallback for non-Error types.
+    errorMessage = String(error);
+  }
+
   console.error(`[ERROR in ${toolName}] ${errorMessage}`);
+
+  const errorObj = error instanceof Error ? error : new Error(String(error), {cause: error});
+  if (!errorObj.name || errorObj.name === "Error") {
+    errorObj.name = error?.constructor?.name ?? "UnknownError";
+  }
+
   return {
     isError: true,
+    structuredContent: {
+      success: false,
+      error: {
+        name: errorObj.name,
+        message: errorMessage,
+      },
+    },
     content: [{type: "text" as const, text: `Error in tool '${toolName}': ${errorMessage}`}],
   };
 };
 
-registeredTools.read_file = server.registerTool(
+const read_file_tool = safeRegisterTool(
   "read_file",
   {
     description: "Read the complete contents of a single file.",
     inputSchema: ReadFileArgsSchema,
-    outputSchema,
+    outputSchema: ReadFileOutputSchema,
   },
   async ({path}) => {
     try {
-      const validPath = await fsToolApi.validatePath(path);
+      const validPath = await helpers.validatePath(path);
       const content = await fs.readFile(validPath, "utf-8");
-      return {content: [{type: "text", text: content}]};
+      return {
+        structuredContent: {success: true, path: validPath, content},
+        content: [{type: "text", text: content}],
+      };
     } catch (error) {
       return handleToolError("read_file", error);
     }
   },
 );
 
-registeredTools.write_file = server.registerTool(
+const write_file_tool = safeRegisterTool(
   "write_file",
   {
     description: "Create a new file or completely overwrite an existing file with new content. Use with caution.",
     inputSchema: WriteFileArgsSchema,
-    outputSchema,
+    outputSchema: SuccessOutputSchema,
   },
   async ({path, content}) => {
     try {
-      const validPath = await fsToolApi.validatePath(path);
+      const validPath = await helpers.validatePath(path);
       await fs.writeFile(validPath, content, "utf-8");
-      return {content: [{type: "text", text: `Successfully wrote to ${path}`}]};
+      const message = `Successfully wrote to ${path}`;
+      return {
+        structuredContent: {success: true, path: validPath, message},
+        content: [{type: "text", text: message}],
+      };
     } catch (error) {
       return handleToolError("write_file", error);
     }
   },
 );
 
-registeredTools.edit_file = server.registerTool(
+const edit_file_tool = safeRegisterTool(
   "edit_file",
   {
     description: "Performs precise edits on a text file and allows choosing the return format for verification.",
     inputSchema: EditFileArgsSchema,
-    outputSchema,
+    outputSchema: EditFileOutputSchema,
   },
   async ({path, edits, dryRun, returnStyle = "diff"}) => {
     try {
-      const validPath = await fsToolApi.validatePath(path);
-      const {originalContent, modifiedContent} = await fsToolApi.applyFileEdits(validPath, edits);
+      const validPath = await helpers.validatePath(path);
+      const {originalContent, modifiedContent} = await helpers.applyFileEdits(validPath, edits);
+      const changesApplied = originalContent !== modifiedContent;
+      let diff: string | null = null;
+      let statusMessage: string;
+      let responseText = "";
 
-      if (originalContent === modifiedContent) {
-        return {content: [{type: "text", text: `No changes were made to the file '${validPath}'; content is identical.`}]};
+      if (!changesApplied) {
+        statusMessage = `No changes were made to the file '${validPath}'; content is identical.`;
+      } else {
+        if (!dryRun) {
+          await fs.writeFile(validPath, modifiedContent, "utf-8");
+        }
+        statusMessage = dryRun ? `Dry run successful. Proposed changes for ${validPath}:` : `Successfully applied edits to ${validPath}.`;
+        diff = createTwoFilesPatch(validPath, validPath, originalContent, modifiedContent, "", "", {context: 3});
       }
 
-      if (!dryRun) {
-        await fs.writeFile(validPath, modifiedContent, "utf-8");
+      if (changesApplied && returnStyle !== "none") {
+        if (returnStyle === "full") {
+          responseText = modifiedContent;
+        } else if (returnStyle === "diff" && diff) {
+          let backticks = "```";
+          while (diff.includes(backticks)) backticks += "`";
+          responseText = `${backticks}diff\n${diff}\n${backticks}`;
+        }
       }
 
-      // **FIXED**: Consistently use `validPath` in ALL status messages for correctness.
-      const status = dryRun ? `Dry run successful. Proposed changes for ${validPath}:` : `Successfully applied edits to ${validPath}.`;
-      let responseContent = "";
-
-      if (returnStyle === "full") {
-        responseContent = modifiedContent;
-      } else if (returnStyle === "diff") {
-        const diff = createTwoFilesPatch(validPath, validPath, originalContent, modifiedContent, "", "", {context: 3});
-        let backticks = "```";
-        while (diff.includes(backticks)) backticks += "`";
-        responseContent = `${backticks}diff\n${diff}\n${backticks}`;
-      }
-      // For 'none', responseContent remains empty.
-
-      const finalMessage = responseContent ? `${status}\n${responseContent}` : status;
-      return {content: [{type: "text", text: finalMessage}]};
+      const finalMessage = responseText ? `${statusMessage}\n${responseText}` : statusMessage;
+      return {
+        structuredContent: {
+          success: true,
+          path: validPath,
+          changesApplied,
+          diff,
+          newContent: returnStyle === "full" ? modifiedContent : null,
+          message: statusMessage,
+        },
+        content: [{type: "text", text: finalMessage}],
+      };
     } catch (error) {
       return handleToolError("edit_file", error);
     }
   },
 );
 
-registeredTools.list_directory = server.registerTool(
+const list_directory_tool = safeRegisterTool(
   "list_directory",
   {
     description: "Get a detailed listing of all files and directories in a specified path.",
     inputSchema: ListDirectoryArgsSchema,
-    outputSchema,
+    outputSchema: ListDirectoryOutputSchema,
   },
   async ({path}) => {
     try {
-      const validPath = await fsToolApi.validatePath(path);
+      const validPath = await helpers.validatePath(path);
       const entries = await fs.readdir(validPath, {withFileTypes: true});
+      const structuredEntries = entries.map((e) => ({
+        name: e.name,
+        type: (e.isDirectory() ? "directory" : "file") as "file" | "directory",
+      }));
+
       if (entries.length === 0) {
-        return {content: [{type: "text", text: `Directory '${path}' is empty.`}]};
+        const message = `Directory '${path}' is empty.`;
+        return {
+          structuredContent: {success: true, path: validPath, entries: []},
+          content: [{type: "text", text: message}],
+        };
       }
-      const formatted = entries.map((entry) => `${entry.isDirectory() ? "[DIR] " : "[FILE]"} ${entry.name}`).join("\n");
-      return {content: [{type: "text", text: formatted}]};
+      const formatted = structuredEntries.map((e) => `${e.type === "directory" ? "[DIR] " : "[FILE]"} ${e.name}`).join("\n");
+      return {
+        structuredContent: {success: true, path: validPath, entries: structuredEntries},
+        content: [{type: "text", text: formatted}],
+      };
     } catch (error) {
       return handleToolError("list_directory", error);
     }
   },
 );
 
-registeredTools.create_directory = server.registerTool(
+const create_directory_tool = safeRegisterTool(
   "create_directory",
   {
     description: "Create a new directory, including any necessary parent directories.",
     inputSchema: CreateDirectoryArgsSchema,
-    outputSchema,
+    outputSchema: SuccessOutputSchema,
   },
   async ({path}) => {
     try {
-      const validPath = await fsToolApi.validatePath(path);
+      const validPath = await helpers.validatePath(path);
       await fs.mkdir(validPath, {recursive: true});
-      return {content: [{type: "text", text: `Successfully created directory ${path}`}]};
+      const message = `Successfully created directory ${path}`;
+      return {
+        structuredContent: {success: true, path: validPath, message},
+        content: [{type: "text", text: message}],
+      };
     } catch (error) {
       return handleToolError("create_directory", error);
     }
   },
 );
 
-registeredTools.move_file = server.registerTool(
+const move_file_tool = safeRegisterTool(
   "move_file",
   {
     description: "Move or rename a file or directory.",
     inputSchema: MoveFileArgsSchema,
-    outputSchema,
+    outputSchema: SuccessOutputSchema,
   },
   async ({source, destination}) => {
     try {
-      const validSource = await fsToolApi.validatePath(source);
-      const validDest = await fsToolApi.validatePath(destination);
+      const validSource = await helpers.validatePath(source);
+      const validDest = await helpers.validatePath(destination);
       await fs.rename(validSource, validDest);
-      return {content: [{type: "text", text: `Successfully moved ${source} to ${destination}`}]};
+      const message = `Successfully moved ${source} to ${destination}`;
+      return {
+        structuredContent: {success: true, path: validDest, message},
+        content: [{type: "text", text: message}],
+      };
     } catch (error) {
       return handleToolError("move_file", error);
     }
   },
 );
 
-registeredTools.search_files = server.registerTool(
+const search_files_tool = safeRegisterTool(
   "search_files",
   {
     description: "Recursively search for files and directories matching a pattern within a given path.",
     inputSchema: SearchFilesArgsSchema,
-    outputSchema,
+    outputSchema: SearchFilesOutputSchema,
   },
   async ({path: rootPath, pattern, excludePatterns}) => {
     try {
-      const validRootPath = await fsToolApi.validatePath(rootPath);
+      const validRootPath = await helpers.validatePath(rootPath);
       const results: string[] = [];
       const searchQueue: string[] = [validRootPath];
 
@@ -308,27 +510,30 @@ registeredTools.search_files = server.registerTool(
       }
 
       const output = results.length > 0 ? results.join("\n") : `No matches found for "${pattern}" in "${rootPath}".`;
-      return {content: [{type: "text", text: output}]};
+      return {
+        structuredContent: {success: true, path: rootPath, pattern, matches: results},
+        content: [{type: "text", text: output}],
+      };
     } catch (error) {
       return handleToolError("search_files", error);
     }
   },
 );
 
-registeredTools.get_file_info = server.registerTool(
+const get_file_info_tool = safeRegisterTool(
   "get_file_info",
   {
     description: "Retrieve detailed metadata about a file or directory (size, dates, permissions).",
     inputSchema: GetFileInfoArgsSchema,
-    outputSchema,
+    outputSchema: FileInfoOutputSchema,
   },
   async ({path}) => {
     try {
-      const validPath = await fsToolApi.validatePath(path);
+      const validPath = await helpers.validatePath(path);
       const stats = await fs.stat(validPath);
       const info = {
         path: validPath,
-        type: stats.isDirectory() ? "directory" : stats.isFile() ? "file" : "other",
+        type: (stats.isDirectory() ? "directory" : stats.isFile() ? "file" : "other") as "file" | "directory" | "other",
         size: stats.size,
         permissions: (stats.mode & 0o777).toString(8),
         created: stats.birthtime.toISOString(),
@@ -337,34 +542,54 @@ registeredTools.get_file_info = server.registerTool(
       const formatted = Object.entries(info)
         .map(([key, value]) => `${key}: ${value}`)
         .join("\n");
-      return {content: [{type: "text", text: formatted}]};
+      return {
+        structuredContent: {success: true, ...info},
+        content: [{type: "text", text: formatted}],
+      };
     } catch (error) {
       return handleToolError("get_file_info", error);
     }
   },
 );
 
-registeredTools.list_allowed_directories = server.registerTool(
+const list_allowed_directories_tool = safeRegisterTool(
   "list_allowed_directories",
   {
     description: "Returns the list of root directories the server is allowed to access.",
     inputSchema: {}, // No arguments
-    outputSchema,
+    outputSchema: ListAllowedDirectoriesOutputSchema,
   },
   async () => {
     const text =
       allowedDirectories.length > 0
         ? `This server can only access files and directories within the following paths:\n- ${allowedDirectories.join("\n- ")}`
         : "Warning: No directory restrictions are set. The server can access any path.";
-    return {content: [{type: "text", text}]};
+    return {
+      structuredContent: {success: true, directories: allowedDirectories},
+      content: [{type: "text", text}],
+    };
   },
 );
 
+// A fully type-safe collection of all registered tools.
+const tools = {
+  read_file: read_file_tool,
+  write_file: write_file_tool,
+  edit_file: edit_file_tool,
+  list_directory: list_directory_tool,
+  create_directory: create_directory_tool,
+  move_file: move_file_tool,
+  search_files: search_files_tool,
+  get_file_info: get_file_info_tool,
+  list_allowed_directories: list_allowed_directories_tool,
+};
+
+// **THE FIX IS HERE**: Export the internal API object directly to maintain a stable reference for mocking.
 export const fsToolApi = {
   allowedDirectories,
   server,
-  tools: registeredTools,
-  ..._fsApi,
+  tools,
+  helpers,
 };
 
 // --- 5. Server Startup ---
@@ -386,7 +611,21 @@ async function validateDirectories() {
 
 async function main(dirs: string[]) {
   if (dirs.length > 0) {
-    allowedDirectories = dirs.map((dir) => path.normalize(path.resolve(expandHome(dir))));
+    allowedDirectories = await Promise.all(
+      dirs.map(async (dir) => {
+        const expanded = expandHome(dir);
+        const resolved = path.resolve(expanded);
+        try {
+          return await fs.realpath(resolved);
+        } catch (e: any) {
+          if (e.code === "ENOENT") {
+            console.error(`Error: The allowed directory path does not exist: ${resolved}`);
+            process.exit(1);
+          }
+          throw e;
+        }
+      }),
+    );
     await validateDirectories();
   }
 

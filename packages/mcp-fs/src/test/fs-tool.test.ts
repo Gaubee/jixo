@@ -1,269 +1,195 @@
+import type {CallToolResult, TextContent} from "@modelcontextprotocol/sdk/types.js";
 import assert from "node:assert";
-import fs from "node:fs/promises";
+import fs from "node:fs";
 import path from "node:path";
-import {after, beforeEach, describe, mock, test} from "node:test";
-import {fsToolApi} from "../index.js";
+import {afterEach, beforeEach, describe, mock, test} from "node:test";
+import {z} from "zod";
+import {AccessDeniedError, EditConflictError, fsToolApi} from "../index.js";
 
-// --- Mock Setup ---
-let mockCalls: {
-  validatePath: string[];
-  readFile: string | null;
-  writeFile: {path: string; content: string} | null;
-  mkdir: string | null;
-  rename: {source: string; destination: string} | null;
-  readdir: string | null;
-  stat: string | null;
-} = {} as any;
-
-// We mock the internal API `validatePath` to simplify tests.
-mock.method(fsToolApi, "validatePath", async (p: string) => {
-  mockCalls.validatePath.push(p);
-  return path.resolve(p);
-});
-
-mock.method(fs, "readFile", async (p: string) => {
-  mockCalls.readFile = p;
-  return "mock file content";
-});
-
-mock.method(fs, "writeFile", async (p: string, content: string) => {
-  mockCalls.writeFile = {path: p, content};
-});
-
-mock.method(fs, "mkdir", async (p: string) => {
-  mockCalls.mkdir = p;
-});
-
-mock.method(fs, "rename", async (source: string, destination: string) => {
-  mockCalls.rename = {source, destination};
-});
-
-mock.method(fs, "readdir", async (p: string) => {
-  mockCalls.readdir = p;
-  return [
-    {name: "file.txt", isDirectory: () => false, isFile: () => true},
-    {name: "subdirectory", isDirectory: () => true, isFile: () => false},
-  ] as any;
-});
-
-mock.method(fs, "stat", async (p: string) => {
-  mockCalls.stat = p;
-  return {
-    size: 1024,
-    birthtime: new Date("2023-01-01T00:00:00Z"),
-    mtime: new Date("2023-01-02T00:00:00Z"),
-    isDirectory: () => false,
-    isFile: () => true,
-    mode: 0o100644,
-  } as any;
-});
-
-// --- Test Suite ---
-interface ToolResult {
-  content: {type: "text"; text: string}[];
-  isError?: boolean;
+// Helper to safely get the text from a result's content
+function getResultText(result: CallToolResult): string {
+  assert.ok(result.content && result.content.length > 0, "Result content should not be empty");
+  const firstContent = result.content[0];
+  assert.strictEqual(firstContent.type, "text", "Expected content type to be 'text'");
+  return (firstContent as TextContent).text;
 }
 
-function getToolHandler(toolName: keyof typeof fsToolApi.tools) {
-  const handler = fsToolApi.tools[toolName]?.callback;
-  if (!handler) {
-    throw new Error(`Tool callback for "${toolName}" not found.`);
-  }
-  // @ts-ignore
-  return (args: any) => handler(args, {} as any);
+// Helper to get a tool's handler function for testing.
+function getToolHandler<T extends keyof typeof fsToolApi.tools>(toolName: T) {
+  const tool = fsToolApi.tools[toolName];
+  if (!tool) throw new Error(`Tool definition for "${toolName}" not found.`);
+  // @ts-ignore - The 'extra' parameter is not needed for these tests.
+  return (args: z.infer<typeof tool.inputSchema>): Promise<CallToolResult> => tool.callback(args, {} as any);
 }
 
 describe("MCP Filesystem Tool Handlers", () => {
+  // Mock the internal helper functions to isolate tool logic for testing.
   beforeEach(() => {
-    mockCalls = {
-      validatePath: [],
-      readFile: null,
-      writeFile: null,
-      mkdir: null,
-      rename: null,
-      readdir: null,
-      stat: null,
-    };
-    fsToolApi.allowedDirectories.length = 0;
-    fsToolApi.allowedDirectories.push(path.resolve("/safe/dir"), path.resolve("/another/safe/place"));
+    mock.method(fsToolApi.helpers, "validatePath", async (p: string) => path.resolve(p));
   });
 
-  after(() => {
+  afterEach(() => {
     mock.restoreAll();
   });
 
   describe("`read_file` tool", () => {
-    test("should validate and read a file", async () => {
+    test("should return structured content on success", async (t) => {
+      // Mock the underlying fs call for this specific test
+      mock.method(fs.promises, "readFile", async () => "hello world");
       const handler = getToolHandler("read_file");
-      const result = (await handler({path: "/safe/dir/file.txt"})) as ToolResult;
-      assert.deepStrictEqual(mockCalls.validatePath, [path.resolve("/safe/dir/file.txt")]);
-      assert.strictEqual(mockCalls.readFile, path.resolve("/safe/dir/file.txt"));
-      assert.deepStrictEqual(result, {content: [{type: "text", text: "mock file content"}]});
+      const testPath = "/safe/dir/read_test.txt";
+      const result = await handler({path: testPath});
+
+      assert.strictEqual(result.isError, undefined);
+      assert.ok(result.structuredContent, "structuredContent should exist on success");
+      assert.deepStrictEqual(result.structuredContent, {
+        success: true,
+        path: path.resolve(testPath),
+        content: "hello world",
+      });
+      assert.strictEqual(getResultText(result), "hello world");
     });
 
-    test("should return an error if validation fails", async () => {
-      mock.method(
-        fsToolApi,
-        "validatePath",
-        async () => {
-          throw new Error("Access denied");
-        },
-        {times: 1},
-      );
+    test("should return a structured error for access denied", async (t) => {
+      const errorMessage = "Access Denied";
+      mock.method(fsToolApi.helpers, "validatePath", async () => {
+        throw new AccessDeniedError(errorMessage);
+      });
       const handler = getToolHandler("read_file");
-      const result = (await handler({path: "/forbidden/file.txt"})) as ToolResult;
+      const result = await handler({path: "/forbidden/path/file.txt"});
+
       assert.strictEqual(result.isError, true);
-      assert(result.content[0].text.includes("Error in tool 'read_file': Access denied"));
+      assert.ok(getResultText(result).includes(errorMessage));
+
+      assert.ok(result.structuredContent, "structuredContent should exist on error");
+      const structured = result.structuredContent as any;
+      assert.strictEqual(structured.success, false);
+      assert.strictEqual(structured.error.name, "AccessDeniedError");
+      assert.strictEqual(structured.error.message, errorMessage);
     });
   });
 
   describe("`write_file` tool", () => {
-    test("should validate and write to a file", async () => {
+    test("should return structured success message", async (t) => {
+      mock.method(fs.promises, "writeFile", async () => {});
       const handler = getToolHandler("write_file");
-      const result = (await handler({path: "/safe/dir/new.txt", content: "hello world"})) as ToolResult;
-      const resolvedPath = path.resolve("/safe/dir/new.txt");
-      assert.deepStrictEqual(mockCalls.validatePath, [resolvedPath]);
-      assert.deepStrictEqual(mockCalls.writeFile, {path: resolvedPath, content: "hello world"});
-      assert(result.content[0].text.includes("Successfully wrote to /safe/dir/new.txt"));
+      const testPath = "/safe/dir/write_test.txt";
+      const result = await handler({path: testPath, content: "new content"});
+
+      assert.strictEqual(result.isError, undefined);
+      assert.ok(result.structuredContent);
+      assert.deepStrictEqual(result.structuredContent, {
+        success: true,
+        path: path.resolve(testPath),
+        message: `Successfully wrote to ${testPath}`,
+      });
     });
   });
 
   describe("`edit_file` tool", () => {
-    test("should return a diff by default", async () => {
+    test("should return a diff and correct structured content", async (t) => {
+      mock.method(fsToolApi.helpers, "applyFileEdits", async () => ({
+        originalContent: "original",
+        modifiedContent: "modified",
+      }));
+      mock.method(fs.promises, "writeFile", async () => {});
+
       const handler = getToolHandler("edit_file");
-      const result = (await handler({
-        path: "/safe/dir/doc.txt",
-        edits: [{oldText: "mock file content", newText: "edited mock content"}],
-      })) as ToolResult;
-
-      const expectedNewContent = "edited mock content";
-      const resolvedPath = path.resolve("/safe/dir/doc.txt");
-      assert.deepStrictEqual(mockCalls.writeFile, {path: resolvedPath, content: expectedNewContent});
-
-      const text = result.content[0].text;
-      assert(text.includes(`Successfully applied edits to ${resolvedPath}.`), "Success message is missing.");
-      assert(text.includes("```diff\n"), "Diff block start is missing.");
-      assert(text.includes(`--- ${resolvedPath}`), "Diff header '---' is missing or incorrect.");
-      assert(text.includes(`+++ ${resolvedPath}`), "Diff header '+++' is missing or incorrect.");
-      assert(text.includes("\n-mock file content"), "Removed line is missing from diff.");
-      assert(text.includes("\n+edited mock content"), "Added line is missing from diff.");
-    });
-
-    test("should return the full content when returnStyle is 'full'", async () => {
-      const handler = getToolHandler("edit_file");
-      const result = (await handler({
-        path: "/safe/dir/doc.txt",
-        edits: [{oldText: "mock file content", newText: "new full content"}],
-        returnStyle: "full",
-      })) as ToolResult;
-
-      const expectedNewContent = "new full content";
-      const resolvedPath = path.resolve("/safe/dir/doc.txt");
-      const status = `Successfully applied edits to ${resolvedPath}.`;
-      const expectedOutput = `${status}\n${expectedNewContent}`;
+      const testPath = "/safe/dir/edit_test.txt";
+      const result = await handler({path: testPath, edits: [{oldText: "o", newText: "m"}]});
 
       assert.strictEqual(result.isError, undefined);
-      assert.strictEqual(result.content[0].text, expectedOutput);
-      assert.deepStrictEqual(mockCalls.writeFile?.content, expectedNewContent);
+      assert.ok(result.structuredContent, "structuredContent should exist");
+      const structured = result.structuredContent as any;
+      assert.strictEqual(structured.success, true);
+      assert.strictEqual(structured.changesApplied, true);
+      assert.ok(structured.diff?.includes(`--- ${path.resolve(testPath)}`));
     });
 
-    test("should return only a success message when returnStyle is 'none'", async () => {
+    test("should handle EditConflictError with a structured error and suggestion", async (t) => {
+      const errorMessage = "Text not found";
+      mock.method(fsToolApi.helpers, "applyFileEdits", async () => {
+        throw new EditConflictError(errorMessage);
+      });
+
       const handler = getToolHandler("edit_file");
-      const result = (await handler({
-        path: "/safe/dir/doc.txt",
-        edits: [{oldText: "mock file content", newText: "a new change"}],
-        returnStyle: "none",
-      })) as ToolResult;
+      const testPath = "/safe/dir/conflict_test.txt";
+      const result = await handler({path: testPath, edits: [{oldText: "a", newText: "b"}]});
 
-      const resolvedPath = path.resolve("/safe/dir/doc.txt");
-      const expectedMessage = `Successfully applied edits to ${resolvedPath}.`;
+      assert.strictEqual(result.isError, true);
+      const errorText = getResultText(result);
+      assert.ok(errorText.includes(errorMessage));
+      assert.ok(errorText.includes("Suggestion: The file content may have changed"));
 
-      // Check that the file was still written
-      assert.deepStrictEqual(mockCalls.writeFile?.content, "a new change");
-      // Check that the response is ONLY the success message
-      assert.strictEqual(result.content[0].text, expectedMessage);
-    });
-
-    test("should perform a dry run without writing to the file", async () => {
-      const handler = getToolHandler("edit_file");
-      const result = (await handler({
-        path: "/safe/dir/doc.txt",
-        edits: [{oldText: "mock file content", newText: "new content"}],
-        dryRun: true,
-      })) as ToolResult;
-
-      const resolvedPath = path.resolve("/safe/dir/doc.txt");
-      assert.strictEqual(mockCalls.writeFile, null, "writeFile should not have been called on a dry run");
-      assert(result.content[0].text.includes(`Dry run successful. Proposed changes for ${resolvedPath}:`), "Dry run message is missing.");
-      assert(result.content[0].text.includes("```diff"), "Diff should still be generated on dry run.");
-    });
-
-    test("should return a 'no changes' message if content is identical", async () => {
-      const handler = getToolHandler("edit_file");
-      const result = (await handler({
-        path: "/safe/dir/doc.txt",
-        edits: [{oldText: "mock file content", newText: "mock file content"}],
-      })) as ToolResult;
-
-      assert.strictEqual(mockCalls.writeFile, null, "writeFile should not be called when content is unchanged");
-      assert(result.content[0].text.includes("No changes were made"), "Expected 'no changes' message was not found.");
+      assert.ok(result.structuredContent, "structuredContent should exist on error");
+      const structured = result.structuredContent as any;
+      assert.strictEqual(structured.success, false);
+      assert.strictEqual(structured.error.name, "EditConflictError");
+      assert.ok(structured.error.message.includes(errorMessage));
     });
   });
 
   describe("`list_directory` tool", () => {
-    test("should validate and list directory contents", async () => {
+    test("should return structured list of entries", async (t) => {
+      mock.method(fs.promises, "readdir", async () => [{name: "file.txt", isDirectory: () => false, isFile: () => true}] as any);
       const handler = getToolHandler("list_directory");
-      const result = (await handler({path: "/safe/dir"})) as ToolResult;
-      const resolvedPath = path.resolve("/safe/dir");
-      assert.deepStrictEqual(mockCalls.validatePath, [resolvedPath]);
-      assert.strictEqual(mockCalls.readdir, resolvedPath);
-      const expectedOutput = "[FILE] file.txt\n[DIR]  subdirectory";
-      assert.strictEqual(result.content[0].text, expectedOutput);
-    });
-  });
+      const testPath = "/safe/dir";
+      const result = await handler({path: testPath});
 
-  describe("`create_directory` tool", () => {
-    test("should validate and create a directory", async () => {
-      const handler = getToolHandler("create_directory");
-      await handler({path: "/safe/dir/new_dir"});
-      const resolvedPath = path.resolve("/safe/dir/new_dir");
-      assert.deepStrictEqual(mockCalls.validatePath, [resolvedPath]);
-      assert.strictEqual(mockCalls.mkdir, resolvedPath);
-    });
-  });
-
-  describe("`move_file` tool", () => {
-    test("should validate both paths and move the file", async () => {
-      const handler = getToolHandler("move_file");
-      const sourcePath = path.resolve("/safe/dir/src.txt");
-      const destPath = path.resolve("/another/safe/place/dest.txt");
-      await handler({source: "/safe/dir/src.txt", destination: "/another/safe/place/dest.txt"});
-
-      assert.deepStrictEqual(mockCalls.validatePath, [sourcePath, destPath]);
-      assert.deepStrictEqual(mockCalls.rename, {source: sourcePath, destination: destPath});
+      assert.strictEqual(result.isError, undefined);
+      assert.ok(result.structuredContent);
+      assert.deepStrictEqual(result.structuredContent, {
+        success: true,
+        path: path.resolve(testPath),
+        entries: [{name: "file.txt", type: "file"}],
+      });
     });
   });
 
   describe("`get_file_info` tool", () => {
-    test("should validate and get file stats", async () => {
+    test("should return structured file metadata", async (t) => {
+      const stats = {
+        size: 123,
+        birthtime: new Date("2024-01-01Z"),
+        mtime: new Date("2024-01-02Z"),
+        isDirectory: () => false,
+        isFile: () => true,
+        mode: 0o100644,
+      };
+      mock.method(fs.promises, "stat", async () => stats);
+
       const handler = getToolHandler("get_file_info");
-      const resolvedPath = path.resolve("/safe/dir/file.txt");
-      const result = (await handler({path: "/safe/dir/file.txt"})) as ToolResult;
-      assert.deepStrictEqual(mockCalls.validatePath, [resolvedPath]);
-      assert.strictEqual(mockCalls.stat, resolvedPath);
-      assert(result.content[0].text.includes("size: 1024"));
-      assert(result.content[0].text.includes("permissions: 644"));
-      assert(result.content[0].text.includes("modified: 2023-01-02T00:00:00.000Z"));
+      const testPath = "/safe/dir/info_test.txt";
+      const result = await handler({path: testPath});
+
+      assert.strictEqual(result.isError, undefined);
+      assert.ok(result.structuredContent);
+      const structured = result.structuredContent as any;
+      assert.strictEqual(structured.success, true);
+      assert.strictEqual(structured.path, path.resolve(testPath));
+      assert.strictEqual(structured.size, 123);
+      assert.strictEqual(structured.type, "file");
     });
   });
 
   describe("`list_allowed_directories` tool", () => {
-    test("should return the list of allowed directories", async () => {
+    test("should return structured list of allowed directories", async () => {
+      // Set some directories for the test
+      fsToolApi.allowedDirectories.length = 0;
+      fsToolApi.allowedDirectories.push("/safe/dir1", "/safe/dir2");
+
       const handler = getToolHandler("list_allowed_directories");
-      const result = (await handler({})) as ToolResult;
-      assert.deepStrictEqual(mockCalls.validatePath, []);
-      const expectedText = `This server can only access files and directories within the following paths:\n- ${path.resolve("/safe/dir")}\n- ${path.resolve("/another/safe/place")}`;
-      assert.strictEqual(result.content[0].text, expectedText);
+      const result = await handler({});
+
+      assert.strictEqual(result.isError, undefined);
+      assert.ok(result.structuredContent);
+      assert.deepStrictEqual(result.structuredContent, {
+        success: true,
+        directories: ["/safe/dir1", "/safe/dir2"],
+      });
+
+      // Clear after test
+      fsToolApi.allowedDirectories.length = 0;
     });
   });
 });

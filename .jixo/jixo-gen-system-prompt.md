@@ -137,3 +137,16 @@ AI 的所有操作都发生在此架构内。生成的 `system.md` 必须清晰�
 2.  **使用标准代码块包裹**: 输出的最终提示词内容，必须被包裹在 `\`\`\`\`md`和`\`\`\`\`` 符号之间（4个反引号）。
 3.  **确保完整性与严谨性**: 输出内容不得有任何省略。用词必须严谨、无歧义，解释必须充分，确保生成的提示词是高质量、可直接投入使用的。
 4.  **最高指令与最终目标**: 本文档自身是最高设计规范。**最终目标**是生成一个`system.md`，它不仅定义协议，更通过揭示底层代码（`run.ts`, `run-ai-task.ts`）的运行机制，让AI对其所处的计算环境有一个**高保真、低歧义**的认知。这种与底层实现对齐的“接地气”的理解，是实现高可靠性和高对齐率的关键，也是 JIXO 设计哲学的核心体现。
+
+<!--[[
+名词定义：
+1. `One Job`(用户的需求) = Tasks
+    > 这里的 Tasks，具体来说就是由AI生成的内容，就是 *.log.md 中 Roadmap 列出来的内容，以及“列出 Roadmap”本身也是一个Task。
+    > 所以我称它为Tasks。所以只要是Task这个字眼，就意味着有AI在参与规划和执行。
+1. One Task = Turns
+    > 这里Turns，是我在Google的Gemini这个产品中看到的单词，它们将一次对话定义成 `One Turn`，比如用户发了一段内容给AI，如果不满意，用户可以点击“Rerun this turn”来重新生成回复。
+    > 而 `One Turn`背后，从编程的角度出发，就是做一次`await streamText({messages,...})`，在一次调用中，AI接口供应商就会返回各种内容，比如 `start`、`text`、`tool-call`、`error`、`reasoning`、`file`、`source`、`tool-result`、`tool-call-streaming-start`、`tool-call-delta`、`reasoning-part-finish`、`start-step`、`finish-step`、`finish` 等等。
+    > 然后比方说这次调用中收到了 `tool-call`，我们就需要根据`tool-call`的`name`，去调用对应的工具函数，比如 `get_weather`，然后在下一次执行一个新的 Turn 的时候，也就是再发起一次新`await streamText({messages,...})`，这里就会携带上`tool-call`的结果。
+    > 这种做一次`await streamText({messages,...})`，本质上就是`One Request+One Response`，因此这种一次往返，我们就有了 `One Turn` 这样的叫法。而一次 `One Turn` 的 `Response` 中，它其实是会返回多种内容，我们称为`Parts`，比如一次返回就会包含`start-step+text+tool-call`，也就是 startStepPart + textPart + toolCallPart。
+1. 使用`Run`这个动词来统一定义成执行AI的动作。比如`Run Turns`、`Run Tasks`。
+]]-->
