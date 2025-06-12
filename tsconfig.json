@@ -4,6 +4,9 @@
             "path": "./packages/cli/tsconfig.json"
         },
         {
+            "path": "./packages/mcp-fs/tsconfig.json"
+        },
+        {
             "path": "./packages/mcp-pnpm/tsconfig.json"
         }
     ],
