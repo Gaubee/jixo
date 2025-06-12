@@ -1,14 +1,20 @@
-import {McpServer, type RegisteredTool} from "@modelcontextprotocol/sdk/server/mcp.js";
+#!/usr/bin/env node
+
+import {McpServer, type RegisteredTool, type ToolCallback} from "@modelcontextprotocol/sdk/server/mcp.js";
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import {spawn} from "node:child_process";
-import fs from "node:fs";
+import fs from "node:fs/promises";
 import path from "node:path";
-import {z} from "zod";
+import {z, type ZodObject, type ZodRawShape} from "zod";
 import pkg from "../package.json" with {type: "json"};
 
-// --- 自定义错误类 (保持不变) ---
-class PnpmExecutionError extends Error {
+// --- Custom Error Class ---
+/**
+ * Thrown when a pnpm command fails to execute successfully.
+ * Contains stdout, stderr, and the exit code for detailed diagnostics.
+ */
+export class PnpmExecutionError extends Error {
   constructor(
     message: string,
     public readonly stdout: string,
@@ -20,83 +26,157 @@ class PnpmExecutionError extends Error {
   }
 }
 
-// --- 核心安全执行函数 (保持不变) ---
-async function executePnpmCommand(args: string[], cwd?: string): Promise<string> {
-  const displayCwd = cwd || process.cwd();
-  console.error(`[SPAWN CWD: ${displayCwd}] pnpm ${args.join(" ")}`);
+// --- Core API and Helper Functions ---
+const helpers = {
+  /**
+   * Securely executes a pnpm command in a subprocess.
+   * @param args - An array of arguments to pass to the pnpm command.
+   * @param cwd - The working directory for the command.
+   * @returns A promise that resolves with the command's stdout.
+   * @throws {PnpmExecutionError} if the command fails.
+   */
+  executePnpmCommand: async (args: string[], cwd?: string): Promise<{stdout: string; stderr: string; exitCode: number | null}> => {
+    const displayCwd = cwd || process.cwd();
+    console.error(`[SPAWN CWD: ${displayCwd}] pnpm ${args.join(" ")}`);
 
-  return new Promise((resolve, reject) => {
-    const pnpm = spawn("pnpm", args, {
-      cwd,
-      shell: true,
-      stdio: "pipe",
+    return new Promise((resolve, reject) => {
+      const pnpm = spawn("pnpm", args, {
+        cwd,
+        shell: true, // Use shell for better cross-platform compatibility with PATH resolution
+        stdio: "pipe",
+      });
+
+      let stdout = "";
+      let stderr = "";
+
+      pnpm.stdout.on("data", (data) => (stdout += data.toString()));
+      pnpm.stderr.on("data", (data) => (stderr += data.toString()));
+
+      pnpm.on("error", (error) => {
+        console.error(`[SPAWN ERROR] Failed to start "pnpm" command.`, error);
+        reject(new Error(`Failed to start subprocess: ${error.message}. Is pnpm installed and in your PATH?`));
+      });
+
+      pnpm.on("close", (code) => {
+        if (stderr && code === 0) {
+          // Log stderr as a warning if the command still succeeded
+          console.error(`[STDWARN] ${stderr}`);
+        }
+
+        if (code === 0) {
+          resolve({stdout, stderr, exitCode: code});
+        } else {
+          const errorMessage = `Command "pnpm ${args.join(" ")}" failed with exit code ${code}.`;
+          console.error(`[ERROR] ${errorMessage}\n--- STDERR ---\n${stderr}\n--- STDOUT ---\n${stdout}`);
+          reject(new PnpmExecutionError(errorMessage, stdout, stderr, code));
+        }
+      });
     });
+  },
+};
 
-    let stdout = "";
-    let stderr = "";
+// --- Schema Definitions ---
 
-    pnpm.stdout.on("data", (data) => (stdout += data.toString()));
-    pnpm.stderr.on("data", (data) => (stderr += data.toString()));
-
-    pnpm.on("error", (error) => {
-      console.error(`[SPAWN ERROR] Failed to start "pnpm" command.`, error);
-      reject(new Error(`Failed to start subprocess: ${error.message}. Is pnpm installed and in your PATH?`));
-    });
-
-    pnpm.on("close", (code) => {
-      if (stderr && code === 0) {
-        console.error(`[STDWARN] ${stderr}`);
-      }
-      if (code === 0) {
-        resolve(stdout || `Command "pnpm ${args.join(" ")}" executed successfully.`);
-      } else {
-        const errorMessage = `Command "pnpm ${args.join(" ")}" failed with exit code ${code}.`;
-        console.error(`[ERROR] ${errorMessage}\n--- STDERR ---\n${stderr}\n--- STDOUT ---\n${stdout}`);
-        reject(new PnpmExecutionError(errorMessage, stdout, stderr, code));
-      }
-    });
-  });
-}
-
-// --- Schema 和工具定义 ---
-
+// --- Base Schemas ---
 const baseInputSchema = {
-  cwd: z.string().optional().describe("The working directory to run the command in. If not provided, it runs in the current directory."),
+  cwd: z.string().optional().describe("The working directory to run the command in. Defaults to the current directory."),
   extraArgs: z.array(z.string()).optional().describe("An array of extra command-line arguments to pass to pnpm. Example: ['--reporter=json']."),
 };
 
-// --- 修正点 1: 定义一个严格符合 MCP 规范的输出 Schema ---
-// 这个 Schema 直接对应 MCP 规范中的 `CallToolResult`。
-// 它不再有复杂的 `union` 或自定义的 `error` 类型。
-const outputSchema = {
-  // `content` 数组现在是必需的，并且只包含标准的 `text` 类型。
-  content: z.array(
-    z.object({
-      type: z.literal("text"),
-      text: z.string(),
-    }),
-  ),
-  // `isError` 是一个可选的布尔值，用于明确表示工具执行是否出错。
-  // 这正是我们之前缺少的关键标志。
-  isError: z.boolean().optional().describe("If true, the tool execution resulted in an error. The 'content' will contain error details."),
+const GenericErrorSchema = {
+  error: z
+    .object({
+      name: z.string().describe("The type of error, e.g., 'PnpmExecutionError'."),
+      message: z.string().describe("A detailed description of what went wrong."),
+    })
+    .optional()
+    .describe("Included only when 'success' is false."),
 };
 
+const BasePnpmOutputSchema = {
+  success: z.boolean().describe("Indicates if the operation was successful."),
+  stdout: z.string().optional().describe("The standard output from the pnpm command."),
+  stderr: z.string().optional().describe("The standard error from the pnpm command. May contain warnings even on success."),
+  exitCode: z.number().nullable().optional().describe("The exit code of the pnpm command."),
+  ...GenericErrorSchema,
+};
+
+// --- Tool-Specific Schemas ---
+const LicensesOutputSchema = {
+  ...BasePnpmOutputSchema,
+  entries: z.array(z.any()).optional().describe("A structured list of licenses, only available when using the '--json' flag."),
+};
+
+// --- Server and Tool Registration ---
+
 const server = new McpServer({
-  name: "pnpm-tool-pro",
+  name: "pnpm-server",
   version: pkg.version,
 });
 
-const registeredTools: {[key: string]: RegisteredTool} = {};
+/**
+ * A type-safe wrapper for `server.registerTool`.
+ */
+function safeRegisterTool<I extends ZodRawShape, O extends ZodRawShape>(
+  name: string,
+  config: {
+    description?: string;
+    inputSchema?: I;
+    outputSchema?: O;
+    annotations?: RegisteredTool["annotations"];
+  },
+  callback: ToolCallback<I>,
+): {
+  underlying: RegisteredTool;
+  inputSchema: ZodObject<I>;
+  outputSchema: ZodObject<O>;
+  callback: ToolCallback<I>;
+} {
+  const underlying = server.registerTool(name, config, callback);
+  return {
+    underlying,
+    inputSchema: z.object(config.inputSchema ?? ({} as I)),
+    outputSchema: z.object(config.outputSchema ?? ({} as O)),
+    callback,
+  };
+}
 
-// --- 修正点 2: 更新所有工具处理器以返回符合规范的错误对象 ---
-// 每个 catch 块现在都会返回一个包含 `isError: true` 和详细错误文本的 `content` 的对象。
+/**
+ * Centralized error handler for all pnpm tools.
+ */
+const handleToolError = (toolName: string, error: unknown) => {
+  let userMessage: string;
+  const structuredError: {[key: string]: any} = {
+    success: false,
+  };
 
-registeredTools.install = server.registerTool(
+  if (error instanceof PnpmExecutionError) {
+    userMessage = `Tool '${toolName}' failed with exit code ${error.exitCode}.\n\n--- ERROR MESSAGE ---\n${error.message}\n\n--- STDERR ---\n${error.stderr}\n\n--- STDOUT ---\n${error.stdout}`;
+    structuredError.error = {name: error.name, message: error.message};
+    structuredError.stdout = error.stdout;
+    structuredError.stderr = error.stderr;
+    structuredError.exitCode = error.exitCode;
+  } else if (error instanceof Error) {
+    userMessage = `An unexpected error occurred in '${toolName}': ${error.message}`;
+    structuredError.error = {name: error.name, message: error.message};
+  } else {
+    userMessage = `An unknown error occurred in '${toolName}': ${String(error)}`;
+    structuredError.error = {name: "UnknownError", message: String(error)};
+  }
+
+  return {
+    isError: true,
+    structuredContent: structuredError,
+    content: [{type: "text" as const, text: userMessage}],
+  };
+};
+
+const install_tool = safeRegisterTool(
   "install",
   {
     description: "Installs all dependencies for a project.",
     inputSchema: {...baseInputSchema, frozenLockfile: z.boolean().optional(), production: z.boolean().optional()},
-    outputSchema, // 使用新的、符合规范的 Schema
+    outputSchema: BasePnpmOutputSchema,
     annotations: {title: "Install Project Dependencies"},
   },
   async ({cwd, frozenLockfile, production, extraArgs}) => {
@@ -105,32 +185,23 @@ registeredTools.install = server.registerTool(
       if (frozenLockfile) args.push("--frozen-lockfile");
       if (production) args.push("--prod");
       if (extraArgs) args.push(...extraArgs);
-      const output = await pnpmApi.executePnpmCommand(args, cwd);
-      return {content: [{type: "text", text: output}]};
+      const {stdout, stderr, exitCode} = await helpers.executePnpmCommand(args, cwd);
+      return {
+        structuredContent: {success: true, stdout, stderr, exitCode},
+        content: [{type: "text", text: stdout || `Command "pnpm ${args.join(" ")}" executed successfully.`}],
+      };
     } catch (error) {
-      if (error instanceof PnpmExecutionError) {
-        // 这是正确的错误返回格式
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Tool 'install' failed with exit code ${error.exitCode}.\n\n--- ERROR MESSAGE ---\n${error.message}\n\n--- STDERR ---\n${error.stderr}\n\n--- STDOUT ---\n${error.stdout}`,
-            },
-          ],
-        };
-      }
-      throw error;
+      return handleToolError("install", error);
     }
   },
 );
 
-registeredTools.add = server.registerTool(
+const add_tool = safeRegisterTool(
   "add",
   {
     description: "Adds packages to project dependencies.",
     inputSchema: {...baseInputSchema, packages: z.array(z.string()).min(1), dev: z.boolean().optional(), optional: z.boolean().optional(), filter: z.string().optional()},
-    outputSchema,
+    outputSchema: BasePnpmOutputSchema,
     annotations: {title: "Add Packages"},
   },
   async ({cwd, packages, dev, optional, filter, extraArgs}) => {
@@ -142,38 +213,31 @@ registeredTools.add = server.registerTool(
       if (optional) args.push("-O");
       args.push(...packages);
       if (extraArgs) args.push(...extraArgs);
-      const output = await pnpmApi.executePnpmCommand(args, cwd);
-      return {content: [{type: "text", text: output}]};
+      const {stdout, stderr, exitCode} = await helpers.executePnpmCommand(args, cwd);
+      return {
+        structuredContent: {success: true, stdout, stderr, exitCode},
+        content: [{type: "text", text: stdout || `Command "pnpm ${args.join(" ")}" executed successfully.`}],
+      };
     } catch (error) {
-      if (error instanceof PnpmExecutionError) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Tool 'add' failed with exit code ${error.exitCode}.\n\n--- ERROR MESSAGE ---\n${error.message}\n\n--- STDERR ---\n${error.stderr}\n\n--- STDOUT ---\n${error.stdout}`,
-            },
-          ],
-        };
-      }
-      throw error;
+      return handleToolError("add", error);
     }
   },
 );
 
-registeredTools.run = server.registerTool(
+const run_tool = safeRegisterTool(
   "run",
   {
     description: "Executes a script defined in the project's `package.json`.",
     inputSchema: {...baseInputSchema, script: z.string(), scriptArgs: z.array(z.string()).optional(), filter: z.string().optional()},
-    outputSchema,
+    outputSchema: BasePnpmOutputSchema,
     annotations: {title: "Run a Project Script", destructiveHint: true},
   },
   async ({cwd, script, scriptArgs, filter, extraArgs}) => {
     try {
       const pkgPath = path.join(cwd || process.cwd(), "package.json");
       try {
-        const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+        const pkgData = await fs.readFile(pkgPath, "utf-8");
+        const pkg = JSON.parse(pkgData);
         if (!pkg.scripts || !pkg.scripts[script]) {
           throw new Error(`Security check failed: Script "${script}" not found in ${pkgPath}.`);
         }
@@ -187,31 +251,23 @@ registeredTools.run = server.registerTool(
       if (scriptArgs && scriptArgs.length > 0) {
         args.push("--", ...scriptArgs);
       }
-      const output = await pnpmApi.executePnpmCommand(args, cwd);
-      return {content: [{type: "text", text: output}]};
+      const {stdout, stderr, exitCode} = await helpers.executePnpmCommand(args, cwd);
+      return {
+        structuredContent: {success: true, stdout, stderr, exitCode},
+        content: [{type: "text", text: stdout || `Command "pnpm ${args.join(" ")}" executed successfully.`}],
+      };
     } catch (error) {
-      if (error instanceof PnpmExecutionError) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Tool 'run' failed with exit code ${error.exitCode}.\n\n--- ERROR MESSAGE ---\n${error.message}\n\n--- STDERR ---\n${error.stderr}\n\n--- STDOUT ---\n${error.stdout}`,
-            },
-          ],
-        };
-      }
-      throw error;
+      return handleToolError("run", error);
     }
   },
 );
 
-registeredTools.dlx = server.registerTool(
+const dlx_tool = safeRegisterTool(
   "dlx",
   {
-    description: "Fetches and runs a package from the registry.",
+    description: "Fetches and runs a package from the registry without installing it as a dependency.",
     inputSchema: {...baseInputSchema, commandAndArgs: z.array(z.string()).min(1)},
-    outputSchema,
+    outputSchema: BasePnpmOutputSchema,
     annotations: {title: "Download and Execute Package", openWorldHint: true},
   },
   async ({cwd, commandAndArgs, extraArgs}) => {
@@ -219,31 +275,23 @@ registeredTools.dlx = server.registerTool(
       const args = ["dlx"];
       if (extraArgs) args.push(...extraArgs);
       args.push(...commandAndArgs);
-      const output = await pnpmApi.executePnpmCommand(args, cwd);
-      return {content: [{type: "text", text: output}]};
+      const {stdout, stderr, exitCode} = await helpers.executePnpmCommand(args, cwd);
+      return {
+        structuredContent: {success: true, stdout, stderr, exitCode},
+        content: [{type: "text", text: stdout || `Command "pnpm ${args.join(" ")}" executed successfully.`}],
+      };
     } catch (error) {
-      if (error instanceof PnpmExecutionError) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Tool 'dlx' failed with exit code ${error.exitCode}.\n\n--- ERROR MESSAGE ---\n${error.message}\n\n--- STDERR ---\n${error.stderr}\n\n--- STDOUT ---\n${error.stdout}`,
-            },
-          ],
-        };
-      }
-      throw error;
+      return handleToolError("dlx", error);
     }
   },
 );
 
-registeredTools.create = server.registerTool(
+const create_tool = safeRegisterTool(
   "create",
   {
     description: "Creates a new project from a starter kit.",
     inputSchema: {...baseInputSchema, template: z.string(), templateArgs: z.array(z.string()).optional()},
-    outputSchema,
+    outputSchema: BasePnpmOutputSchema,
     annotations: {title: "Create a New Project", openWorldHint: true},
   },
   async ({cwd, template, templateArgs, extraArgs}) => {
@@ -251,32 +299,23 @@ registeredTools.create = server.registerTool(
       const args = ["create", template];
       if (templateArgs) args.push(...templateArgs);
       if (extraArgs) args.push(...extraArgs);
-      const output = await pnpmApi.executePnpmCommand(args, cwd);
-      return {content: [{type: "text", text: output}]};
+      const {stdout, stderr, exitCode} = await helpers.executePnpmCommand(args, cwd);
+      return {
+        structuredContent: {success: true, stdout, stderr, exitCode},
+        content: [{type: "text", text: stdout || `Command "pnpm ${args.join(" ")}" executed successfully.`}],
+      };
     } catch (error) {
-      if (error instanceof PnpmExecutionError) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              // 把所有有用的信息都打包到这个文本里，AI 就能看到了！
-              text: `Tool 'create' failed with exit code ${error.exitCode}.\n\n--- ERROR MESSAGE ---\n${error.message}\n\n--- STDERR ---\n${error.stderr}\n\n--- STDOUT ---\n${error.stdout}`,
-            },
-          ],
-        };
-      }
-      throw error;
+      return handleToolError("create", error);
     }
   },
 );
 
-registeredTools.licenses = server.registerTool(
+const licenses_tool = safeRegisterTool(
   "licenses",
   {
     description: "Checks and lists the licenses of installed packages.",
     inputSchema: {...baseInputSchema, json: z.boolean().optional(), dev: z.boolean().optional(), production: z.boolean().optional()},
-    outputSchema,
+    outputSchema: LicensesOutputSchema,
     annotations: {title: "List Package Licenses", readOnlyHint: true},
   },
   async ({cwd, json, dev, production, extraArgs}) => {
@@ -286,40 +325,52 @@ registeredTools.licenses = server.registerTool(
       if (dev) args.push("--dev");
       if (production) args.push("--prod");
       if (extraArgs) args.push(...extraArgs);
-      const output = await pnpmApi.executePnpmCommand(args, cwd);
-      return {content: [{type: "text", text: output}]};
-    } catch (error) {
-      if (error instanceof PnpmExecutionError) {
-        return {
-          isError: true,
-          content: [
-            {
-              type: "text",
-              text: `Tool 'licenses' failed with exit code ${error.exitCode}.\n\n--- ERROR MESSAGE ---\n${error.message}\n\n--- STDERR ---\n${error.stderr}\n\n--- STDOUT ---\n${error.stdout}`,
-            },
-          ],
-        };
+      const {stdout, stderr, exitCode} = await helpers.executePnpmCommand(args, cwd);
+
+      const structuredContent: z.TypeOf<z.ZodObject<typeof LicensesOutputSchema>> = {success: true, stdout, stderr, exitCode};
+      if (json) {
+        try {
+          structuredContent.entries = JSON.parse(stdout);
+        } catch (parseError) {
+          // If JSON parsing fails, return it as an error but keep the original output
+          return handleToolError("licenses", new Error(`Failed to parse JSON output: ${(parseError as Error).message}`));
+        }
       }
-      throw error;
+
+      return {
+        structuredContent,
+        content: [{type: "text", text: stdout || `Command "pnpm ${args.join(" ")}" executed successfully.`}],
+      };
+    } catch (error) {
+      return handleToolError("licenses", error);
     }
   },
 );
 
+// --- API Export for Testing and Main Entry ---
+
 export const pnpmApi = {
   server,
-  tools: registeredTools,
-  executePnpmCommand,
+  tools: {
+    install: install_tool,
+    add: add_tool,
+    run: run_tool,
+    dlx: dlx_tool,
+    create: create_tool,
+    licenses: licenses_tool,
+  },
+  helpers,
 };
 
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("MCP pnpm tool server running on stdio. Ready for commands.");
+  console.error("MCP pnpm server running on stdio. Ready for commands.");
 }
 
 if (import_meta_ponyfill(import.meta).main) {
   main().catch((error) => {
-    console.error("Fatal error in MCP pnpm tool server:", error);
+    console.error("Fatal error in MCP pnpm server:", error);
     process.exit(1);
   });
 }
