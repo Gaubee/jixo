@@ -25,7 +25,7 @@ export const init = (dir: string) => {
     }
     /// .jixo/.gitignore
     const gitignoreFilepath = path.join(jixoDirname, ".gitignore");
-    addRulesToGitIgnore(gitignoreFilepath, ["*.log.jsonl"]);
+    addRulesToGitIgnore(gitignoreFilepath, ["*.log.jsonl", "*.log.jsonl.txt"]);
   }
   /// jixo.config.json
   {

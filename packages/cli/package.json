@@ -27,6 +27,7 @@
     "@gaubee/node": "^0.2.1",
     "@gaubee/nodekit": "^0.9.1",
     "@gaubee/util": "^0.32.1",
+    "@jixo/mcp-fs": "workspace:^",
     "@jixo/mcp-pnpm": "workspace:^",
     "ai": "alpha",
     "commander": "^14.0.0",

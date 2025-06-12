@@ -12,8 +12,8 @@ export const tools = {
       return map_get_or_put_async(map, cwd, async () => {
         const mcpClient = await createMCPClient({
           transport: new Experimental_StdioMCPTransport({
-            command: "pnpx",
-            args: ["@modelcontextprotocol/server-filesystem", cwd],
+            command: "pnpm",
+            args: ["mcp-fs", cwd],
           }),
         });
         const tools = await mcpClient.tools();
@@ -42,8 +42,10 @@ export const tools = {
   pnpm: func_remember(async () => {
     const mcpClient = await createMCPClient({
       transport: new Experimental_StdioMCPTransport({
-        command: "pnpx",
-        args: ["@jixo/mcp-pnpm"],
+        // command: "pnpx",
+        // args: ["@jixo/mcp-pnpm"],
+        command: "pnpm",
+        args: ["mcp-pnpm"],
       }),
     });
     const tools = await mcpClient.tools();
