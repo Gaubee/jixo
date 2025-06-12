@@ -81,35 +81,53 @@ describe("Tool Output and Error Handling", () => {
     });
   });
 
-  describe("`licenses` tool", () => {
-    test("should return structured JSON entries on success", async () => {
-      const licenseData = [{name: "zod", license: "MIT"}];
-      const mockResult = {stdout: JSON.stringify(licenseData), stderr: "", exitCode: 0};
+  describe("`list` tool", () => {
+    test("should return parsed JSON data when --json is used", async () => {
+      const listData = [{name: "zod", version: "3.23.8"}];
+      const mockResult = {stdout: JSON.stringify(listData), stderr: "", exitCode: 0};
       mock.method(pnpmApi.helpers, "executePnpmCommand", async () => mockResult);
-      const handler = getToolHandler("licenses");
+      const handler = getToolHandler("list");
       const result = await handler({json: true});
+
+      assert.strictEqual(result.isError, undefined);
+      const structured = result.structuredContent as any;
+      assert.strictEqual(structured.success, true);
+      assert.deepStrictEqual(structured.jsonData, listData);
+    });
+  });
+
+  describe("`outdated` tool", () => {
+    test("should return parsed JSON data when --json is used", async () => {
+      const outdatedData = {zod: {current: "3.23.4", latest: "3.23.8"}};
+      const mockResult = {stdout: JSON.stringify(outdatedData), stderr: "", exitCode: 0};
+      mock.method(pnpmApi.helpers, "executePnpmCommand", async () => mockResult);
+      const handler = getToolHandler("outdated");
+      const result = await handler({json: true});
+
+      assert.strictEqual(result.isError, undefined);
+      const structured = result.structuredContent as any;
+      assert.strictEqual(structured.success, true);
+      assert.deepStrictEqual(structured.jsonData, outdatedData);
+    });
+  });
+
+  describe("`info` tool", () => {
+    test("should return structured JSON data on success", async () => {
+      const infoData = {name: "zod", version: "3.23.8"};
+      const mockResult = {stdout: JSON.stringify(infoData), stderr: "", exitCode: 0};
+      mock.method(pnpmApi.helpers, "executePnpmCommand", async () => mockResult);
+      const handler = getToolHandler("info");
+      const result = await handler({packages: ["zod"], json: true});
 
       assert.strictEqual(result.isError, undefined);
       assert.ok(result.structuredContent);
       assert.deepStrictEqual(result.structuredContent, {
         success: true,
-        ...mockResult,
-        entries: licenseData,
+        stdout: mockResult.stdout,
+        stderr: mockResult.stderr,
+        exitCode: mockResult.exitCode,
+        jsonData: infoData,
       });
-    });
-
-    test("should return a structured error if JSON parsing fails", async () => {
-      const mockResult = {stdout: "{invalid json}", stderr: "", exitCode: 0};
-      mock.method(pnpmApi.helpers, "executePnpmCommand", async () => mockResult);
-      const handler = getToolHandler("licenses");
-      const result = await handler({json: true});
-
-      assert.strictEqual(result.isError, true);
-      assert.ok(result.structuredContent);
-      const structured = result.structuredContent as any;
-      assert.strictEqual(structured.success, false);
-      assert.strictEqual(structured.error.name, "Error");
-      assert.ok(structured.error.message.includes("Failed to parse JSON output"));
     });
   });
 });
@@ -132,26 +150,40 @@ describe("MCP pnpm Tool Command Argument Generation", () => {
     mock.restoreAll();
   });
 
-  test("`install` should combine all options correctly", async () => {
+  test("`install` should handle filter argument", async () => {
     const handler = getToolHandler("install");
-    await handler({
-      cwd: "./backend",
-      production: true,
-      extraArgs: ["--ignore-scripts"],
-    });
-    assert.deepStrictEqual(lastCall.args, ["install", "--prod", "--ignore-scripts"]);
-    assert.strictEqual(lastCall.cwd, "./backend");
+    await handler({filter: "my-app", frozenLockfile: true});
+    assert.deepStrictEqual(lastCall.args, ["--filter", "my-app", "install", "--frozen-lockfile"]);
   });
 
-  test("`add` should handle dev, optional, and filter flags", async () => {
+  test("`add` should handle workspaceRoot argument", async () => {
     const handler = getToolHandler("add");
-    await handler({
-      packages: ["eslint"],
-      dev: true,
-      optional: true,
-      filter: "my-app",
-    });
-    assert.deepStrictEqual(lastCall.args, ["--filter", "my-app", "add", "-D", "-O", "eslint"]);
+    await handler({packages: ["zod"], workspaceRoot: true});
+    assert.deepStrictEqual(lastCall.args, ["add", "-w", "zod"]);
+  });
+
+  test("`remove` should construct arguments correctly", async () => {
+    const handler = getToolHandler("remove");
+    await handler({packages: ["zod"], filter: "my-app", dev: true});
+    assert.deepStrictEqual(lastCall.args, ["--filter", "my-app", "remove", "-D", "zod"]);
+  });
+
+  test("`list` should construct arguments correctly", async () => {
+    const handler = getToolHandler("list");
+    await handler({depth: 2, json: true, dev: true, filter: "my-app"});
+    assert.deepStrictEqual(lastCall.args, ["--filter", "my-app", "list", "--depth=2", "--json", "--dev"]);
+  });
+
+  test("`outdated` should construct arguments correctly", async () => {
+    const handler = getToolHandler("outdated");
+    await handler({packages: ["zod"], recursive: true, json: true});
+    assert.deepStrictEqual(lastCall.args, ["outdated", "zod", "--json", "-r"]);
+  });
+
+  test("`update` should construct arguments correctly", async () => {
+    const handler = getToolHandler("update");
+    await handler({packages: ["zod"], latest: true, recursive: true, interactive: true});
+    assert.deepStrictEqual(lastCall.args, ["update", "zod", "--latest", "-r", "-i"]);
   });
 
   test("`run` should combine script args and extraArgs", async () => {
@@ -164,24 +196,20 @@ describe("MCP pnpm Tool Command Argument Generation", () => {
     assert.deepStrictEqual(lastCall.args, ["run", "test", "--stream", "--", "--ci", "--coverage"]);
   });
 
-  test("`dlx` should handle command and args correctly", async () => {
-    const handler = getToolHandler("dlx");
-    await handler({
-      commandAndArgs: ["cowsay", "Hello MCP!"],
-      extraArgs: ["--quiet"],
-      cwd: "/tmp/test",
-    });
-    assert.deepStrictEqual(lastCall.args, ["dlx", "--quiet", "cowsay", "Hello MCP!"]);
-    assert.strictEqual(lastCall.cwd, "/tmp/test");
+  test("`licenses` should handle long argument", async () => {
+    const handler = getToolHandler("licenses");
+    await handler({long: true, json: true, filter: "my-app"});
+    assert.deepStrictEqual(lastCall.args, ["--filter", "my-app", "licenses", "list", "--json", "--long"]);
   });
 
-  test("`create` should handle template and args correctly", async () => {
-    const handler = getToolHandler("create");
+  test("`info` should handle packages, fields, and json flag", async () => {
+    const handler = getToolHandler("info");
     await handler({
-      template: "vite@latest",
-      templateArgs: ["my-app", "--template", "react-ts"],
-      extraArgs: ["--force"],
+      packages: ["zod"],
+      fields: ["version", "license"],
+      json: true,
+      extraArgs: ["--no-color"],
     });
-    assert.deepStrictEqual(lastCall.args, ["create", "vite@latest", "my-app", "--template", "react-ts", "--force"]);
+    assert.deepStrictEqual(lastCall.args, ["info", "zod", "version", "license", "--json", "--no-color"]);
   });
 });
