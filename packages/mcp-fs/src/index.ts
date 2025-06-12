@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import {McpServer, type RegisteredTool} from "@modelcontextprotocol/sdk/server/mcp.js";
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
 import {createTwoFilesPatch} from "diff";
@@ -9,87 +11,70 @@ import path from "node:path";
 import {z} from "zod";
 import pkg from "../package.json" with {type: "json"};
 
-// --- 1. 启动与配置 ---
+// --- 1. Startup and Configuration ---
 let allowedDirectories: string[] = [];
 
-// 展开并规范化路径
+// Expands home directory tilde `~` and normalizes the path.
 const expandHome = (filepath: string): string => {
   return filepath.startsWith("~/") || filepath === "~" ? path.join(os.homedir(), filepath.slice(1)) : filepath;
 };
 
-// --- 2. 核心 API 和辅助函数 ---
+// --- 2. Core API and Helper Functions ---
 
 const _fsApi = {
   /**
-   * 验证给定路径是否在允许的目录范围内，并处理符号链接。
-   * @throws {Error} 如果路径无效或不允许访问。
-   * @returns {Promise<string>} 经过验证和解析的绝对路径。
+   * Validates if a given path is within the allowed directories, handling symbolic links.
+   * @throws {Error} If the path is invalid or not allowed.
+   * @returns {Promise<string>} The validated and resolved absolute path.
    */
   async validatePath(requestedPath: string): Promise<string> {
     const expandedPath = expandHome(requestedPath);
     const absolute = path.isAbsolute(expandedPath) ? path.resolve(expandedPath) : path.resolve(process.cwd(), expandedPath);
     const normalizedRequested = path.normalize(absolute);
 
-    if (!allowedDirectories.some((dir) => normalizedRequested.startsWith(dir))) {
-      throw new Error(`Access denied: Path '${absolute}' is outside the allowed directories: ${allowedDirectories.join(", ")}`);
+    if (allowedDirectories.length > 0 && !allowedDirectories.some((dir) => normalizedRequested.startsWith(dir))) {
+      throw new Error(`Access denied: Path '${absolute}' is outside the allowed directories.`);
     }
 
     try {
       const realPath = await fs.realpath(absolute);
       const normalizedReal = path.normalize(realPath);
-      if (!allowedDirectories.some((dir) => normalizedReal.startsWith(dir))) {
+      if (allowedDirectories.length > 0 && !allowedDirectories.some((dir) => normalizedReal.startsWith(dir))) {
         throw new Error("Access denied: Symbolic link points to a location outside the allowed directories.");
       }
       return realPath;
     } catch (error: any) {
       if (error.code === "ENOENT") {
-        // 文件或目录尚不存在，验证其父目录
         const parentDir = path.dirname(absolute);
-        const realParentPath = await fs.realpath(parentDir).catch(() => {
-          throw new Error(`Access denied: Parent directory '${parentDir}' does not exist or is inaccessible.`);
-        });
-        const normalizedParent = path.normalize(realParentPath);
-        if (!allowedDirectories.some((dir) => normalizedParent.startsWith(dir))) {
-          throw new Error("Access denied: Parent directory is outside the allowed directories.");
-        }
-        return absolute; // 返回预期的绝对路径，因为它将在允许的位置被创建
+        await this.validatePath(parentDir);
+        return absolute;
       }
-      throw error; // 重新抛出其他错误
+      throw error;
     }
   },
 
   /**
-   * 对文件内容应用一系列编辑操作。
-   * @returns {Promise<string>} 显示更改的 git-style diff。
+   * Applies a series of edits to a file's content and returns the original and modified states.
+   * @returns {Promise<{originalContent: string; modifiedContent: string}>}
    */
-  async applyFileEdits(filePath: string, edits: {oldText: string; newText: string}[], dryRun = false): Promise<string> {
+  async applyFileEdits(filePath: string, edits: {oldText: string; newText: string}[]): Promise<{originalContent: string; modifiedContent: string}> {
     const normalize = (text: string) => text.replace(/\r\n/g, "\n");
     const originalContent = normalize(await fs.readFile(filePath, "utf-8"));
     let modifiedContent = originalContent;
 
     for (const edit of edits) {
       const normalizedOld = normalize(edit.oldText);
+      const normalizedNew = normalize(edit.newText);
       if (!modifiedContent.includes(normalizedOld)) {
         throw new Error(`Could not apply edit: The text to be replaced was not found in the file.\n--- TEXT NOT FOUND ---\n${edit.oldText}`);
       }
-      modifiedContent = modifiedContent.replace(normalizedOld, normalize(edit.newText));
+      modifiedContent = modifiedContent.replace(normalizedOld, normalizedNew);
     }
-
-    const diff = createTwoFilesPatch(filePath, filePath, originalContent, modifiedContent, "original", "modified");
-    if (!dryRun) {
-      await fs.writeFile(filePath, modifiedContent, "utf-8");
-    }
-
-    // 格式化 diff 以便在 markdown 中安全显示
-    let backticks = "```";
-    while (diff.includes(backticks)) {
-      backticks += "`";
-    }
-    return `${backticks}diff\n${diff}\n${backticks}`;
+    return {originalContent, modifiedContent};
   },
 };
 
-// --- 3. Schemas 定义 ---
+// --- 3. Schema Definitions ---
 
 const ReadFileArgsSchema = {path: z.string().describe("The full path to the file to read.")};
 const WriteFileArgsSchema = {
@@ -98,8 +83,22 @@ const WriteFileArgsSchema = {
 };
 const EditFileArgsSchema = {
   path: z.string().describe("The path to the file to edit."),
-  edits: z.array(z.object({oldText: z.string(), newText: z.string()})).describe("A list of search-and-replace operations."),
+  edits: z
+    .array(z.object({oldText: z.string(), newText: z.string()}))
+    .min(1)
+    .describe("A list of search-and-replace operations."),
   dryRun: z.boolean().default(false).optional().describe("If true, returns the diff without modifying the file."),
+  returnStyle: z
+    .enum(["diff", "full", "none"])
+    .default("diff")
+    .optional()
+    .describe(
+      "Controls what content is returned after a successful edit. " +
+        "CHOICE GUIDANCE: " +
+        "1. 'diff' (default): Best for small, targeted changes. Returns a git-style diff, which is token-efficient and clearly shows what changed. " +
+        "2. 'full': Best for large or complex changes. Returns the entire new file content. Use this when the changes are substantial or when you need the complete file state for subsequent steps. " +
+        "3. 'none': The most token-efficient option. Returns only a success message with no content. Use this when you are highly confident in the edit and do not need to verify the result.",
+    ),
 };
 const ListDirectoryArgsSchema = {path: z.string().describe("The path to the directory to list.")};
 const CreateDirectoryArgsSchema = {path: z.string().describe("The path to the directory to create (recursively).")};
@@ -114,13 +113,13 @@ const SearchFilesArgsSchema = {
 };
 const GetFileInfoArgsSchema = {path: z.string().describe("The path to the file or directory to get info for.")};
 
-// 统一的输出 Schema，所有工具共享
+// Unified output schema for all tools.
 const outputSchema = {
   content: z.array(z.object({type: z.literal("text"), text: z.string()})),
   isError: z.boolean().optional(),
 };
 
-// --- 4. 服务器和工具注册 ---
+// --- 4. Server and Tool Registration ---
 
 const server = new McpServer({
   name: "secure-filesystem-server",
@@ -177,16 +176,39 @@ registeredTools.write_file = server.registerTool(
 registeredTools.edit_file = server.registerTool(
   "edit_file",
   {
-    description: "Performs precise, non-destructive edits on a text file by replacing sections of text. Returns a git-style diff of the changes.",
+    description: "Performs precise edits on a text file and allows choosing the return format for verification.",
     inputSchema: EditFileArgsSchema,
     outputSchema,
   },
-  async ({path, edits, dryRun}) => {
+  async ({path, edits, dryRun, returnStyle = "diff"}) => {
     try {
       const validPath = await fsToolApi.validatePath(path);
-      const diff = await fsToolApi.applyFileEdits(validPath, edits, dryRun);
-      const message = dryRun ? `Dry run successful. Changes for ${path}:\n${diff}` : `Successfully applied edits to ${path}.\n${diff}`;
-      return {content: [{type: "text", text: message}]};
+      const {originalContent, modifiedContent} = await fsToolApi.applyFileEdits(validPath, edits);
+
+      if (originalContent === modifiedContent) {
+        return {content: [{type: "text", text: `No changes were made to the file '${validPath}'; content is identical.`}]};
+      }
+
+      if (!dryRun) {
+        await fs.writeFile(validPath, modifiedContent, "utf-8");
+      }
+
+      // **FIXED**: Consistently use `validPath` in ALL status messages for correctness.
+      const status = dryRun ? `Dry run successful. Proposed changes for ${validPath}:` : `Successfully applied edits to ${validPath}.`;
+      let responseContent = "";
+
+      if (returnStyle === "full") {
+        responseContent = modifiedContent;
+      } else if (returnStyle === "diff") {
+        const diff = createTwoFilesPatch(validPath, validPath, originalContent, modifiedContent, "", "", {context: 3});
+        let backticks = "```";
+        while (diff.includes(backticks)) backticks += "`";
+        responseContent = `${backticks}diff\n${diff}\n${backticks}`;
+      }
+      // For 'none', responseContent remains empty.
+
+      const finalMessage = responseContent ? `${status}\n${responseContent}` : status;
+      return {content: [{type: "text", text: finalMessage}]};
     } catch (error) {
       return handleToolError("edit_file", error);
     }
@@ -308,7 +330,7 @@ registeredTools.get_file_info = server.registerTool(
         path: validPath,
         type: stats.isDirectory() ? "directory" : stats.isFile() ? "file" : "other",
         size: stats.size,
-        permissions: stats.mode.toString(8).slice(-3),
+        permissions: (stats.mode & 0o777).toString(8),
         created: stats.birthtime.toISOString(),
         modified: stats.mtime.toISOString(),
       };
@@ -330,13 +352,14 @@ registeredTools.list_allowed_directories = server.registerTool(
     outputSchema,
   },
   async () => {
-    // This tool is safe and does not need a try/catch
-    const text = `This server can only access files and directories within the following paths:\n- ${allowedDirectories.join("\n- ")}`;
+    const text =
+      allowedDirectories.length > 0
+        ? `This server can only access files and directories within the following paths:\n- ${allowedDirectories.join("\n- ")}`
+        : "Warning: No directory restrictions are set. The server can access any path.";
     return {content: [{type: "text", text}]};
   },
 );
 
-// Export a consistent API object for testing
 export const fsToolApi = {
   allowedDirectories,
   server,
@@ -344,7 +367,7 @@ export const fsToolApi = {
   ..._fsApi,
 };
 
-// --- 5. 服务器启动 ---
+// --- 5. Server Startup ---
 
 async function validateDirectories() {
   for (const dir of allowedDirectories) {
@@ -361,24 +384,31 @@ async function validateDirectories() {
   }
 }
 
-async function main() {
-  // 命令行参数解析
-  const args = process.argv.slice(2);
-  if (args.length === 0) {
-    console.error("Usage: mcp-fs <allowed-directory> [additional-directories...]");
-    process.exit(1);
+async function main(dirs: string[]) {
+  if (dirs.length > 0) {
+    allowedDirectories = dirs.map((dir) => path.normalize(path.resolve(expandHome(dir))));
+    await validateDirectories();
   }
-  allowedDirectories = args.map((dir) => path.normalize(path.resolve(expandHome(dir))));
 
-  await validateDirectories();
   const transport = new StdioServerTransport();
   await server.connect(transport);
+
   console.error("Secure MCP Filesystem Server running on stdio.");
-  console.error("Allowed directories:", allowedDirectories);
+  if (allowedDirectories.length > 0) {
+    console.error("Allowed directories:", allowedDirectories);
+  } else {
+    console.error("Warning: No directory restrictions specified. Access is not sandboxed.");
+  }
 }
 
+/// from cli
 if (import_meta_ponyfill(import.meta).main) {
-  main().catch((error) => {
+  const dirs = process.argv.slice(2);
+  if (dirs.length === 0) {
+    console.error(`Usage: ${Object.keys(pkg.bin)[0]} <allowed-directory> [additional-directories...]`);
+    process.exit(1);
+  }
+  main(dirs).catch((error) => {
     console.error("Fatal error running server:", error);
     process.exit(1);
   });
