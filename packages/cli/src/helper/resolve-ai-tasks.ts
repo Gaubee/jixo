@@ -8,7 +8,7 @@ import z from "zod";
 import {type JixoConfig} from "../config.js";
 import {parseProgress} from "./parse-progress.js";
 
-const process_executor_id = uuidv7();
+const process_runner_uuid_prefix = uuidv7();
 
 /**
  * 将 config.tasks 字段转化成具体的 ai-tasks 信息
@@ -16,7 +16,7 @@ const process_executor_id = uuidv7();
  * @param config_tasks
  * @returns
  */
-export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) => {
+export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"], current_job_loop_count: number) => {
   const config_tasks_arr = Array.isArray(config_tasks) ? config_tasks : [config_tasks];
   type TaskBase = {
     data: {[key: string]: any};
@@ -24,7 +24,9 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
   };
   type AiTask = TaskBase &
     Readonly<{
-      name: string;
+      runner: string;
+      jobName: string;
+      loopCount: number;
       filepath: string;
       exitCode: number | null;
       exitReason: string;
@@ -35,9 +37,8 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
       agents: string[];
       model: string;
       startTime: string;
-      maxSteps: number;
-      executor: string;
-      otherExecutors: string[];
+      maxTurns: number;
+      otherRunners: string[];
 
       log: Readonly<{
         name: string;
@@ -70,8 +71,8 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
       task_dir.push(cwd);
     }
 
-    const task_name = inner_task_name || options.defaultName;
-    const useLog = ai_task.data.useLog || task_name;
+    const job_name = inner_task_name || options.defaultName;
+    const useLog = ai_task.data.useLog || job_name;
 
     const log = {
       name: useLog,
@@ -117,7 +118,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
     };
     reloadLog();
     const startTime = new Date().toISOString();
-    const executor = `${task_name}-${process_executor_id}`;
+    const runner_id = `${job_name}-${process_runner_uuid_prefix}-${current_job_loop_count.toString().padStart(3, "0")}`;
 
     const task_process = {
       code: null as number | null,
@@ -133,8 +134,10 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
 
     tasks.push({
       ...ai_task,
-      name: task_name,
-      filepath: options.filepath ?? path.join(cwd, `.jixo/${task_name}.task.md`),
+      jobName: job_name,
+      loopCount: current_job_loop_count,
+      runner: runner_id,
+      filepath: options.filepath ?? path.join(cwd, `.jixo/${job_name}.job.md`),
       cwd: cwd,
       dirs: task_dir,
       agents: match(z.union([z.string(), z.string().array()]).safeParse(ai_task.data.agents))
@@ -142,9 +145,8 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
           return Array.isArray(agents) ? agents : agents.split(/\s+/);
         })
         .otherwise(() => []),
-      maxSteps: 40,
-      executor: executor,
-      otherExecutors: [],
+      maxTurns: 40,
+      otherRunners: [],
       model: match(z.string().safeParse(ai_task.data.model))
         .with({success: true, data: P.select()}, (model) => model)
         .otherwise(() => ""),
@@ -174,12 +176,12 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
         (dirname) => {
           for (const entry of walkFiles(path.resolve(cwd, dirname), {
             matchFile(entry) {
-              return entry.name.endsWith(".task.md");
+              return entry.name.endsWith(".job.md");
             },
           })) {
             addTask(readMarkdown(entry.path), {
               filepath: entry.path,
-              defaultName: entry.name.slice(0, -".task.md".length),
+              defaultName: entry.name.slice(0, -".job.md".length),
             });
           }
         },
@@ -193,7 +195,7 @@ export const resolveAiTasks = (cwd: string, config_tasks: JixoConfig["tasks"]) =
         (m) => {
           addTask(readMarkdown(m.filename), {
             filepath: m.filename,
-            defaultName: m.name ?? m.filename.slice(0, -".task.md".length),
+            defaultName: m.name ?? m.filename.slice(0, -".job.md".length),
           });
         },
       )

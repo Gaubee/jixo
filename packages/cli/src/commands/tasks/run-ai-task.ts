@@ -1,82 +1,29 @@
 import {blue, cyan, FileEntry, gray, green, red, spinner, YAML, yellow} from "@gaubee/nodekit";
 import {func_catch} from "@gaubee/util";
-import {AISDKError, streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart, type ToolSet} from "ai";
-import createDebug from "debug";
+import {streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart, type ToolSet} from "ai";
 import ms from "ms";
 import {open} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {match, P} from "ts-pattern";
-import {safeEnv} from "../../env.js";
 import {handleError} from "../../helper/handle-ai-error.js";
+import {createDebug} from "../../helper/logger.js";
 import {getAllPromptConfigs, getAllSkillMap as getAllSkillNavMap} from "../../helper/prompts-loader.js";
 import type {AiTask} from "../../helper/resolve-ai-tasks.js";
 import {AiTaskTui} from "./ai-tasl-tui.js";
 import {tools} from "./ai-tools.js";
-import {providers} from "./model-providers.js";
+import {getModel} from "./model-providers.js";
 
-createDebug.formatters.y = (v) => {
-  return JSON.stringify(v, (_k, v) => {
-    if (typeof v === "string") {
-      let slice_len = 0;
-      if (v.length > 200) {
-        slice_len = 50;
-      }
-      if (v.length > 100) {
-        slice_len = 30;
-      }
-      if (slice_len > 0) {
-        return `<string:${v.length}>${v.slice(0, slice_len)}${gray("...")}${v.slice(-slice_len)}`;
-      }
-      return v;
-    }
-    if (AISDKError.isInstance(v)) {
-      return red(v.message);
-    }
-    return v;
-  });
-};
 const log = createDebug("jixo:run-ai-task");
 
-const getModel = (model?: string) => {
-  return match(model)
-    .with(P.string.startsWith("deepseek-"), (model) => providers.deepseek(model))
-    .with(P.string.startsWith("gemini-"), (model) => providers.google(model))
-    .with(P.string.startsWith("o3-"), P.string.startsWith("o1-"), P.string.startsWith("gpt-"), (model) => providers.openai(model))
-    .with(P.string.startsWith("claude-"), (model) => providers.anthropic(model))
-    .with(P.string.startsWith("grok-"), (model) => providers.xai(model))
-    .with(P.string.includes("/"), (model) => providers.deepinfra(model))
-    .otherwise(() => {
-      if (safeEnv.JIXO_DEEPSEEK_API_KEY) {
-        return providers.deepseek("deepseek-reasoner");
-      }
-      if (safeEnv.JIXO_GOOGLE_API_KEY) {
-        return providers.google("gemini-2.5-pro-preview-05-06");
-      }
-      if (safeEnv.JIXO_OPENAI_API_KEY) {
-        return providers.openai("o3-mini");
-      }
-      if (safeEnv.JIXO_ANTHROPIC_API_KEY) {
-        return providers.anthropic("claude-4-sonnet-20250514");
-      }
-      if (safeEnv.JIXO_XAI_API_KEY) {
-        return providers.xai("grok-3-beta");
-      }
-      if (safeEnv.JIXO_DEEPINFRA_API_KEY) {
-        return providers.deepinfra("meta-llama/Meta-Llama-3.1-405B-Instruct");
-      }
-      return providers.deepseek("deepseek-reasoner");
-    });
-};
 export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: FileEntry[], changedFilesSet: Record<string, FileEntry[]>) => {
   const tool_spinner = spinner({
     prefixText: "🧰",
-    text: "正在准备环境工具...",
+    text: "Preparing AI tools...",
   });
   tool_spinner.start();
   const availableTools: ToolSet = {
     ...(await tools.fileSystem(ai_task.cwd)),
-    // ...(await tools.memory(path.join(ai_task.cwd, `.jixo/${ai_task.name}.memory.json`))),
     ...(await tools.pnpm()),
     ...(await tools.jixo(ai_task)),
     ...(await tools.git(ai_task.cwd)),
@@ -84,7 +31,7 @@ export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: Fi
   tool_spinner.clear();
   tool_spinner.stop();
 
-  const json_line_log_file_handle = await open(path.join(ai_task.cwd, ".jixo", `${ai_task.executor}.${loopTimes.toString().padStart(2, "0")}.log.jsonl`), "a");
+  const json_line_log_file_handle = await open(path.join(ai_task.cwd, ".jixo", `${ai_task.runner}.log.jsonl`), "a");
   const __writeJsonLineLog = (...lineDatas: any[]) => {
     for (const lineData of lineDatas) {
       try {
@@ -93,7 +40,7 @@ export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: Fi
     }
   };
 
-  const tui = new AiTaskTui(ai_task, spinner({text: `Initializing AI task: ${cyan(ai_task.name)}...`, prefixText: "⏳ "}));
+  const tui = new AiTaskTui(ai_task, spinner({text: `Initializing AI task: ${cyan(ai_task.jobName)}...`, prefixText: "⏳ "}));
   tui.spinner.start();
   const updateTuiState = () => {
     tui.setStatus("loop and time", `${green(`[${loopTimes}]`)} ${cyan(`+${ms(Date.now() - new Date(ai_task.startTime).getTime())}`)}`);
@@ -121,7 +68,7 @@ const _runAiTask = async (
   const model = getModel(ai_task.model);
 
   const initialMessages: ModelMessage[] = [];
-  const maxSteps = 40; // Safeguard against infinite loops
+  const maxTurns = 40; // Safeguard against infinite loops
 
   const promptConfigs = getAllPromptConfigs();
 
@@ -165,7 +112,7 @@ const _runAiTask = async (
           },
         }),
       )
-      .replaceAll("{{maxSteps}}", () => `${maxSteps}`)
+      .replaceAll("{{maxTurns}}", () => `${maxTurns}`)
       .replaceAll(
         "{{changedFiles}}",
         YAML.stringify(
@@ -192,17 +139,17 @@ const _runAiTask = async (
 
   __writeJsonLineLog(...currentMessages);
 
-  loop: for (let step = 0; step < maxSteps; step++) {
-    if (step === 0) {
+  loop: for (let turn = 0; turn < maxTurns; turn++) {
+    if (turn === 0) {
       tui.setStatus("turns", `Connecting To ${model.provider}...`);
     } else {
-      tui.setStatus("turns", `Processing step ${step + 1}/${maxSteps}...`);
-      const userStepMessage: ModelMessage = {
+      tui.setStatus("turns", `Processing step ${turn + 1}/${maxTurns}...`);
+      const userTurnMessage: ModelMessage = {
         role: "user",
-        content: `Steps: ${step}/${maxSteps}`,
+        content: `Turns: ${turn}/${maxTurns}`,
       };
-      currentMessages.push(userStepMessage);
-      __writeJsonLineLog(userStepMessage);
+      currentMessages.push(userTurnMessage);
+      __writeJsonLineLog(userTurnMessage);
     }
     const result = await streamText({
       model: model,
@@ -304,7 +251,6 @@ const _runAiTask = async (
         .with({type: "tool-call-delta"}, (p) => log("\nQAQ tool-call-delta: %y", p))
         .with({type: "reasoning-part-finish"}, (p) => log("\nQAQ reasoning-part-finish: %y", p))
         .with({type: "start-step"}, (p) => log("\nQAQ start-step: %y", p))
-        // --- START: MODIFIED SECTION ---
         .with({type: "finish-step"}, (p) => {
           log("\nQAQ finish-step: %y", p);
           /**
@@ -333,7 +279,6 @@ const _runAiTask = async (
               log(`Step finished with normal reason: ${p.finishReason}. Awaiting end of turn.`);
             });
         })
-        // --- END: MODIFIED SECTION ---
         .with({type: "start"}, (p) => log("\nQAQ start: %y", p))
         .with({type: "finish"}, async (finishPart) => {
           log("\nQAQ finish: %y", finishPart);
@@ -343,7 +288,7 @@ const _runAiTask = async (
 
           if (finishPart.finishReason === "stop" || finishPart.finishReason === "length") {
             tui.prefixText = tui.endInfo.prefixText = "✅ ";
-            tui.text = tui.endInfo.text = green(`${cyan(`[${ai_task.name}]`)} Completed`);
+            tui.text = tui.endInfo.text = green(`${cyan(`[${ai_task.jobName}]`)} Completed`);
             // Task finished without tool calls or after tool calls that didn't lead to more calls.
             return LOOP_SIGNALS.RETURN; // Exit the outer loop and function
           }
@@ -351,7 +296,7 @@ const _runAiTask = async (
           if (finishPart.finishReason === "tool-calls") {
             if (requestedToolCalls.length === 0) {
               tui.prefixText = tui.endInfo.prefixText = "🚧 ";
-              tui.text = tui.endInfo.text = yellow(`${cyan(`[${ai_task.name}]`)} finished with 'tool-calls' but no tools were requested.`);
+              tui.text = tui.endInfo.text = yellow(`${cyan(`[${ai_task.jobName}]`)} finished with 'tool-calls' but no tools were requested.`);
               return LOOP_SIGNALS.RETURN; // Exit, something is off
             }
 
@@ -405,7 +350,7 @@ const _runAiTask = async (
           } else {
             // Other finish reasons, potentially an error or unexpected state
             tui.prefixText = tui.endInfo.prefixText = "🛑 ";
-            tui.text = tui.endInfo.text = red(`${cyan(`[${ai_task.name}]`)} task finished with unhandled reason: ${finishPart.finishReason}`);
+            tui.text = tui.endInfo.text = red(`${cyan(`[${ai_task.jobName}]`)} task finished with unhandled reason: ${finishPart.finishReason}`);
             return LOOP_SIGNALS.ERROR;
           }
         })
@@ -421,9 +366,9 @@ const _runAiTask = async (
       }
     }
     // If the stream finishes without a 'finish' part (e.g. error thrown inside), this loop might exit. Ensure spinner stops.
-    if (step === maxSteps - 1) {
+    if (turn === maxTurns - 1) {
       tui.prefixText = tui.endInfo.prefixText = "🚧 ";
-      tui.text = tui.endInfo.text = yellow(`${cyan(`[${ai_task.name}]`)} Max interaction steps reached.`);
+      tui.text = tui.endInfo.text = yellow(`${cyan(`[${ai_task.jobName}]`)} Max interaction turns reached.`);
       break;
     }
   }

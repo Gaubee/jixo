@@ -9,8 +9,8 @@ export const init = (dir: string) => {
     const jixoDirname = path.join(dir, ".jixo");
     /// 创建 .jixo 目录
     fs.mkdirSync(jixoDirname, {recursive: true});
-    /// .jixo/readme.task.md
-    const readmeTaskFilepath = path.join(jixoDirname, "readme.task.md");
+    /// .jixo/readme.job.md
+    const readmeTaskFilepath = path.join(jixoDirname, "readme.job.md");
     if (!fs.existsSync(readmeTaskFilepath)) {
       writeMarkdown(
         readmeTaskFilepath,

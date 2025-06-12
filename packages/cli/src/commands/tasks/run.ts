@@ -26,7 +26,7 @@ export const run = async (
   if (fs.existsSync(cwdIgnoreFilepath)) {
     ignore.push(...fs.readFileSync(cwdIgnoreFilepath, "utf-8").split("\n"));
   }
-  const exitedTasks = new Set<string>();
+  const exitedJobs = new Set<string>();
 
   let {force = false} = options;
   const {loopTimes: MAX_LOOP_TIMES = Infinity} = options;
@@ -34,7 +34,7 @@ export const run = async (
   let retryTimes = 0;
   const MAX_RETRY_TIMES = 3;
   while (currentTimes <= MAX_LOOP_TIMES) {
-    const ai_tasks = resolveAiTasks(cwd, config.tasks);
+    const ai_tasks = resolveAiTasks(cwd, config.tasks, currentTimes - 1);
 
     const allFiles = [...walkFiles(cwd, {ignore})];
     let allDone = true;
@@ -47,7 +47,7 @@ export const run = async (
             continue;
           }
         }
-        if (exitedTasks.has(ai_task.name)) {
+        if (exitedJobs.has(ai_task.jobName)) {
           continue;
         }
 
@@ -55,7 +55,7 @@ export const run = async (
         if (!task_dirs.some((dir) => dirMatcher.isMatch(dir))) {
           continue;
         }
-        if (!nameMatcher.isMatch(ai_task.name)) {
+        if (!nameMatcher.isMatch(ai_task.jobName)) {
           continue;
         }
         const isCwdTask = cwd === task_dirs[0] && task_dirs.length === 1;
@@ -85,7 +85,7 @@ export const run = async (
         await runAiTask(ai_task, currentTimes, task_allFiles, task_changedFiles);
 
         if (ai_task.exitCode != null) {
-          exitedTasks.add(ai_task.name);
+          exitedJobs.add(ai_task.jobName);
         }
       }
     } catch (e) {

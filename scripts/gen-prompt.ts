@@ -30,7 +30,7 @@ const gen_prompt = async (input: string, output: string, once: boolean) => {
     ///
     .replace(/@#([\w\.\-\/]+)/g, (_, filepath) => {
       try {
-        return "````" + path.parse(filepath).ext.slice(1) + "\n" + getFileState(rootResolver(filepath), once).get() + "\n````";
+        return "`" + filepath + "`:\n````" + path.parse(filepath).ext.slice(1) + "\n" + getFileState(rootResolver(filepath), once).get() + "\n````";
       } catch (e) {
         return _;
       }

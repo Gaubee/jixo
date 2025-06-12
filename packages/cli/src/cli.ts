@@ -55,12 +55,11 @@ export const runCli = async (args: string[] = process.argv) => {
             description: "Tasks are forced to run, even at 100% progress. It is suitable for running after modifying the content of the task",
           })
           .option("once", {
-            alias: "O",
             type: "boolean",
-            description: "The task is executed only once in the loop, equal to --step=1",
+            description: "The task is executed only once in the loop, equal to --loop=1",
           })
-          .option("step", {
-            alias: "S",
+          .option("loop", {
+            alias: "L",
             type: "number",
             description: "The task is executed N times in the loop",
           });
@@ -81,7 +80,7 @@ export const runCli = async (args: string[] = process.argv) => {
           dirFilter,
           force: argv.force,
           loopTimes: match(argv)
-            .with({step: P.number.gt(0).select()}, (step) => step)
+            .with({loop: P.number.gt(0).select()}, (loop) => loop)
             .with({once: P.boolean.select()}, (once) => (once ? 1 : Infinity))
             .otherwise(() => Infinity),
         });

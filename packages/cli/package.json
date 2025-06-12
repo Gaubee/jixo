@@ -22,6 +22,7 @@
     "@ai-sdk/deepseek": "alpha",
     "@ai-sdk/google": "alpha",
     "@ai-sdk/openai": "alpha",
+    "@ai-sdk/provider": "alpha",
     "@ai-sdk/xai": "alpha",
     "@gaubee/node": "^0.2.1",
     "@gaubee/nodekit": "^0.9.1",

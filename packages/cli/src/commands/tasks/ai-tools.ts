@@ -91,8 +91,6 @@ export const tools = {
     const configs = getAllPromptConfigs();
     const allSkillMap = getAllSkillMap();
     return (ai_task: AiTask) => {
-      // return map_get_or_put_async(map, ai_task.name, async () => {
-      // });
       return {
         get_jixo_skill: tool({
           description: "Get the JIXO skill prompt by name",
@@ -113,6 +111,7 @@ export const tools = {
               description: "Lock the log file for writing, will return log file content",
               parameters: z.object({}),
               execute: async () => {
+                ai_task.reloadLog();
                 return {type: "success", filepath: ai_task.log.filepath, content: ai_task.log.content};
               },
             }),
@@ -123,8 +122,8 @@ export const tools = {
                 return {type: "success"};
               },
             }),
-            jixo_task_exit: tool({
-              description: "Exit the task.",
+            jixo_tasks_exit: tool({
+              description: "Exit the tasks.",
               parameters: z.object({
                 code: z.number({description: "Exit code: 0 is Success; 1 is Error; 2 is No Tasks"}),
                 reason: z.string({description: "Exit reasons that provide human-readable information"}),

@@ -1,21 +1,49 @@
 <CONTEXT_DATA>
 <ENVIRONMENT>
 
-- **Executor_Identity**: `{{task.executor}}`
-- **Executor_Name**: `{{task.name}}`
-- **Current_Task_Max_Steps_Quota**: `{{task.maxSteps}}`
+- **Job_Name**: `{{task.jobName}}`
+- **Task_Runner**: `{{task.runner}}`
+- **Current_Task_Max_Turns_Quota**: `{{task.maxTurns}}`
 - **Task_Start_Time**: `{{task.startTime}}`
 
 </ENVIRONMENT>
 
 <ACTIVE_SESSION_STATE>
 
-- **Other_Executor_List**:
+- **Other_Runner_List**:
   ```yaml
-  {{task.otherExecutors}}
+  {{task.otherRunners}}
   ```
 
 </ACTIVE_SESSION_STATE>
+
+<WORKSPACE_STRUCTURE>
+
+directory: {{task.cwd}}
+
+files:
+
+```yaml
+{{allFiles}}
+```
+
+</WORKSPACE_STRUCTURE>
+<JOB_DIRS_CHANGE_FILES>
+
+```yaml
+{{changedFiles}}
+```
+
+</JOB_DIRS_CHANGE_FILES>
+
+<JIXO_ALL_SKILLS>
+
+```yaml
+{{allSkills}}
+```
+
+</JIXO_ALL_SKILLS>
+
 </CONTEXT_DATA>
 
 <INPUT_FILES>
@@ -29,38 +57,15 @@
 </CONTENT>
 </FILE>
 
-<FILE id="task_file" path="{{task.filepath}}">
+<FILE id="job_file" path="{{task.filepath}}">
 <CONTENT>
 ```md
 {{task.content}}
 ```
 </CONTENT>
 </FILE>
-
-<FILE id="workspace_structure" path="{{task.cwd}}">
-<CONTENT>
-```yaml
-{{allFiles}}
-```
-</CONTENT>
-</FILE>
-<FILE id="change_files" path="{{task.dirs}}">
-<CONTENT>
-```yaml
-{{changedFiles}}
-```
-</CONTENT>
-</FILE>
-
-<FILE id="jixo_all_skills">
-<CONTENT>
-```yaml
-{{allSkills}}
-```
-</CONTENT>
-</FILE>
 </INPUT_FILES>
 
 <IMPERATIVE>
-Your sole task is to execute one step according to the `JIXO_EXECUTION_PROTOCOL` defined in your system prompt, using the data provided above. Begin `PROTOCOL 0` now.
+Your sole task is to execute turns according to the `JIXO_EXECUTION_PROTOCOL` defined in your system prompt, using the data provided above. Begin `PROTOCOL 0` now.
 </IMPERATIVE>
