@@ -4,8 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {afterEach, beforeEach, describe, mock, test} from "node:test";
 import {z} from "zod";
+import {AccessDeniedError, EditConflictError} from "../error.js";
 import {fsToolApi} from "../index.js";
-import { AccessDeniedError, EditConflictError } from "../error.js";
 
 // Helper to safely get the text from a result's content
 function getResultText(result: CallToolResult): string {
@@ -23,10 +23,12 @@ function getToolHandler<T extends keyof typeof fsToolApi.tools>(toolName: T) {
   return (args: z.infer<typeof tool.inputSchema>): Promise<CallToolResult> => tool.callback(args, {} as any);
 }
 
-describe("MCP Filesystem Tool Handlers", () => {
+const SANDBOX = path.resolve("./mcp-fs-test-sandbox");
+
+describe("MCP Filesystem Tool Handlers (Unit)", () => {
   // Mock the internal helper functions to isolate tool logic for testing.
   beforeEach(() => {
-    mock.method(fsToolApi.helpers, "validatePath", async (p: string) => path.resolve(p));
+    mock.method(fsToolApi.helpers, "validatePath", (p: string) => path.resolve(p));
   });
 
   afterEach(() => {
@@ -36,7 +38,7 @@ describe("MCP Filesystem Tool Handlers", () => {
   describe("`read_file` tool", () => {
     test("should return structured content on success", async (t) => {
       // Mock the underlying fs call for this specific test
-      mock.method(fs.promises, "readFile", async () => "hello world");
+      mock.method(fs, "readFileSync", () => "hello world");
       const handler = getToolHandler("read_file");
       const testPath = "/safe/dir/read_test.txt";
       const result = await handler({path: testPath});
@@ -53,7 +55,7 @@ describe("MCP Filesystem Tool Handlers", () => {
 
     test("should return a structured error for access denied", async (t) => {
       const errorMessage = "Access Denied";
-      mock.method(fsToolApi.helpers, "validatePath", async () => {
+      mock.method(fsToolApi.helpers, "validatePath", () => {
         throw new AccessDeniedError(errorMessage);
       });
       const handler = getToolHandler("read_file");
@@ -72,7 +74,7 @@ describe("MCP Filesystem Tool Handlers", () => {
 
   describe("`write_file` tool", () => {
     test("should return structured success message", async (t) => {
-      mock.method(fs.promises, "writeFile", async () => {});
+      mock.method(fs, "writeFileSync", () => {});
       const handler = getToolHandler("write_file");
       const testPath = "/safe/dir/write_test.txt";
       const result = await handler({path: testPath, content: "new content"});
@@ -89,11 +91,11 @@ describe("MCP Filesystem Tool Handlers", () => {
 
   describe("`edit_file` tool", () => {
     test("should return a diff and correct structured content", async (t) => {
-      mock.method(fsToolApi.helpers, "applyFileEdits", async () => ({
+      mock.method(fsToolApi.helpers, "applyFileEdits", () => ({
         originalContent: "original",
         modifiedContent: "modified",
       }));
-      mock.method(fs.promises, "writeFile", async () => {});
+      mock.method(fs, "writeFileSync", () => {});
 
       const handler = getToolHandler("edit_file");
       const testPath = "/safe/dir/edit_test.txt";
@@ -109,7 +111,7 @@ describe("MCP Filesystem Tool Handlers", () => {
 
     test("should handle EditConflictError with a structured error and suggestion", async (t) => {
       const errorMessage = "Text not found";
-      mock.method(fsToolApi.helpers, "applyFileEdits", async () => {
+      mock.method(fsToolApi.helpers, "applyFileEdits", () => {
         throw new EditConflictError(errorMessage);
       });
 
@@ -131,11 +133,11 @@ describe("MCP Filesystem Tool Handlers", () => {
   });
 
   describe("`list_directory` tool", () => {
-    test("should return structured list of entries", async (t) => {
-      mock.method(fs.promises, "readdir", async () => [{name: "file.txt", isDirectory: () => false, isFile: () => true}] as any);
+    test("should return structured list of entries for maxDepth 1", async (t) => {
+      mock.method(fs, "readdirSync", () => [{name: "file.txt", isDirectory: () => false, isFile: () => true}] as any);
       const handler = getToolHandler("list_directory");
       const testPath = "/safe/dir";
-      const result = await handler({path: testPath});
+      const result = await handler({path: testPath, maxDepth: 1});
 
       assert.strictEqual(result.isError, undefined);
       assert.ok(result.structuredContent);
@@ -157,7 +159,7 @@ describe("MCP Filesystem Tool Handlers", () => {
         isFile: () => true,
         mode: 0o100644,
       };
-      mock.method(fs.promises, "stat", async () => stats);
+      mock.method(fs, "statSync", () => stats as any);
 
       const handler = getToolHandler("get_file_info");
       const testPath = "/safe/dir/info_test.txt";
@@ -175,7 +177,6 @@ describe("MCP Filesystem Tool Handlers", () => {
 
   describe("`list_allowed_directories` tool", () => {
     test("should return structured list of allowed directories", async () => {
-      // Set some directories for the test
       fsToolApi.allowedDirectories.length = 0;
       fsToolApi.allowedDirectories.push("/safe/dir1", "/safe/dir2");
 
@@ -189,8 +190,143 @@ describe("MCP Filesystem Tool Handlers", () => {
         directories: ["/safe/dir1", "/safe/dir2"],
       });
 
-      // Clear after test
       fsToolApi.allowedDirectories.length = 0;
+    });
+  });
+});
+
+describe("MCP Filesystem Tool Handlers (Integration)", () => {
+  beforeEach(() => {
+    mock.restoreAll(); // Use real implementations
+    fs.rmSync(SANDBOX, {recursive: true, force: true});
+    fs.mkdirSync(SANDBOX, {recursive: true});
+    fsToolApi.allowedDirectories.length = 0;
+    fsToolApi.allowedDirectories.push(SANDBOX);
+  });
+
+  afterEach(() => {
+    fs.rmSync(SANDBOX, {recursive: true, force: true});
+    fsToolApi.allowedDirectories.length = 0;
+  });
+
+  describe("`create_directory` tool", () => {
+    test("should recursively create directories", async () => {
+      const handler = getToolHandler("create_directory");
+      const deepDirPath = path.join(SANDBOX, "a", "b", "c");
+
+      assert.strictEqual(fs.existsSync(deepDirPath), false, "Precondition: Directory should not exist");
+      const result = await handler({path: deepDirPath});
+      assert.strictEqual(result.isError, undefined, `Tool failed: ${result.isError && getResultText(result)}`);
+      assert.ok(fs.existsSync(deepDirPath), "Directory should be created");
+    });
+  });
+
+  describe("`copy_path` tool", () => {
+    test("should copy a file", async () => {
+      const handler = getToolHandler("copy_path");
+      const sourceFile = path.join(SANDBOX, "source.txt");
+      const destFile = path.join(SANDBOX, "dest.txt");
+      fs.writeFileSync(sourceFile, "test");
+
+      const result = await handler({source: sourceFile, destination: destFile});
+      assert.strictEqual(result.isError, undefined);
+      const content = fs.readFileSync(destFile, "utf-8");
+      assert.strictEqual(content, "test");
+    });
+
+    test("should recursively copy a directory", async () => {
+      const handler = getToolHandler("copy_path");
+      const sourceDir = path.join(SANDBOX, "source_dir");
+      const destDir = path.join(SANDBOX, "dest_dir");
+      fs.mkdirSync(sourceDir);
+      fs.writeFileSync(path.join(sourceDir, "file.txt"), "hello");
+
+      const result = await handler({source: sourceDir, destination: destDir, recursive: true});
+      assert.strictEqual(result.isError, undefined, `Tool failed: ${result.isError && getResultText(result)}`);
+      assert.ok(fs.existsSync(path.join(destDir, "file.txt")));
+    });
+
+    test("should fail to copy a directory if not recursive", async () => {
+      const handler = getToolHandler("copy_path");
+      const sourceDir = path.join(SANDBOX, "source_dir");
+      fs.mkdirSync(sourceDir);
+
+      const result = await handler({source: sourceDir, destination: path.join(SANDBOX, "dest_dir"), recursive: false});
+      assert.ok(result.isError);
+      assert.ok(getResultText(result).includes("Source is a directory, but 'recursive' option is not set to true"));
+    });
+  });
+
+  describe("`delete_path` tool", () => {
+    test("should delete a file", async () => {
+      const handler = getToolHandler("delete_path");
+      const fileToDelete = path.join(SANDBOX, "file.txt");
+      fs.writeFileSync(fileToDelete, "delete me");
+      assert.ok(fs.existsSync(fileToDelete));
+
+      const result = await handler({path: fileToDelete});
+      assert.strictEqual(result.isError, undefined);
+      assert.strictEqual(fs.existsSync(fileToDelete), false);
+    });
+
+    test("should be idempotent and succeed if file does not exist", async () => {
+      const handler = getToolHandler("delete_path");
+      const fileToDelete = path.join(SANDBOX, "nonexistent.txt");
+      assert.strictEqual(fs.existsSync(fileToDelete), false);
+
+      const result = await handler({path: fileToDelete});
+      assert.strictEqual(result.isError, undefined);
+    });
+
+    test("should fail to delete a non-empty directory if not recursive", async () => {
+      const handler = getToolHandler("delete_path");
+      const dirToDelete = path.join(SANDBOX, "dir");
+      fs.mkdirSync(dirToDelete);
+      fs.writeFileSync(path.join(dirToDelete, "file.txt"), "content");
+
+      const result = await handler({path: dirToDelete, recursive: false});
+      assert.ok(result.isError);
+      const structured = result.structuredContent as any;
+      assert.strictEqual(structured.error.name, "DeleteNonEmptyDirectoryError");
+      assert.ok(getResultText(result).includes("Suggestion: To delete a non-empty directory, set the 'recursive' parameter to true"));
+    });
+  });
+
+  describe("`list_directory` (recursive) tool", () => {
+    test("should generate a correct directory tree", async () => {
+      const handler = getToolHandler("list_directory");
+      const dirA = path.join(SANDBOX, "a");
+      const dirB = path.join(dirA, "b");
+      fs.mkdirSync(dirB, {recursive: true});
+      fs.writeFileSync(path.join(SANDBOX, "file1.txt"), "");
+      fs.writeFileSync(path.join(dirA, "file2.txt"), "");
+
+      const result = await handler({path: SANDBOX, maxDepth: 3});
+      assert.strictEqual(result.isError, undefined);
+
+      const structured = result.structuredContent as any;
+      assert.strictEqual(structured.success, true);
+      assert.strictEqual(structured.entries.length, 2); // 'a' and 'file1.txt' at root
+      const dirAEntry = structured.entries.find((e: any) => e.name === "a");
+      assert.ok(dirAEntry);
+      assert.strictEqual(dirAEntry.children.length, 2); // 'b' and 'file2.txt' in 'a'
+    });
+
+    test("should respect maxDepth", async () => {
+      const handler = getToolHandler("list_directory");
+      const dirA = path.join(SANDBOX, "a");
+      const dirB = path.join(dirA, "b");
+      fs.mkdirSync(dirB, {recursive: true});
+
+      const result = await handler({path: SANDBOX, maxDepth: 2});
+      assert.strictEqual(result.isError, undefined);
+
+      const structured = result.structuredContent as any;
+      const dirAEntry = structured.entries.find((e: any) => e.name === "a");
+      assert.ok(dirAEntry);
+      const dirBEntry = dirAEntry.children.find((e: any) => e.name === "b");
+      assert.ok(dirBEntry);
+      assert.deepStrictEqual(dirBEntry.children, []); // 'b' children are not listed due to maxDepth
     });
   });
 });

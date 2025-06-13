@@ -20,3 +20,13 @@ export class EditConflictError extends Error {
     this.name = "EditConflictError";
   }
 }
+
+/**
+ * Thrown when attempting to delete a non-empty directory without the recursive flag.
+ */
+export class DeleteNonEmptyDirectoryError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "DeleteNonEmptyDirectoryError";
+  }
+}

@@ -1,17 +1,15 @@
-#!/usr/bin/env node
-
 import {safeRegisterTool} from "@jixo/mcp-core";
 import {McpServer} from "@modelcontextprotocol/sdk/server/mcp.js";
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
 import {createTwoFilesPatch} from "diff";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import {minimatch} from "minimatch";
-import fs from "node:fs/promises";
+import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {z} from "zod";
 import pkg from "../package.json" with {type: "json"};
-import {AccessDeniedError, EditConflictError} from "./error.js";
+import {AccessDeniedError, DeleteNonEmptyDirectoryError, EditConflictError} from "./error.js";
 
 // --- 1. Startup and Configuration ---
 let allowedDirectories: string[] = [];
@@ -25,11 +23,11 @@ const expandHome = (filepath: string): string => {
 // Encapsulated in an object to ensure stable references.
 const helpers = {
   /**
-   * Validates if a given path is within the allowed directories, handling symbolic links.
+   * Validates if a given path is within the allowed directories, handling symbolic links and non-existent paths for creation.
    * @throws {AccessDeniedError} If the path is invalid or not allowed.
-   * @returns {Promise<string>} The validated and resolved absolute path.
+   * @returns {string} The validated and resolved absolute path.
    */
-  async validatePath(requestedPath: string): Promise<string> {
+  validatePath(requestedPath: string): string {
     const expandedPath = expandHome(requestedPath);
     const absolute = path.isAbsolute(expandedPath) ? path.resolve(expandedPath) : path.resolve(process.cwd(), expandedPath);
     const normalizedRequested = path.normalize(absolute);
@@ -39,39 +37,56 @@ const helpers = {
     }
 
     try {
-      const realPath = await fs.realpath(absolute);
+      const realPath = fs.realpathSync(normalizedRequested);
+      // Path exists, double-check its real path for symlinks pointing outside the sandbox
       if (allowedDirectories.length > 0 && !allowedDirectories.some((dir) => realPath.startsWith(dir))) {
         throw new AccessDeniedError("Access denied: Symbolic link points to a location outside the allowed directories.");
       }
       return realPath;
     } catch (error: any) {
       if (error.code === "ENOENT") {
-        const parentDir = path.dirname(normalizedRequested);
-        try {
-          const realParentDir = await fs.realpath(parentDir);
-          if (allowedDirectories.length > 0 && !allowedDirectories.some((dir) => realParentDir.startsWith(dir))) {
-            throw new AccessDeniedError(`Access denied: Cannot create item in directory '${parentDir}' as it is outside the allowed sandbox.`);
+        // Path does not exist. This is okay for creation.
+        // We must validate its intended parent directory is within the sandbox.
+        let parentDir = path.dirname(normalizedRequested);
+        let current = parentDir;
+
+        // Traverse up to find the first existing ancestor.
+        while (true) {
+          try {
+            const realParentDir = fs.realpathSync(current);
+            // Found an existing ancestor. Check if it's in the sandbox.
+            if (allowedDirectories.length > 0 && !allowedDirectories.some((dir) => realParentDir.startsWith(dir))) {
+              throw new AccessDeniedError(`Access denied: Cannot create item in directory '${parentDir}' as it resolves outside the allowed sandbox.`);
+            }
+            // Ancestor is valid, so the target path is also valid for creation.
+            return normalizedRequested;
+          } catch (parentError: any) {
+            if (parentError.code === "ENOENT") {
+              const next = path.dirname(current);
+              if (next === current) {
+                // Reached the root and found nothing.
+                // The initial check at the top covers this; if we are here, it's allowed.
+                return normalizedRequested;
+              }
+              current = next;
+            } else {
+              throw parentError; // Different error while checking parent.
+            }
           }
-          return normalizedRequested;
-        } catch (parentError: any) {
-          if (parentError.code === "ENOENT") {
-            throw new Error(`Parent directory does not exist: ${parentDir}`);
-          }
-          throw parentError;
         }
       }
-      throw error;
+      throw error; // Other errors like EACCES.
     }
   },
 
   /**
    * Applies a series of edits to a file's content and returns the original and modified states.
    * @throws {EditConflictError} If the text to be replaced is not found.
-   * @returns {Promise<{originalContent: string; modifiedContent: string}>}
+   * @returns {{originalContent: string; modifiedContent: string}}
    */
-  async applyFileEdits(filePath: string, edits: {oldText: string; newText: string}[]): Promise<{originalContent: string; modifiedContent: string}> {
+  applyFileEdits(filePath: string, edits: {oldText: string; newText: string}[]): {originalContent: string; modifiedContent: string} {
     const normalize = (text: string) => text.replace(/\r\n/g, "\n");
-    const originalContent = normalize(await fs.readFile(filePath, "utf-8"));
+    const originalContent = normalize(fs.readFileSync(filePath, "utf-8"));
     let modifiedContent = originalContent;
 
     for (const edit of edits) {
@@ -113,15 +128,23 @@ const EditFileArgsSchema = {
         "3. 'none': The most token-efficient option. Returns only a success message with no content. Use this when you are highly confident in the edit and do not need to verify the result.",
     ),
 };
-const ListDirectoryArgsSchema = {path: z.string().describe("The path to the directory to list.")};
+const ListDirectoryArgsSchema = {
+  path: z.string().describe("The path to the directory to list."),
+  maxDepth: z.number().int().min(1).optional().default(1).describe("Maximum depth for listing. Default is 1 (flat listing). Values > 1 produce a recursive tree."),
+};
 const CreateDirectoryArgsSchema = {path: z.string().describe("The path to the directory to create (recursively).")};
 const MoveFileArgsSchema = {
   source: z.string().describe("The source path of the file or directory to move."),
   destination: z.string().describe("The destination path."),
 };
-const CopyFileArgsSchema = {
-  source: z.string().describe("The path of the file to copy."),
-  destination: z.string().describe("The path where the copy will be created."),
+const CopyPathArgsSchema = {
+  source: z.string().describe("The path of the file or directory to copy."),
+  destination: z.string().describe("The path where the copy will be created. If the destination is an existing directory, the source will be copied inside it."),
+  recursive: z.boolean().optional().default(false).describe("If true, allows copying directories recursively. Required for directories."),
+};
+const DeletePathArgsSchema = {
+  path: z.string().describe("The path of the file or directory to delete."),
+  recursive: z.boolean().optional().default(false).describe("If true, allows deleting directories and their contents recursively. Required for non-empty directories."),
 };
 const SearchFilesArgsSchema = {
   path: z.string().describe("The root directory to start the search from."),
@@ -166,17 +189,24 @@ const EditFileOutputSchema = {
   ...GenericErrorSchema,
 };
 
+// A recursive Zod schema for directory entries, enabling structured tree output.
+type DirectoryEntry = {
+  name: string;
+  type: "file" | "directory";
+  children?: DirectoryEntry[];
+};
+const DirectoryEntrySchema: z.ZodType<DirectoryEntry> = z.lazy(() =>
+  z.object({
+    name: z.string(),
+    type: z.enum(["file", "directory"]),
+    children: z.array(DirectoryEntrySchema).optional(),
+  }),
+);
+
 const ListDirectoryOutputSchema = {
   success: z.boolean().describe("Indicates if the operation was successful."),
   path: z.string().optional(),
-  entries: z
-    .array(
-      z.object({
-        name: z.string(),
-        type: z.enum(["file", "directory"]),
-      }),
-    )
-    .optional(),
+  entries: z.array(DirectoryEntrySchema).optional().describe("A list of files and directories. If maxDepth > 1, directories will contain a nested 'children' list."),
   ...GenericErrorSchema,
 };
 
@@ -224,13 +254,12 @@ const handleToolError = (toolName: string, error: unknown) => {
   let errorMessage: string;
 
   if (error instanceof EditConflictError) {
-    // For EditConflictError, provide a specific suggestion.
     errorMessage = `${error.message}\n\nSuggestion: The file content may have changed. Use the 'read_file' tool to get the latest version before trying to edit again.`;
+  } else if (error instanceof DeleteNonEmptyDirectoryError) {
+    errorMessage = `${error.message}\n\nSuggestion: To delete a non-empty directory, set the 'recursive' parameter to true.`;
   } else if (error instanceof Error) {
-    // For AccessDeniedError and other standard errors, use their message.
     errorMessage = error.message;
   } else {
-    // Fallback for non-Error types.
     errorMessage = String(error);
   }
 
@@ -264,8 +293,8 @@ const read_file_tool = safeRegisterTool(
   },
   async ({path}) => {
     try {
-      const validPath = await helpers.validatePath(path);
-      const content = await fs.readFile(validPath, "utf-8");
+      const validPath = helpers.validatePath(path);
+      const content = fs.readFileSync(validPath, "utf-8");
       return {
         structuredContent: {success: true, path: validPath, content},
         content: [{type: "text", text: content}],
@@ -286,8 +315,8 @@ const write_file_tool = safeRegisterTool(
   },
   async ({path, content}) => {
     try {
-      const validPath = await helpers.validatePath(path);
-      await fs.writeFile(validPath, content, "utf-8");
+      const validPath = helpers.validatePath(path);
+      fs.writeFileSync(validPath, content, "utf-8");
       const message = `Successfully wrote to ${path}`;
       return {
         structuredContent: {success: true, path: validPath, message},
@@ -309,8 +338,8 @@ const edit_file_tool = safeRegisterTool(
   },
   async ({path, edits, dryRun, returnStyle = "diff"}) => {
     try {
-      const validPath = await helpers.validatePath(path);
-      const {originalContent, modifiedContent} = await helpers.applyFileEdits(validPath, edits);
+      const validPath = helpers.validatePath(path);
+      const {originalContent, modifiedContent} = helpers.applyFileEdits(validPath, edits);
       const changesApplied = originalContent !== modifiedContent;
       let diff: string | null = null;
       let statusMessage: string;
@@ -320,7 +349,7 @@ const edit_file_tool = safeRegisterTool(
         statusMessage = `No changes were made to the file '${validPath}'; content is identical.`;
       } else {
         if (!dryRun) {
-          await fs.writeFile(validPath, modifiedContent, "utf-8");
+          fs.writeFileSync(validPath, modifiedContent, "utf-8");
         }
         statusMessage = dryRun ? `Dry run successful. Proposed changes for ${validPath}:` : `Successfully applied edits to ${validPath}.`;
         diff = createTwoFilesPatch(validPath, validPath, originalContent, modifiedContent, "", "", {context: 3});
@@ -358,30 +387,69 @@ const list_directory_tool = safeRegisterTool(
   server,
   "list_directory",
   {
-    description: "Get a detailed listing of all files and directories in a specified path.",
+    description: "Get a listing of files and directories. Can list recursively to show a directory tree.",
     inputSchema: ListDirectoryArgsSchema,
     outputSchema: ListDirectoryOutputSchema,
   },
-  async ({path}) => {
+  async ({path: rootPath, maxDepth = 1}) => {
     try {
-      const validPath = await helpers.validatePath(path);
-      const entries = await fs.readdir(validPath, {withFileTypes: true});
-      const structuredEntries = entries.map((e) => ({
-        name: e.name,
-        type: (e.isDirectory() ? "directory" : "file") as "file" | "directory",
-      }));
+      const validPath = helpers.validatePath(rootPath);
 
-      if (entries.length === 0) {
-        const message = `Directory '${path}' is empty.`;
+      const listRecursively = (dir: string, currentDepth: number): DirectoryEntry[] => {
+        if (currentDepth >= maxDepth) return [];
+        try {
+          const entries = fs.readdirSync(dir, {withFileTypes: true});
+          return entries.map((entry) => {
+            const entryPath = path.join(dir, entry.name);
+            const isDirectory = entry.isDirectory();
+            const result: DirectoryEntry = {
+              name: entry.name,
+              type: isDirectory ? "directory" : "file",
+            };
+            if (isDirectory) {
+              result.children = listRecursively(entryPath, currentDepth + 1);
+            }
+            return result;
+          });
+        } catch {
+          return []; // Ignore errors reading subdirectories, e.g. permission denied
+        }
+      };
+
+      const formatTree = (entries: DirectoryEntry[], prefix: string): string => {
+        let treeString = "";
+        for (let i = 0; i < entries.length; i++) {
+          const entry = entries[i];
+          const connector = i === entries.length - 1 ? "└── " : "├── ";
+          const line = prefix + connector + entry.name + (entry.type === "directory" ? "/" : "") + "\n";
+          treeString += line;
+          if (entry.children && entry.children.length > 0) {
+            const newPrefix = prefix + (i === entries.length - 1 ? "    " : "│   ");
+            treeString += formatTree(entry.children, newPrefix);
+          }
+        }
+        return treeString;
+      };
+
+      const structuredEntries = listRecursively(validPath, 0);
+
+      if (structuredEntries.length === 0) {
         return {
           structuredContent: {success: true, path: validPath, entries: []},
-          content: [{type: "text", text: message}],
+          content: [{type: "text", text: `Directory '${rootPath}' is empty or could not be read.`}],
         };
       }
-      const formatted = structuredEntries.map((e) => `${e.type === "directory" ? "[DIR] " : "[FILE]"} ${e.name}`).join("\n");
+
+      let formattedText: string;
+      if (maxDepth === 1) {
+        formattedText = structuredEntries.map((e) => `${e.type === "directory" ? "[DIR] " : "[FILE]"} ${e.name}`).join("\n");
+      } else {
+        formattedText = path.basename(validPath) + "\n" + formatTree(structuredEntries, "");
+      }
+
       return {
         structuredContent: {success: true, path: validPath, entries: structuredEntries},
-        content: [{type: "text", text: formatted}],
+        content: [{type: "text", text: formattedText}],
       };
     } catch (error) {
       return handleToolError("list_directory", error);
@@ -399,8 +467,8 @@ const create_directory_tool = safeRegisterTool(
   },
   async ({path}) => {
     try {
-      const validPath = await helpers.validatePath(path);
-      await fs.mkdir(validPath, {recursive: true});
+      const validPath = helpers.validatePath(path);
+      fs.mkdirSync(validPath, {recursive: true});
       const message = `Successfully created directory ${path}`;
       return {
         structuredContent: {success: true, path: validPath, message},
@@ -422,9 +490,9 @@ const move_file_tool = safeRegisterTool(
   },
   async ({source, destination}) => {
     try {
-      const validSource = await helpers.validatePath(source);
-      const validDest = await helpers.validatePath(destination);
-      await fs.rename(validSource, validDest);
+      const validSource = helpers.validatePath(source);
+      const validDest = helpers.validatePath(destination);
+      fs.renameSync(validSource, validDest);
       const message = `Successfully moved ${source} to ${destination}`;
       return {
         structuredContent: {success: true, path: validDest, message},
@@ -436,26 +504,67 @@ const move_file_tool = safeRegisterTool(
   },
 );
 
-const copy_file_tool = safeRegisterTool(
+const copy_path_tool = safeRegisterTool(
   server,
-  "copy_file",
+  "copy_path",
   {
-    description: "Copies a file from a source path to a destination path.",
-    inputSchema: CopyFileArgsSchema,
+    description: "Copies a file or directory. Requires `recursive: true` to copy directories.",
+    inputSchema: CopyPathArgsSchema,
     outputSchema: SuccessOutputSchema,
   },
-  async ({source, destination}) => {
+  async ({source, destination, recursive = false}) => {
     try {
-      const validSource = await helpers.validatePath(source);
-      const validDest = await helpers.validatePath(destination);
-      await fs.copyFile(validSource, validDest);
+      const validSource = helpers.validatePath(source);
+      const validDest = helpers.validatePath(destination);
+      const stats = fs.statSync(validSource);
+      if (stats.isDirectory() && !recursive) {
+        throw new Error("Source is a directory, but 'recursive' option is not set to true. Aborting to prevent incomplete copy.");
+      }
+      fs.cpSync(validSource, validDest, {recursive: recursive});
       const message = `Successfully copied ${source} to ${destination}`;
       return {
         structuredContent: {success: true, path: validDest, message},
         content: [{type: "text", text: message}],
       };
     } catch (error) {
-      return handleToolError("copy_file", error);
+      return handleToolError("copy_path", error);
+    }
+  },
+);
+
+const delete_path_tool = safeRegisterTool(
+  server,
+  "delete_path",
+  {
+    description: "Deletes a file or directory. Requires `recursive: true` to delete non-empty directories. Is idempotent (succeeds if path already does not exist).",
+    inputSchema: DeletePathArgsSchema,
+    outputSchema: SuccessOutputSchema,
+  },
+  async ({path: targetPath, recursive = false}) => {
+    try {
+      // Intentionally do not validate path before rm, as `force:true` handles non-existence.
+      // We still need to resolve it to ensure it's absolute and within sandbox if we were to check.
+      // But for a pure delete operation, we can let rm handle it, simplifying logic.
+      const expandedPath = expandHome(targetPath);
+      const absolutePath = path.isAbsolute(expandedPath) ? path.resolve(expandedPath) : path.resolve(process.cwd(), expandedPath);
+      const validPath = path.normalize(absolutePath);
+
+      // We must still validate that the path is not outside the allowed directories.
+      if (allowedDirectories.length > 0 && !allowedDirectories.some((dir) => validPath.startsWith(dir))) {
+        throw new AccessDeniedError(`Access denied: Path '${validPath}' is outside the allowed directories.`);
+      }
+
+      fs.rmSync(validPath, {recursive: recursive, force: true});
+      const message = `Successfully deleted ${targetPath}`;
+      return {
+        structuredContent: {success: true, path: validPath, message},
+        content: [{type: "text", text: message}],
+      };
+    } catch (error: any) {
+      if (error.code.includes("ENOTEMPTY") || error.code.includes("EISDIR")) {
+        return handleToolError("delete_path", new DeleteNonEmptyDirectoryError(`Path '${targetPath}' is a directory and cannot be deleted. Use the 'recursive: true' option.`));
+      }
+      return handleToolError("delete_path", error);
     }
   },
 );
@@ -470,13 +579,13 @@ const search_files_tool = safeRegisterTool(
   },
   async ({path: rootPath, pattern, excludePatterns}) => {
     try {
-      const validRootPath = await helpers.validatePath(rootPath);
+      const validRootPath = helpers.validatePath(rootPath);
       const results: string[] = [];
       const searchQueue: string[] = [validRootPath];
 
       while (searchQueue.length > 0) {
         const currentPath = searchQueue.shift()!;
-        const entries = await fs.readdir(currentPath, {withFileTypes: true});
+        const entries = fs.readdirSync(currentPath, {withFileTypes: true});
 
         for (const entry of entries) {
           const fullPath = path.join(currentPath, entry.name);
@@ -515,8 +624,8 @@ const get_file_info_tool = safeRegisterTool(
   },
   async ({path}) => {
     try {
-      const validPath = await helpers.validatePath(path);
-      const stats = await fs.stat(validPath);
+      const validPath = helpers.validatePath(path);
+      const stats = fs.statSync(validPath);
       const info = {
         path: validPath,
         type: (stats.isDirectory() ? "directory" : stats.isFile() ? "file" : "other") as "file" | "directory" | "other",
@@ -566,13 +675,17 @@ const tools = {
   list_directory: list_directory_tool,
   create_directory: create_directory_tool,
   move_file: move_file_tool,
-  copy_file: copy_file_tool,
+  copy_path: copy_path_tool,
+  delete_path: delete_path_tool,
   search_files: search_files_tool,
   get_file_info: get_file_info_tool,
   list_allowed_directories: list_allowed_directories_tool,
 };
 
-// **THE FIX IS HERE**: Export the internal API object directly to maintain a stable reference for mocking.
+/**
+ * Export the internal API object directly to maintain a stable reference for mocking.
+ * for test mock, when using a function or property on this object, you should always call it by reference, such as with 'helpers.validatePath(path)', Instead of 'const validatePath= helpers.validatePath' + 'validatePath(path)'.
+ */
 export const fsToolApi = {
   allowedDirectories,
   server,
@@ -582,39 +695,12 @@ export const fsToolApi = {
 
 // --- 5. Server Startup ---
 
-async function validateDirectories() {
-  for (const dir of allowedDirectories) {
-    try {
-      const stats = await fs.stat(dir);
-      if (!stats.isDirectory()) {
-        console.error(`Error: The specified allowed path '${dir}' is not a directory.`);
-        process.exit(1);
-      }
-    } catch (error) {
-      console.error(`Error: Could not access the specified allowed directory '${dir}'.`, error);
-      process.exit(1);
-    }
-  }
-}
-
 async function main(dirs: string[]) {
   if (dirs.length > 0) {
-    allowedDirectories = await Promise.all(
-      dirs.map(async (dir) => {
-        const expanded = expandHome(dir);
-        const resolved = path.resolve(expanded);
-        try {
-          return await fs.realpath(resolved);
-        } catch (e: any) {
-          if (e.code === "ENOENT") {
-            console.error(`Error: The allowed directory path does not exist: ${resolved}`);
-            process.exit(1);
-          }
-          throw e;
-        }
-      }),
-    );
-    await validateDirectories();
+    allowedDirectories = dirs.map((dir) => {
+      const expanded = expandHome(dir);
+      return path.resolve(expanded);
+    });
   }
 
   const transport = new StdioServerTransport();
