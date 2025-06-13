@@ -4,7 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {afterEach, beforeEach, describe, mock, test} from "node:test";
 import {z} from "zod";
-import {AccessDeniedError, EditConflictError, fsToolApi} from "../index.js";
+import {fsToolApi} from "../index.js";
+import { AccessDeniedError, EditConflictError } from "../error.js";
 
 // Helper to safely get the text from a result's content
 function getResultText(result: CallToolResult): string {

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import {McpServer, type RegisteredTool, type ToolCallback} from "@modelcontextprotocol/sdk/server/mcp.js";
+import {safeRegisterTool} from "@jixo/mcp-core";
+import {McpServer} from "@modelcontextprotocol/sdk/server/mcp.js";
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
 import {createTwoFilesPatch} from "diff";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
@@ -8,30 +9,9 @@ import {minimatch} from "minimatch";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import {z, type ZodObject, type ZodRawShape} from "zod";
+import {z} from "zod";
 import pkg from "../package.json" with {type: "json"};
-
-// --- Custom Error Classes ---
-/**
- * Thrown when a file operation attempts to access a path outside the allowed directories.
- */
-export class AccessDeniedError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "AccessDeniedError";
-  }
-}
-
-/**
- * Thrown when an edit operation cannot find the text it's supposed to replace,
- * indicating the file's content is not what the AI model expects.
- */
-export class EditConflictError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "EditConflictError";
-  }
-}
+import {AccessDeniedError, EditConflictError} from "./error.js";
 
 // --- 1. Startup and Configuration ---
 let allowedDirectories: string[] = [];
@@ -139,6 +119,10 @@ const MoveFileArgsSchema = {
   source: z.string().describe("The source path of the file or directory to move."),
   destination: z.string().describe("The destination path."),
 };
+const CopyFileArgsSchema = {
+  source: z.string().describe("The path of the file to copy."),
+  destination: z.string().describe("The path where the copy will be created."),
+};
 const SearchFilesArgsSchema = {
   path: z.string().describe("The root directory to start the search from."),
   pattern: z.string().describe("A case-insensitive substring to search for in file/directory names."),
@@ -229,36 +213,6 @@ const server = new McpServer({
 });
 
 /**
- * A type-safe wrapper for `server.registerTool`.
- * It captures the specific Zod shapes for input and output, returning a strongly-typed object
- * that preserves this metadata, unlike the generic `RegisteredTool` from the SDK.
- */
-function safeRegisterTool<I extends ZodRawShape, O extends ZodRawShape>(
-  name: string,
-  config: {
-    description?: string;
-    inputSchema?: I;
-    outputSchema?: O;
-  },
-  callback: ToolCallback<I>,
-): {
-  underlying: RegisteredTool;
-  inputSchema: ZodObject<I>;
-  outputSchema: ZodObject<O>;
-  callback: ToolCallback<I>;
-} {
-  // The SDK's registerTool does the actual registration.
-  const underlying = server.registerTool(name, config, callback);
-  // We return a new object that includes the typed schemas for compile-time safety.
-  return {
-    underlying,
-    inputSchema: z.object(config.inputSchema ?? ({} as I)),
-    outputSchema: z.object(config.outputSchema ?? ({} as O)),
-    callback,
-  };
-}
-
-/**
  * Centralized error handler for all tools.
  * It formats the error message and provides specific suggestions for certain error types,
  * returning a structured response that conforms to the tool's output schema.
@@ -301,6 +255,7 @@ const handleToolError = (toolName: string, error: unknown) => {
 };
 
 const read_file_tool = safeRegisterTool(
+  server,
   "read_file",
   {
     description: "Read the complete contents of a single file.",
@@ -322,6 +277,7 @@ const read_file_tool = safeRegisterTool(
 );
 
 const write_file_tool = safeRegisterTool(
+  server,
   "write_file",
   {
     description: "Create a new file or completely overwrite an existing file with new content. Use with caution.",
@@ -344,6 +300,7 @@ const write_file_tool = safeRegisterTool(
 );
 
 const edit_file_tool = safeRegisterTool(
+  server,
   "edit_file",
   {
     description: "Performs precise edits on a text file and allows choosing the return format for verification.",
@@ -398,6 +355,7 @@ const edit_file_tool = safeRegisterTool(
 );
 
 const list_directory_tool = safeRegisterTool(
+  server,
   "list_directory",
   {
     description: "Get a detailed listing of all files and directories in a specified path.",
@@ -432,6 +390,7 @@ const list_directory_tool = safeRegisterTool(
 );
 
 const create_directory_tool = safeRegisterTool(
+  server,
   "create_directory",
   {
     description: "Create a new directory, including any necessary parent directories.",
@@ -454,6 +413,7 @@ const create_directory_tool = safeRegisterTool(
 );
 
 const move_file_tool = safeRegisterTool(
+  server,
   "move_file",
   {
     description: "Move or rename a file or directory.",
@@ -476,7 +436,32 @@ const move_file_tool = safeRegisterTool(
   },
 );
 
+const copy_file_tool = safeRegisterTool(
+  server,
+  "copy_file",
+  {
+    description: "Copies a file from a source path to a destination path.",
+    inputSchema: CopyFileArgsSchema,
+    outputSchema: SuccessOutputSchema,
+  },
+  async ({source, destination}) => {
+    try {
+      const validSource = await helpers.validatePath(source);
+      const validDest = await helpers.validatePath(destination);
+      await fs.copyFile(validSource, validDest);
+      const message = `Successfully copied ${source} to ${destination}`;
+      return {
+        structuredContent: {success: true, path: validDest, message},
+        content: [{type: "text", text: message}],
+      };
+    } catch (error) {
+      return handleToolError("copy_file", error);
+    }
+  },
+);
+
 const search_files_tool = safeRegisterTool(
+  server,
   "search_files",
   {
     description: "Recursively search for files and directories matching a pattern within a given path.",
@@ -521,6 +506,7 @@ const search_files_tool = safeRegisterTool(
 );
 
 const get_file_info_tool = safeRegisterTool(
+  server,
   "get_file_info",
   {
     description: "Retrieve detailed metadata about a file or directory (size, dates, permissions).",
@@ -553,6 +539,7 @@ const get_file_info_tool = safeRegisterTool(
 );
 
 const list_allowed_directories_tool = safeRegisterTool(
+  server,
   "list_allowed_directories",
   {
     description: "Returns the list of root directories the server is allowed to access.",
@@ -579,6 +566,7 @@ const tools = {
   list_directory: list_directory_tool,
   create_directory: create_directory_tool,
   move_file: move_file_tool,
+  copy_file: copy_file_tool,
   search_files: search_files_tool,
   get_file_info: get_file_info_tool,
   list_allowed_directories: list_allowed_directories_tool,

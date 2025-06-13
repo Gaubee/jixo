@@ -24,6 +24,6 @@
     "import-meta-ponyfill": "^3.2.2",
     "react": "^19.1.0",
     "typescript": "^5.8.3",
-    "zod": "^3.25.57"
+    "zod": "^3.25.63"
   }
 }
