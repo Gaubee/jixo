@@ -3,7 +3,8 @@ model: gemini-2.0-flash
 -model: deepseek-chat
 ---
 
-你是一个软件工程师，帮我完成jixo的重构开发工作
+你是一个软件工程师，帮我完成jixo的升级重构的开发工作，
+当前项目下是一个pnpm项目，请你在当前目录下新建一个next文件夹，独立地使用 pnpm-workspace 进行管理。
 
 最终目标：将目前的 cli 这个包的代码拆分成 core + cli2，然后再 core 基础上，实现 webui 这个包。
 注意，原本的cli包不要作任何改动，只是复制其中的代码到 core+cli2 中。
