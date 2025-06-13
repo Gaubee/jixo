@@ -1,5 +1,5 @@
 import {blue, cyan, FileEntry, gray, green, red, spinner, YAML, yellow} from "@gaubee/nodekit";
-import {func_catch} from "@gaubee/util";
+import {func_catch, obj_omit} from "@gaubee/util";
 import {streamText, type AssistantModelMessage, type ModelMessage, type ToolCallPart, type ToolSet} from "ai";
 import ms from "ms";
 import {open} from "node:fs/promises";
@@ -35,7 +35,8 @@ export const runAiTask = async (ai_task: AiTask, loopTimes: number, allFiles: Fi
   const __writeJsonLineLog = (...lineDatas: any[]) => {
     for (const lineData of lineDatas) {
       try {
-        json_line_log_file_handle.appendFile(JSON.stringify(lineData) + "\n");
+        const log = typeof lineData === "function" ? lineData() : lineData;
+        json_line_log_file_handle.appendFile(JSON.stringify(log) + "\n");
       } catch {}
     }
   };
@@ -174,7 +175,13 @@ const _runAiTask = async (
       ERROR: "ERROR",
     } as const;
     for await (const part of result.fullStream) {
-      __writeJsonLineLog(part);
+      __writeJsonLineLog(() =>
+        match(part)
+          .with({type: "start-step"}, (p) => {
+            obj_omit(p, "request");
+          })
+          .otherwise((p) => p),
+      );
 
       if (firstStreamPart) {
         firstStreamPart = false;
