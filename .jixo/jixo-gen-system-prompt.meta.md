@@ -1,20 +1,20 @@
 这是我 `.jixo/jixo-gen-system-prompt.md` 文件的内容:
 
-@#.jixo/jixo-gen-system-prompt.md
+[.jixo/jixo-gen-system-prompt.md](@FILE)
 
 这是 jixo 运行时的 关键AI提示词：
 
-@#packages/cli/prompts/system.md
+[packages/cli/prompts/system.md](@FILE)
 
-@#packages/cli/prompts/user.md
+[packages/cli/prompts/user.md](@FILE)
 
 然后这是 `jixo run` 这个cli的关键代码：
 
-@#packages/cli/src/cli.ts
+[packages/cli/src/cli.ts](@FILE)
 
-@#packages/cli/src/commands/tasks/run.ts
+[packages/cli/src/commands/tasks/run.ts](@FILE)
 
-@#packages/cli/src/commands/tasks/run-ai-task.ts
+[packages/cli/src/commands/tasks/run-ai-task.ts](@FILE)
 
 我需要你优化 `.jixo/jixo-gen-system-prompt.md` 的内容。
 

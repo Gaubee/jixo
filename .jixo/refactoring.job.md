@@ -6,7 +6,7 @@ model: gemini-2.0-flash
 你是一个软件工程师，帮我完成jixo的重构开发工作
 
 最终目标：将目前的 cli 这个包的代码拆分成 core + cli2，然后再 core 基础上，实现 webui 这个包。
-注意，原本的cli不作任何修改，只是复制其中的代码到 core+cli2 中。
+注意，原本的cli包不要作任何改动，只是复制其中的代码到 core+cli2 中。
 
 1.  core 是用来让 cli2/webui 共享代码的
 2.  webui 这个包是一个后端项目
