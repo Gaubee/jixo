@@ -9,6 +9,7 @@ import {LogFileSchema, type LogFileData, type RoadmapTaskData, type WorkLogEntry
 import {commonModel, thinkModel} from "./llm/index.js";
 import {logManager, parserAgent, serializerAgent} from "./services/logManager.js";
 
+// --- Agent 定义 ---
 const plannerAgent = new Agent({
   name: "PlannerAgent",
   instructions: `You are a master planner. Your role is to analyze the user's job and the current state, then create or update a 'Roadmap'. The roadmap should be a series of clear, atomic, and sequential tasks in Markdown checklist format. Return ONLY the Markdown content for the new roadmap.`,
@@ -55,6 +56,12 @@ class Task {
     await this.job.save();
     console.log(`[Task] Task '${this.id}' completed.`);
   }
+  async unlock() {
+    this.data.status = "Pending";
+    this.data.runner = undefined;
+    await this.job.save();
+    console.log(`[Task] Stale lock on task '${this.id}' has been released.`);
+  }
 }
 
 class Job {
@@ -88,6 +95,7 @@ const JixoWorkflowInputSchema = z.object({
   runnerId: z.string(),
   otherRunners: z.array(z.string()),
 });
+
 const TriageOutputSchema = z.object({
   role: z.enum(["Planner", "Runner", "Exit"]),
   reason: z.string(),
@@ -103,10 +111,39 @@ const triageStep = createStep({
   execute: async ({inputData}): Promise<z.infer<typeof TriageOutputSchema>> => {
     console.log(`[Triage] Runner ${inputData.runnerId} starting triage...`);
     const job = await new Job(inputData.jobName).load();
-    if (job.isCompleted) return {role: "Exit", reason: "All tasks completed successfully.", job, payload: {exitCode: 0}};
+
+    // <!--[[MY_INFO]]--> 版本 9 核心改动：实现了完整的 PROTOCOL 0 分诊逻辑。
+
+    // 1. 僵尸锁处理 (Stale Lock Reconciliation)
+    const staleTasks = job.roadmap.filter((task) => task.status === "Locked" && task.data.runner && !inputData.otherRunners.includes(task.data.runner));
+    if (staleTasks.length > 0) {
+      // 在实际应用中，这里应该只有一个 runner 会成功执行解锁。
+      // 为了演示，我们假设当前 runner 负责解锁。
+      console.log(`[Triage] Found ${staleTasks.length} stale lock(s). Unlocking...`);
+      for (const task of staleTasks) {
+        await task.unlock();
+      }
+      // 解锁后，重新加载状态并重新分诊
+      await job.load();
+    }
+
+    // 2. 检查失败任务
+    const failedTask = job.roadmap.find((t) => t.status === "Failed");
+    if (failedTask) return {role: "Planner", reason: `Found failed task: ${failedTask.id}. Re-planning is required.`, job, payload: {fixTaskId: failedTask.id}};
+
+    // 3. 检查待办任务
     const pendingTask = job.pendingTask;
-    if (pendingTask) return {role: "Runner", reason: `Found pending task: ${pendingTask.id}.`, job, payload: {task: pendingTask}};
-    return {role: "Planner", reason: "No pending tasks found. Planning new tasks.", job};
+    if (pendingTask) return {role: "Runner", reason: `Found pending task: ${pendingTask.id}. Executing task.`, job, payload: {task: pendingTask}};
+
+    // 4. 检查是否所有任务都已完成
+    if (job.isCompleted) return {role: "Exit", reason: "All tasks completed successfully.", job, payload: {exitCode: 0}};
+
+    // 5. 如果没有可执行的任务，但有其他 runner 在工作，则待命
+    const lockedTaskByOthers = job.roadmap.find((t) => t.status === "Locked" && inputData.otherRunners.includes(t.data.runner || ""));
+    if (lockedTaskByOthers) return {role: "Exit", reason: `No available tasks. Other runners are active.`, job, payload: {exitCode: 2}};
+
+    // 6. 默认情况：需要规划
+    return {role: "Planner", reason: "No pending tasks or active runners. Planning new tasks.", job};
   },
 });
 
@@ -148,10 +185,8 @@ const executionStep = createStep({
   execute: async ({inputData, mastra, getInitData}) => {
     const task = inputData.payload.task as Task;
     const runner = mastra.getAgent("runnerAgent");
-    // 从 `getInitData()` 获取最顶层工作流的输入，从而安全地拿到当前轮次的 runnerId。
     const initData = getInitData<typeof JixoWorkflowInputSchema>();
     const runnerId = initData.runnerId;
-
     console.log(`[Runner] Preparing to execute task ${task.id}...`);
     await task.lock(runnerId);
     console.log(`[Runner] Agent ${runnerId} is 'working' on task: "${task.description}"`);
@@ -161,6 +196,7 @@ const executionStep = createStep({
     return {status: `Task ${task.id} executed`};
   },
 });
+
 const exitStep = createStep({
   id: "exit",
   description: "Gracefully exits the workflow.",
@@ -201,28 +237,54 @@ export const mastra = new Mastra({
 
 // --- 外层循环模拟器 ---
 async function runJixoOuterLoop() {
-  const MAX_LOOP_TIMES = 5;
-  let currentTimes = 1;
   const jobName = "jixo-demo-job";
   await logManager.init(jobName, "---\ntitle: _待定_\nprogress: '0%'\n---\n\n## Roadmap\n\n## Work Log\n");
 
+  const MAX_LOOP_TIMES = 10; // 增加循环次数以观察并发行为
+  const CONCURRENT_RUNNERS = 2; // 定义并发运行器的数量
+  let currentTimes = 1;
+
+  // <!--[[MY_INFO]]--> 版本 9 改动:
+  // - activeRunners 用于跟踪当前活跃的 runner ID。
+  // - 循环现在通过 Promise.all 来并发启动多个工作流。
+  let activeRunners = new Set<string>();
+
   while (currentTimes <= MAX_LOOP_TIMES) {
     console.log("\n" + "─".repeat(process.stdout.columns) + `\n JIXO Outer Loop - Run #${currentTimes}\n` + "─".repeat(process.stdout.columns));
-    const run = mastra.getWorkflow("jixoJobWorkflow").createRun();
-    const result = await run.start({
-      inputData: {jobName, runnerId: `${jobName}-runner-${currentTimes}`, otherRunners: []},
+
+    const runnerIds = Array.from({length: CONCURRENT_RUNNERS}, (_, i) => `${jobName}-runner-${currentTimes}-${i}`);
+    activeRunners = new Set(runnerIds);
+
+    const runPromises = runnerIds.map((runnerId) => {
+      const run = mastra.getWorkflow("jixoJobWorkflow").createRun();
+      const otherRunnersList = runnerIds.filter((id) => id !== runnerId);
+
+      return run
+        .start({
+          inputData: {jobName, runnerId, otherRunners: otherRunnersList},
+        })
+        .then((result) => ({runnerId, result}));
     });
 
-    console.log(`[Outer Loop] Workflow finished with status: ${result.status}`);
-    if (result.status === "success") {
-      const finalOutput = result.result;
-      if (finalOutput?.status === "Exited" && finalOutput.reason.includes("All tasks completed")) {
-        console.log("[Outer Loop] Job completed. Exiting loop.");
-        break;
+    const results = await Promise.all(runPromises);
+
+    let shouldBreak = false;
+    for (const {runnerId, result} of results) {
+      console.log(`[Outer Loop] Runner ${runnerId} finished with status: ${result.status}`);
+      if (result.status === "success") {
+        const finalOutput = result.output as {status: string; reason: string};
+        if (finalOutput?.status === "Exited" && finalOutput.reason.includes("All tasks completed")) {
+          console.log("[Outer Loop] A runner reported job completion. Exiting loop.");
+          shouldBreak = true;
+        }
       }
     }
+
+    if (shouldBreak) break;
+
     currentTimes++;
     await delay(2000);
   }
 }
+
 runJixoOuterLoop();

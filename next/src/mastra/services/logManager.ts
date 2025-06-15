@@ -52,13 +52,27 @@ export const serializerAgent = new Agent({
   model: commonModel,
 });
 
-// --- 日志管理器 ---
 const LOG_FILE_DIR = path.join(process.cwd(), ".jixo");
 const CACHE_DIR = path.join(LOG_FILE_DIR, "cache");
+let isLogLocked = false;
 
 export const logManager = {
   _cache: new Map<string, LogFileData>(),
   _getLogFilePath: (jobName: string) => path.join(LOG_FILE_DIR, `${jobName}.log.md`),
+
+  _lock: async () => {
+    if (isLogLocked) {
+      // 在真实实现中，这里会是一个自旋锁或带超时的等待
+      throw new Error("Log file is already locked.");
+    }
+    isLogLocked = true;
+    console.log("[LogManager] Lock acquired.");
+  },
+
+  _unlock: async () => {
+    isLogLocked = false;
+    console.log("[LogManager] Lock released.");
+  },
 
   read: async (jobName: string): Promise<LogFileData> => {
     const filePath = logManager._getLogFilePath(jobName);
@@ -81,19 +95,24 @@ export const logManager = {
   },
 
   update: async (jobName: string, logData: LogFileData): Promise<void> => {
-    const filePath = logManager._getLogFilePath(jobName);
-    console.log(`[LogManager] Invoking SerializerAgent to update log for job '${jobName}'...`);
-    const validatedLogData = LogFileSchema.parse(logData);
-    const result = await serializerAgent.generate(JSON.stringify(validatedLogData, null, 2));
-    const newFileContent = result.text;
-    await fsp.writeFile(filePath, newFileContent, "utf-8"); // 改为异步写入
-    console.log(`[LogManager] Log file for job '${jobName}' updated.`);
-    const hash = createHash("sha256").update(newFileContent).digest("hex");
-    logManager._cache.set(hash, validatedLogData);
+    await logManager._lock();
+    try {
+      const filePath = logManager._getLogFilePath(jobName);
+      console.log(`[LogManager] Invoking SerializerAgent to update log for job '${jobName}'...`);
+      const validatedLogData = LogFileSchema.parse(logData);
+      const result = await serializerAgent.generate(JSON.stringify(validatedLogData, null, 2));
+      const newFileContent = result.text;
+      await fsp.writeFile(filePath, newFileContent, "utf-8");
+      console.log(`[LogManager] Log file for job '${jobName}' updated.`);
+      const hash = createHash("sha256").update(newFileContent).digest("hex");
+      logManager._cache.set(hash, validatedLogData);
+    } finally {
+      await logManager._unlock();
+    }
   },
 
   init: async (jobName: string, content: string) => {
-    await fsp.mkdir(LOG_FILE_DIR, {recursive: true}); // 改为异步创建目录
-    await fsp.writeFile(logManager._getLogFilePath(jobName), content); // 改为异步写入
+    await fsp.mkdir(LOG_FILE_DIR, {recursive: true});
+    await fsp.writeFile(logManager._getLogFilePath(jobName), content);
   },
 };
