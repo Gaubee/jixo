@@ -1,4 +1,4 @@
-import {blue, createResolverByRootFile, cwdResolver, green} from "@gaubee/nodekit";
+import {blue, createResolverByRootFile, cwdResolver, green, normalizeFilePath} from "@gaubee/nodekit";
 import {parseArgs} from "@std/cli/parse-args";
 import {globbySync} from "globby";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
@@ -30,10 +30,12 @@ const gen_prompt = async (input: string, output: string, once: boolean) => {
   const inputContent = getFileState(input, once).get();
   const outputContent = inputContent
     ///
-    .replace(/\[([\`\w\.\-\/\*]+)\]\(@(\w+)\)/g, (_, glob_or_filepath, mode) => {
+    .replace(/\[(.+?)\]\(@(\w+)\)/g, (_, glob_or_filepath, mode) => {
       if (glob_or_filepath.startsWith("`")) {
         glob_or_filepath = glob_or_filepath.slice(1, -1);
       }
+      glob_or_filepath = normalizeFilePath(glob_or_filepath);
+      mode = mode.toUpperCase().trim();
       console.log(blue("glob_or_filepath"), green(mode), glob_or_filepath);
       const files = globbySync(glob_or_filepath);
       if (files.length === 0) {
