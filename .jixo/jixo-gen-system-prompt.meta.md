@@ -32,3 +32,17 @@
       1. 这种循环执行的方案替代单次执行的，可以有效规避幻觉。并且因为计划严谨，甚至一个计划被执行多次，因此我的目标是让普通的AI模型也达到高级AI模型的效果。比如经过我的初步测试，目前这套提示词，已经能让我通过 Gemini 2.0 Flash 通过**多次Turns**或者**多次Task*多次Turns**，达到了Gemini 2.5 Pro **单次或者多次Turns** 的水平。
    1. 因此 *.log.md 的设计和 Task-Runner 如何工作，如何读写 *.log.md 是非常重要的。是整个系统的核心。
       > 做好这个核心，在未来就能用 *.job.md 来生成 *.job.md 或者 *.skill.md，这能任务分裂下去，也能让它们自己优化自己。走上AI无监督的自我进化的道路。
+
+
+<!--[[
+名词定义：
+1. `One Job`(用户的需求) = Tasks
+    > 这里的 Tasks，具体来说就是由AI生成的内容，就是 *.log.md 中 Roadmap 列出来的内容，以及“列出 Roadmap”本身也是一个Task。
+    > 所以我称它为Tasks。所以只要是Task这个字眼，就意味着有AI在参与规划和执行。
+1. One Task = Turns
+    > 这里Turns，是我在Google的Gemini这个产品中看到的单词，它们将一次对话定义成 `One Turn`，比如用户发了一段内容给AI，如果不满意，用户可以点击“Rerun this turn”来重新生成回复。
+    > 而 `One Turn`背后，从编程的角度出发，就是做一次`await streamText({messages,...})`，在一次调用中，AI接口供应商就会返回各种内容，比如 `start`、`text`、`tool-call`、`error`、`reasoning`、`file`、`source`、`tool-result`、`tool-call-streaming-start`、`tool-call-delta`、`reasoning-part-finish`、`start-step`、`finish-step`、`finish` 等等。
+    > 然后比方说这次调用中收到了 `tool-call`，我们就需要根据`tool-call`的`name`，去调用对应的工具函数，比如 `get_weather`，然后在下一次执行一个新的 Turn 的时候，也就是再发起一次新`await streamText({messages,...})`，这里就会携带上`tool-call`的结果。
+    > 这种做一次`await streamText({messages,...})`，本质上就是`One Request+One Response`，因此这种一次往返，我们就有了 `One Turn` 这样的叫法。而一次 `One Turn` 的 `Response` 中，它其实是会返回多种内容，我们称为`Parts`，比如一次返回就会包含`start-step+text+tool-call`，也就是 startStepPart + textPart + toolCallPart。
+1. 使用`Run`这个动词来统一定义成执行AI的动作。比如`Run Turns`、`Run Tasks`。
+]]-->

@@ -4,24 +4,15 @@ import {Agent} from "@mastra/core/agent";
 import {createStep, createWorkflow} from "@mastra/core/workflows";
 import {LibSQLStore} from "@mastra/libsql";
 import {PinoLogger} from "@mastra/loggers";
+import path from "node:path";
+import {uuidv7} from "uuidv7";
 import {z} from "zod";
-import {LogFileSchema, type LogFileData, type RoadmapTaskData, type WorkLogEntryData} from "./entities.js";
+import {LogFileSchema, type RoadmapTaskData, type WorkLogEntryData} from "./entities.js";
 import {commonModel, thinkModel} from "./llm/index.js";
 import {logManager, parserAgent, serializerAgent} from "./services/logManager.js";
+import {tools} from "./tools/index.js";
 
-// --- Agent 定义 ---
-const plannerAgent = new Agent({
-  name: "PlannerAgent",
-  instructions: `You are a master planner. Your role is to analyze the user's job and the current state, then create or update a 'Roadmap'. The roadmap should be a series of clear, atomic, and sequential tasks in Markdown checklist format. Return ONLY the Markdown content for the new roadmap.`,
-  model: thinkModel,
-});
-
-const runnerAgent = new Agent({
-  name: "RunnerAgent",
-  instructions: `You are an executor. You will be given a specific task to complete. Perform the task and return a concise, one-sentence summary of the work you did.`,
-  model: commonModel,
-});
-
+const process_id = uuidv7();
 // --- 实体类定义 ---
 class Task {
   constructor(
@@ -65,8 +56,11 @@ class Task {
 }
 
 class Job {
-  public log!: LogFileData;
-  constructor(public readonly name: string) {}
+  public log!: z.infer<typeof LogFileSchema>;
+  constructor(
+    public readonly name: string,
+    public readonly goal: string,
+  ) {} // Job 现在有了一个明确的目标
   async load() {
     this.log = await logManager.read(this.name);
     return this;
@@ -92,10 +86,10 @@ class Job {
 // --- JIXO 工作流定义 ---
 const JixoWorkflowInputSchema = z.object({
   jobName: z.string(),
+  jobGoal: z.string(), // 作业目标现在是工作流的输入
   runnerId: z.string(),
   otherRunners: z.array(z.string()),
 });
-
 const TriageOutputSchema = z.object({
   role: z.enum(["Planner", "Runner", "Exit"]),
   reason: z.string(),
@@ -110,39 +104,20 @@ const triageStep = createStep({
   outputSchema: TriageOutputSchema,
   execute: async ({inputData}): Promise<z.infer<typeof TriageOutputSchema>> => {
     console.log(`[Triage] Runner ${inputData.runnerId} starting triage...`);
-    const job = await new Job(inputData.jobName).load();
-
-    // <!--[[MY_INFO]]--> 版本 9 核心改动：实现了完整的 PROTOCOL 0 分诊逻辑。
-
-    // 1. 僵尸锁处理 (Stale Lock Reconciliation)
+    const job = await new Job(inputData.jobName, inputData.jobGoal).load();
     const staleTasks = job.roadmap.filter((task) => task.status === "Locked" && task.data.runner && !inputData.otherRunners.includes(task.data.runner));
     if (staleTasks.length > 0) {
-      // 在实际应用中，这里应该只有一个 runner 会成功执行解锁。
-      // 为了演示，我们假设当前 runner 负责解锁。
       console.log(`[Triage] Found ${staleTasks.length} stale lock(s). Unlocking...`);
-      for (const task of staleTasks) {
-        await task.unlock();
-      }
-      // 解锁后，重新加载状态并重新分诊
+      for (const task of staleTasks) await task.unlock();
       await job.load();
     }
-
-    // 2. 检查失败任务
     const failedTask = job.roadmap.find((t) => t.status === "Failed");
     if (failedTask) return {role: "Planner", reason: `Found failed task: ${failedTask.id}. Re-planning is required.`, job, payload: {fixTaskId: failedTask.id}};
-
-    // 3. 检查待办任务
     const pendingTask = job.pendingTask;
-    if (pendingTask) return {role: "Runner", reason: `Found pending task: ${pendingTask.id}. Executing task.`, job, payload: {task: pendingTask}};
-
-    // 4. 检查是否所有任务都已完成
+    if (pendingTask) return {role: "Runner", reason: `Found pending task: ${pendingTask.id}.`, job, payload: {task: pendingTask}};
     if (job.isCompleted) return {role: "Exit", reason: "All tasks completed successfully.", job, payload: {exitCode: 0}};
-
-    // 5. 如果没有可执行的任务，但有其他 runner 在工作，则待命
     const lockedTaskByOthers = job.roadmap.find((t) => t.status === "Locked" && inputData.otherRunners.includes(t.data.runner || ""));
     if (lockedTaskByOthers) return {role: "Exit", reason: `No available tasks. Other runners are active.`, job, payload: {exitCode: 2}};
-
-    // 6. 默认情况：需要规划
     return {role: "Planner", reason: "No pending tasks or active runners. Planning new tasks.", job};
   },
 });
@@ -155,24 +130,34 @@ const planningStep = createStep({
   execute: async ({inputData, mastra}) => {
     const {job, reason} = inputData;
     const planner = mastra.getAgent("plannerAgent");
-    console.log(`[Planner] Reason: ${reason}. Invoking PlannerAgent...`);
-    const jobGoal = "Refactor the project to improve modularity.";
-    const result = await planner.generate(`The job goal is: "${jobGoal}". The current roadmap is empty. Please create a new plan.`);
-    const newRoadmapMarkdown = result.text;
     const parser = mastra.getAgent("parserAgent");
-    const parsedResult = await parser.generate(`---\ntitle: ""\nprogress: ""\n---\n## Roadmap\n${newRoadmapMarkdown}`, {output: LogFileSchema});
+
+    console.log(`[Planner] Reason: ${reason}. Invoking PlannerAgent...`);
+
+    // <!--[[MY_INFO]]--> 版本 10 核心改动：真实调用 PlannerAgent 生成计划
+    const result = await planner.generate(`The job goal is: "${job.goal}". The current roadmap is empty. Please create a new plan.`);
+    const newRoadmapMarkdown = result.text;
+
+    // 使用 ParserAgent 将 Planner 生成的 Markdown 解析为结构化数据
+    const parsedResult = await parser.generate(
+      // 我们需要构造一个最小化的、可被解析的 Markdown 字符串
+      `---\ntitle: ""\nprogress: ""\n---\n## Roadmap\n${newRoadmapMarkdown}`,
+      {output: LogFileSchema},
+    );
+
     job.log.roadmap = parsedResult.object.roadmap;
-    job.log.title = jobGoal;
+    job.log.title = job.goal;
     job.log.progress = "10%";
     job.addWorkLog({
       timestamp: new Date().toISOString(),
-      runnerId: inputData.job.name + "-runner-id",
+      runnerId: `${job.name}-planner-${process_id}`,
       role: "Planner",
       objective: "Create initial project plan.",
       result: "Succeeded",
       summary: "Created initial roadmap based on job goal.",
     });
     await job.save();
+
     return {status: "Plan updated"};
   },
 });
@@ -187,11 +172,13 @@ const executionStep = createStep({
     const runner = mastra.getAgent("runnerAgent");
     const initData = getInitData<typeof JixoWorkflowInputSchema>();
     const runnerId = initData.runnerId;
-    console.log(`[Runner] Preparing to execute task ${task.id}...`);
+
     await task.lock(runnerId);
+
     console.log(`[Runner] Agent ${runnerId} is 'working' on task: "${task.description}"`);
     const result = await runner.generate(`Please complete the following task: "${task.description}". Provide a one-sentence summary of your work.`);
     const summary = result.text;
+
     await task.complete(summary, runnerId);
     return {status: `Task ${task.id} executed`};
   },
@@ -217,7 +204,10 @@ const exitStep = createStep({
 const jixoJobWorkflow = createWorkflow({
   id: "jixoJobWorkflow",
   inputSchema: JixoWorkflowInputSchema,
-  outputSchema: z.object({status: z.string(), reason: z.string()}),
+  outputSchema: z.object({
+    status: z.string(),
+    reason: z.string(),
+  }),
 })
   .then(triageStep)
   .branch([
@@ -227,7 +217,25 @@ const jixoJobWorkflow = createWorkflow({
   ])
   .commit();
 
+// --- Agent 定义 ---
+const plannerAgent = new Agent({
+  name: "PlannerAgent",
+  instructions: `You are a master planner. Your role is to analyze the user's job and the current state, then create or update a 'Roadmap'. The roadmap should be a series of clear, atomic, and sequential tasks in Markdown checklist format. Return ONLY the Markdown content for the new roadmap, starting with the first task item (e.g., '- [ ] ...').`,
+  model: thinkModel,
+});
+
+const runnerAgent = new Agent({
+  name: "RunnerAgent",
+  instructions: `You are an executor. You will be given a specific task to complete. Perform the task and return a concise, one-sentence summary of the work you did.`,
+  model: commonModel,
+  tools: {
+    ...(await tools.fileSystem(path.join(process.cwd(), "demo"))),
+    ...(await tools.pnpm()),
+  },
+});
+
 // --- Mastra 实例注册 ---
+
 export const mastra = new Mastra({
   agents: {plannerAgent, runnerAgent, parserAgent, serializerAgent},
   workflows: {jixoJobWorkflow},
@@ -235,53 +243,31 @@ export const mastra = new Mastra({
   logger: new PinoLogger({name: "JIXO-on-Mastra", level: "info"}),
 });
 
-// --- 外层循环模拟器 ---
+// --- JIXO执行器 ---
 async function runJixoOuterLoop() {
-  const jobName = "jixo-demo-job";
-  await logManager.init(jobName, "---\ntitle: _待定_\nprogress: '0%'\n---\n\n## Roadmap\n\n## Work Log\n");
+  await logManager.init("jixo-demo-job", "---\ntitle: _待定_\nprogress: '0%'\n---\n\n## Roadmap\n\n## Work Log\n");
 
-  const MAX_LOOP_TIMES = 10; // 增加循环次数以观察并发行为
-  const CONCURRENT_RUNNERS = 2; // 定义并发运行器的数量
+  const MAX_LOOP_TIMES = 10;
   let currentTimes = 1;
-
-  // <!--[[MY_INFO]]--> 版本 9 改动:
-  // - activeRunners 用于跟踪当前活跃的 runner ID。
-  // - 循环现在通过 Promise.all 来并发启动多个工作流。
-  let activeRunners = new Set<string>();
+  const jobName = "jixo-demo-job";
+  const jobGoal = "Refactor the project's logging service to be more modular and add structured logging.";
 
   while (currentTimes <= MAX_LOOP_TIMES) {
     console.log("\n" + "─".repeat(process.stdout.columns) + `\n JIXO Outer Loop - Run #${currentTimes}\n` + "─".repeat(process.stdout.columns));
 
-    const runnerIds = Array.from({length: CONCURRENT_RUNNERS}, (_, i) => `${jobName}-runner-${currentTimes}-${i}`);
-    activeRunners = new Set(runnerIds);
-
-    const runPromises = runnerIds.map((runnerId) => {
-      const run = mastra.getWorkflow("jixoJobWorkflow").createRun();
-      const otherRunnersList = runnerIds.filter((id) => id !== runnerId);
-
-      return run
-        .start({
-          inputData: {jobName, runnerId, otherRunners: otherRunnersList},
-        })
-        .then((result) => ({runnerId, result}));
+    const run = mastra.getWorkflow("jixoJobWorkflow").createRun();
+    const result = await run.start({
+      inputData: {jobName, jobGoal, runnerId: `${jobName}-runner-${currentTimes}`, otherRunners: []},
     });
 
-    const results = await Promise.all(runPromises);
-
-    let shouldBreak = false;
-    for (const {runnerId, result} of results) {
-      console.log(`[Outer Loop] Runner ${runnerId} finished with status: ${result.status}`);
-      if (result.status === "success") {
-        const finalOutput = result.output as {status: string; reason: string};
-        if (finalOutput?.status === "Exited" && finalOutput.reason.includes("All tasks completed")) {
-          console.log("[Outer Loop] A runner reported job completion. Exiting loop.");
-          shouldBreak = true;
-        }
+    console.log(`[Outer Loop] Workflow finished with status: ${result.status}`);
+    if (result.status === "success") {
+      const finalOutput = result.result;
+      if (finalOutput?.status === "Exited" && finalOutput.reason.includes("All tasks completed")) {
+        console.log("[Outer Loop] Job completed. Exiting loop.");
+        break;
       }
     }
-
-    if (shouldBreak) break;
-
     currentTimes++;
     await delay(2000);
   }
