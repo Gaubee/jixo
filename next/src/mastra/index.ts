@@ -7,16 +7,16 @@ import {PinoLogger} from "@mastra/loggers";
 import path from "node:path";
 import {uuidv7} from "uuidv7";
 import {z} from "zod";
-import {LogFileSchema, type RoadmapTaskData, type WorkLogEntryData} from "./entities.js";
+import {LogFileSchema, type RoadmapTaskNodeData, type WorkLogEntryData} from "./entities.js";
 import {commonModel, thinkModel} from "./llm/index.js";
-import {logManager, parserAgent, serializerAgent} from "./services/logManager.js";
+import {logManager} from "./services/logManager.js";
 import {tools} from "./tools/index.js";
 
 const process_id = uuidv7();
 // --- 实体类定义 ---
 class Task {
   constructor(
-    public data: RoadmapTaskData,
+    public data: RoadmapTaskNodeData,
     public readonly job: Job,
   ) {}
   get id() {
@@ -237,20 +237,53 @@ const runnerAgent = new Agent({
 // --- Mastra 实例注册 ---
 
 export const mastra = new Mastra({
-  agents: {plannerAgent, runnerAgent, parserAgent, serializerAgent},
+  agents: {
+    plannerAgent,
+    runnerAgent,
+  },
   workflows: {jixoJobWorkflow},
   storage: new LibSQLStore({url: ":memory:"}),
   logger: new PinoLogger({name: "JIXO-on-Mastra", level: "info"}),
 });
 
+// async function demoUsageInStep(jobName: string) {
+//   console.log("--- Demoing new logManager API ---");
+
+//   // A step would no longer need to manage a 'Job' class for saving.
+//   // It interacts directly with the transactional logManager.
+
+//   // Example: Updating a task's status to 'Completed' and adding a work log.
+//   const taskToUpdate = {id: "1.2", path: "1.2"};
+//   const runnerId = "demo-runner-123";
+
+//   // 1. Update the task status
+//   await logManager.updateTask(jobName, taskToUpdate.path, {
+//     status: "Completed",
+//     runner: runnerId,
+//   });
+//   console.log(`Task ${taskToUpdate.id} status updated.`);
+
+//   // 2. Add a corresponding work log entry
+//   await logManager.addWorkLog(jobName, {
+//     timestamp: new Date().toISOString(),
+//     runnerId: runnerId,
+//     role: "Runner",
+//     objective: `Complete task ${taskToUpdate.id}`,
+//     result: "Succeeded",
+//     summary: "The task was completed successfully using the new logManager.",
+//   });
+//   console.log("Work log entry added.");
+
+//   console.log("--- Demo finished ---");
+// }
+
 // --- JIXO执行器 ---
 async function runJixoOuterLoop() {
-  await logManager.init("jixo-demo-job", "---\ntitle: _待定_\nprogress: '0%'\n---\n\n## Roadmap\n\n## Work Log\n");
-
   const MAX_LOOP_TIMES = 10;
   let currentTimes = 1;
   const jobName = "jixo-demo-job";
   const jobGoal = "Refactor the project's logging service to be more modular and add structured logging.";
+  await logManager.init(jobName);
 
   while (currentTimes <= MAX_LOOP_TIMES) {
     console.log("\n" + "─".repeat(process.stdout.columns) + `\n JIXO Outer Loop - Run #${currentTimes}\n` + "─".repeat(process.stdout.columns));
