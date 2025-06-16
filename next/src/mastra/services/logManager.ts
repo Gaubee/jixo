@@ -22,6 +22,11 @@ progress: '0%'
 
 `;
 
+// Type for the data required to create a new task.
+// We only require the description from the AI.
+export type NewTaskInput = Pick<RoadmapTaskNodeData, "description"> & Partial<Omit<RoadmapTaskNodeData, "id" | "status" | "children" | "description">>;
+
+
 class LogManager {
   private _parserAgent;
   private _locks = new Map<string, boolean>();
@@ -45,12 +50,10 @@ class LogManager {
       await new Promise((resolve) => setTimeout(resolve, 50)); // Simple spin lock
     }
     this._locks.set(jobName, true);
-    // console.log(`[LogManager] Lock acquired for ${jobName}.`);
   }
 
   private _unlock(jobName: string) {
     this._locks.set(jobName, false);
-    // console.log(`[LogManager] Lock released for ${jobName}.`);
   }
 
   private async _readFileWithHash(filePath: string): Promise<{content: string; hash: string}> {
@@ -63,33 +66,48 @@ class LogManager {
     const hash = createHash("sha256").update(content).digest("hex");
     return {content, hash};
   }
+  
+  /**
+   * Finds a task node by its path (e.g., "1.2.1").
+   * The path is constructed from the `id` properties of the nodes.
+  */
+  private _findTaskByPath(roadmap: RoadmapTaskNodeData[], path: string): {parent: RoadmapTaskNodeData[] | null, task: RoadmapTaskNodeData | null, index: number} {
+    const parts = path.split('.').filter(Boolean);
+    if (parts.length === 0) return { parent: null, task: null, index: -1 };
 
-  private async _findTaskByPath(roadmap: RoadmapTaskNodeData[], path: string): Promise<RoadmapTaskNodeData | null> {
-    const parts = path.split(".").filter(Boolean);
-    if (parts.length === 0) return null;
+    let currentTasks: RoadmapTaskNodeData[] = roadmap;
+    let parent: RoadmapTaskNodeData[] | null = null;
+    let task: RoadmapTaskNodeData | null = null;
+    let foundIndex = -1;
 
-    let currentTasks: RoadmapTaskNodeData[] | undefined = roadmap;
-    let foundTask: RoadmapTaskNodeData | null = null;
+    for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        foundIndex = currentTasks.findIndex(t => t.id === part);
+        if (foundIndex === -1) return { parent: null, task: null, index: -1 };
+        
+        task = currentTasks[foundIndex];
 
-    for (const part of parts) {
-      if (!currentTasks) return null;
-      /**<!--[[这里使用id来索引，我觉得很不错，比index跟稳定，但你要确保创建的id不要太过复杂，假设你用hash，那么最多用4～6-hex长度的就够了。]]--> */
-      const task: RoadmapTaskNodeData | undefined = currentTasks.find((t) => t.id === part);
-      if (!task) return null;
-      foundTask = task;
-      currentTasks = task.children;
+        if (i < parts.length - 1) {
+            parent = currentTasks;
+            currentTasks = task.children;
+        } else {
+            parent = currentTasks;
+        }
     }
-    return foundTask;
+
+    return { parent, task, index: foundIndex };
   }
 
   // --- Public High-Level API ---
 
   public async init(jobName: string) {
     await fsp.mkdir(CACHE_DIR, {recursive: true});
-    await fsp.writeFile(this._getLogFilePath(jobName), EMPTY_JOB_CONTENT);
+    const logFilePath = this._getLogFilePath(jobName);
+    if (!_fs.existsSync(logFilePath)) {
+      await fsp.writeFile(logFilePath, EMPTY_JOB_CONTENT);
+    }
   }
 
-  /** Reads the log file, utilizing a cache to avoid re-parsing unchanged files. */
   public async getLogFile(jobName: string): Promise<LogFileData> {
     const filePath = this._getLogFilePath(jobName);
     const {content, hash} = await this._readFileWithHash(filePath);
@@ -97,7 +115,7 @@ class LogManager {
 
     try {
       const cachedData = await fsp.readFile(cachePath, "utf-8");
-      console.log(`[LogManager] Cache hit for job '${jobName}'.`);
+      // console.log(`[LogManager] Cache hit for job '${jobName}'.`);
       return LogFileSchema.parse(JSON.parse(cachedData));
     } catch {
       console.log(`[LogManager] Cache miss. Invoking ParserAgent for job '${jobName}'...`);
@@ -108,7 +126,6 @@ class LogManager {
     }
   }
 
-  /** Updates the log file using a deterministic serializer and updates the cache. */
   private async updateLogFile(jobName: string, data: LogFileData): Promise<void> {
     const validatedData = LogFileSchema.parse(data);
     const markdownContent = serializeLogFile(validatedData);
@@ -116,44 +133,49 @@ class LogManager {
 
     await fsp.writeFile(this._getLogFilePath(jobName), markdownContent, "utf-8");
     await fsp.writeFile(this._getCacheFilePath(hash), JSON.stringify(validatedData, null, 2), "utf-8");
-    console.log(`[LogManager] Log file for job '${jobName}' updated.`);
+    // console.log(`[LogManager] Log file for job '${jobName}' updated.`);
   }
 
-  /** Adds a new task to the roadmap at a specified parent path.
-   * <!--[[
-   * 这里我建议id是可选的，由addTask接口直接生成一个完整的ID。否则AI可能会生成同样的ID，会导致一些异常的可能，这不是AI擅长的事情。
-   * 另外，如果id是可选的，那么我们就应该返回完整的ID，代表生成成功了。理论上也可以返回完整的 RoadmapTaskNodeData 对象，这样兼容性会更好一些。
-   * 这样一来，一些参数都可以进一步省略，由addTask使用默认值进行补全返回。这样用input替代AI-output，成本还能进一步降低。
-   * ]]-->
-   */
-  public async addTask(jobName: string, parentPath: string, taskData: RoadmapTaskNodeData): Promise<void> {
+  public async addTask(jobName: string, parentPath: string, taskInput: NewTaskInput): Promise<RoadmapTaskNodeData> {
     await this._lock(jobName);
     try {
       const logData = await this.getLogFile(jobName);
+      let targetChildrenList: RoadmapTaskNodeData[];
+      let newId: string;
+
       if (parentPath === "") {
-        logData.roadmap.push(taskData);
+        targetChildrenList = logData.roadmap;
+        newId = (targetChildrenList.length + 1).toString();
       } else {
-        const parentTask = await this._findTaskByPath(logData.roadmap, parentPath);
+        const { task: parentTask } = this._findTaskByPath(logData.roadmap, parentPath);
         if (!parentTask) throw new Error(`Parent task with path '${parentPath}' not found.`);
-        parentTask.children = parentTask.children || [];
-        parentTask.children.push(taskData);
+        targetChildrenList = parentTask.children;
+        newId = `${parentTask.id}.${targetChildrenList.length + 1}`;
       }
+      
+      const newTask: RoadmapTaskNodeData = {
+        ...taskInput,
+        id: newId,
+        status: "Pending",
+        children: [],
+      };
+
+      targetChildrenList.push(newTask);
       await this.updateLogFile(jobName, logData);
+      
+      // Return a deep copy of the created task to prevent external mutations.
+      return JSON.parse(JSON.stringify(newTask));
+
     } finally {
       this._unlock(jobName);
     }
   }
 
-  /** Updates a specific task in the roadmap.
-   * <!--[[
-   * 这里updateTask成功或者失败，都应该返回当前这个task的完整内容。提供最新的内容给AI，避免AI出现幻觉。AI的记忆也能更加可靠。
-   * ]]-->
-   */
-  public async updateTask(jobName: string, path: string, updates: Partial<RoadmapTaskNodeData>): Promise<void> {
+  public async updateTask(jobName: string, path: string, updates: Partial<Omit<RoadmapTaskNodeData, 'id' | 'children'>>): Promise<RoadmapTaskNodeData> {
     await this._lock(jobName);
     try {
       const logData = await this.getLogFile(jobName);
-      const task = await this._findTaskByPath(logData.roadmap, path);
+      const { task } = this._findTaskByPath(logData.roadmap, path);
       if (!task) throw new Error(`Task with path '${path}' not found.`);
 
       for (const key in updates) {
@@ -165,17 +187,19 @@ class LogManager {
         }
       }
       await this.updateLogFile(jobName, logData);
+      
+      // Return a deep copy of the updated task to provide a ground-truth feedback loop.
+      return JSON.parse(JSON.stringify(task));
     } finally {
       this._unlock(jobName);
     }
   }
-
-  /** Appends a new entry to the work log. 
-   * <!--[[
-   * 理论上可以对齐addTask的设计，不过我个人觉得保持现状不做任何返回也挺好，因为addWorkLog本身就是一种“下班打卡”的行为，它输出完后，当前的agent就结束会话了，再返回记忆给它也没什么意义。
-   * 如果你觉得对齐addTask接口的设计是有必要的，在重构后，请在注释中补全原因。
-   * ]]-->
-  */
+  
+  /**
+   * Appends a new entry to the work log.
+   * This is a terminal action for an agent's lifecycle, so it does not return a value.
+   * The agent's run is considered complete after this logging action.
+   */
   public async addWorkLog(jobName: string, entry: WorkLogEntryData): Promise<void> {
     await this._lock(jobName);
     try {
@@ -188,5 +212,4 @@ class LogManager {
   }
 }
 
-// Export a singleton instance for use across the application
 export const logManager = new LogManager();

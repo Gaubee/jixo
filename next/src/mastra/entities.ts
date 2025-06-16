@@ -1,30 +1,38 @@
 import {z} from "zod";
 
-// Use z.lazy for recursive schemas. This defines a single node in the Roadmap tree.
-const RoadmapTaskNodeBase = z.object({
+// Base schema without recursion for clean type inference.
+const RoadmapTaskNodeBaseSchema = z.object({
   id: z.string(),
   description: z.string(),
-  // Added "Cancelled" to be compliant with the state machine in system.md
   status: z.enum(["Pending", "Locked", "Completed", "Failed", "Cancelled"]),
   runner: z.string().optional(),
 });
-type RoadmapTaskNodeBaseType = z.infer<typeof RoadmapTaskNodeBase>;
-export type RoadmapTaskNodeData = RoadmapTaskNodeBaseType & {
-  children?: RoadmapTaskNodeData[];
+type RoadmapTaskNodeBaseData = z.infer<typeof RoadmapTaskNodeBaseSchema>;
+
+// Final recursive type and schema.
+export type RoadmapTaskNodeData = RoadmapTaskNodeBaseData & {
+  children: RoadmapTaskNodeData[];
 };
-export const RoadmapTaskNodeSchema: z.ZodType<RoadmapTaskNodeData> = RoadmapTaskNodeBase.extend({
-  // The "children" field is optional, but if present, it must be an array of RoadmapTaskNodeSchema.
-  children: z.array(z.lazy(() => RoadmapTaskNodeBase)).optional(),
+
+export const RoadmapTaskNodeSchema: z.ZodType<RoadmapTaskNodeData> = RoadmapTaskNodeBaseSchema.extend({
+  // The recursive part now correctly points to the full schema.
+  // We also default children to an empty array for consistency.
+  children: z.lazy(() => z.array(RoadmapTaskNodeSchema)),
+  // .optional()
+  /**<!--[[
+   * 你这里写了 default 并不能对冲 optional ，所以 RoadmapTaskNodeData 那边的 children仍然要写成`?:`。
+   * 要注意，这里的 default 只是 optional+注释 的 一个功能而已。
+   * ]]--> */
+  // .default([]),
 });
 
 // Verified against system.md specification.
-// The "Result" can be pending if a task is paused.
 export const WorkLogEntrySchema = z.object({
   timestamp: z.string().datetime(),
   runnerId: z.string(),
   role: z.enum(["Planner", "Runner"]),
   objective: z.string(),
-  result: z.enum(["Succeeded", "Failed", "Pending"]), // 'Cancelled' applies to a Task's status, not a work log result. A planner might cancel a task, logging that as a Succeeded planning action.
+  result: z.enum(["Succeeded", "Failed", "Pending"]),
   summary: z.string(),
 });
 export type WorkLogEntryData = z.infer<typeof WorkLogEntrySchema>;

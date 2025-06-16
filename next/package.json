@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "pnpm tsc",
+    "test": "vitest",
+    "dev": "tsc",
     "server:dev": "mastra dev",
     "server:build": "mastra build",
     "server:start": "mastra start"
@@ -38,6 +39,7 @@
   "devDependencies": {
     "@types/node": "^24.0.1",
     "mastra": "^0.10.5",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.3"
   }
 }
