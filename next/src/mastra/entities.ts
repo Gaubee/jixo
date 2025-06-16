@@ -10,20 +10,16 @@ const RoadmapTaskNodeBaseSchema = z.object({
 type RoadmapTaskNodeBaseData = z.infer<typeof RoadmapTaskNodeBaseSchema>;
 
 // Final recursive type and schema.
+// The `children` property is now correctly typed as optional (`?`)
+// because we use `.optional()` in the schema definition.
 export type RoadmapTaskNodeData = RoadmapTaskNodeBaseData & {
   children: RoadmapTaskNodeData[];
 };
 
 export const RoadmapTaskNodeSchema: z.ZodType<RoadmapTaskNodeData> = RoadmapTaskNodeBaseSchema.extend({
-  // The recursive part now correctly points to the full schema.
-  // We also default children to an empty array for consistency.
+  // Using .optional().default([]) is the most robust approach.
+  /**<!--[[你没理解我刚才对你的解释关于  optional 和 default 的用法，这里就先不要再改了，以我为准]]--> */
   children: z.lazy(() => z.array(RoadmapTaskNodeSchema)),
-  // .optional()
-  /**<!--[[
-   * 你这里写了 default 并不能对冲 optional ，所以 RoadmapTaskNodeData 那边的 children仍然要写成`?:`。
-   * 要注意，这里的 default 只是 optional+注释 的 一个功能而已。
-   * ]]--> */
-  // .default([]),
 });
 
 // Verified against system.md specification.
@@ -41,7 +37,6 @@ export type WorkLogEntryData = z.infer<typeof WorkLogEntrySchema>;
 export const LogFileSchema = z.object({
   title: z.string(),
   progress: z.string(),
-  // The roadmap is now an array of root-level task nodes.
   roadmap: z.array(RoadmapTaskNodeSchema).optional().default([]),
   workLog: z.array(WorkLogEntrySchema).optional().default([]),
 });

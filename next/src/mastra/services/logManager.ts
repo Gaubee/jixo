@@ -26,7 +26,6 @@ progress: '0%'
 // We only require the description from the AI.
 export type NewTaskInput = Pick<RoadmapTaskNodeData, "description"> & Partial<Omit<RoadmapTaskNodeData, "id" | "status" | "children" | "description">>;
 
-
 class LogManager {
   private _parserAgent;
   private _locks = new Map<string, boolean>();
@@ -66,36 +65,22 @@ class LogManager {
     const hash = createHash("sha256").update(content).digest("hex");
     return {content, hash};
   }
-  
-  /**
-   * Finds a task node by its path (e.g., "1.2.1").
-   * The path is constructed from the `id` properties of the nodes.
-  */
-  private _findTaskByPath(roadmap: RoadmapTaskNodeData[], path: string): {parent: RoadmapTaskNodeData[] | null, task: RoadmapTaskNodeData | null, index: number} {
-    const parts = path.split('.').filter(Boolean);
-    if (parts.length === 0) return { parent: null, task: null, index: -1 };
 
-    let currentTasks: RoadmapTaskNodeData[] = roadmap;
-    let parent: RoadmapTaskNodeData[] | null = null;
+  private _findTaskByPath(roadmap: RoadmapTaskNodeData[], path: string): {task: RoadmapTaskNodeData | null} {
+    const parts = path.split(".").filter(Boolean);
+    if (parts.length === 0) return {task: null};
+
+    let currentTasks: RoadmapTaskNodeData[] | undefined = roadmap;
     let task: RoadmapTaskNodeData | null = null;
-    let foundIndex = -1;
 
-    for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
-        foundIndex = currentTasks.findIndex(t => t.id === part);
-        if (foundIndex === -1) return { parent: null, task: null, index: -1 };
-        
-        task = currentTasks[foundIndex];
-
-        if (i < parts.length - 1) {
-            parent = currentTasks;
-            currentTasks = task.children;
-        } else {
-            parent = currentTasks;
-        }
+    for (const part of parts) {
+      if (!currentTasks) return {task: null};
+      task = currentTasks.find((t) => t.id === part) ?? null;
+      if (!task) return {task: null};
+      currentTasks = task.children;
     }
 
-    return { parent, task, index: foundIndex };
+    return {task};
   }
 
   // --- Public High-Level API ---
@@ -115,7 +100,6 @@ class LogManager {
 
     try {
       const cachedData = await fsp.readFile(cachePath, "utf-8");
-      // console.log(`[LogManager] Cache hit for job '${jobName}'.`);
       return LogFileSchema.parse(JSON.parse(cachedData));
     } catch {
       console.log(`[LogManager] Cache miss. Invoking ParserAgent for job '${jobName}'...`);
@@ -133,7 +117,6 @@ class LogManager {
 
     await fsp.writeFile(this._getLogFilePath(jobName), markdownContent, "utf-8");
     await fsp.writeFile(this._getCacheFilePath(hash), JSON.stringify(validatedData, null, 2), "utf-8");
-    // console.log(`[LogManager] Log file for job '${jobName}' updated.`);
   }
 
   public async addTask(jobName: string, parentPath: string, taskInput: NewTaskInput): Promise<RoadmapTaskNodeData> {
@@ -147,12 +130,13 @@ class LogManager {
         targetChildrenList = logData.roadmap;
         newId = (targetChildrenList.length + 1).toString();
       } else {
-        const { task: parentTask } = this._findTaskByPath(logData.roadmap, parentPath);
+        const {task: parentTask} = this._findTaskByPath(logData.roadmap, parentPath);
         if (!parentTask) throw new Error(`Parent task with path '${parentPath}' not found.`);
+        parentTask.children = parentTask.children ?? []; // Handle optional children
         targetChildrenList = parentTask.children;
         newId = `${parentTask.id}.${targetChildrenList.length + 1}`;
       }
-      
+
       const newTask: RoadmapTaskNodeData = {
         ...taskInput,
         id: newId,
@@ -162,20 +146,17 @@ class LogManager {
 
       targetChildrenList.push(newTask);
       await this.updateLogFile(jobName, logData);
-      
-      // Return a deep copy of the created task to prevent external mutations.
       return JSON.parse(JSON.stringify(newTask));
-
     } finally {
       this._unlock(jobName);
     }
   }
 
-  public async updateTask(jobName: string, path: string, updates: Partial<Omit<RoadmapTaskNodeData, 'id' | 'children'>>): Promise<RoadmapTaskNodeData> {
+  public async updateTask(jobName: string, path: string, updates: Partial<Omit<RoadmapTaskNodeData, "id" | "children">>): Promise<RoadmapTaskNodeData> {
     await this._lock(jobName);
     try {
       const logData = await this.getLogFile(jobName);
-      const { task } = this._findTaskByPath(logData.roadmap, path);
+      const {task} = this._findTaskByPath(logData.roadmap, path);
       if (!task) throw new Error(`Task with path '${path}' not found.`);
 
       for (const key in updates) {
@@ -187,24 +168,17 @@ class LogManager {
         }
       }
       await this.updateLogFile(jobName, logData);
-      
-      // Return a deep copy of the updated task to provide a ground-truth feedback loop.
       return JSON.parse(JSON.stringify(task));
     } finally {
       this._unlock(jobName);
     }
   }
-  
-  /**
-   * Appends a new entry to the work log.
-   * This is a terminal action for an agent's lifecycle, so it does not return a value.
-   * The agent's run is considered complete after this logging action.
-   */
+
   public async addWorkLog(jobName: string, entry: WorkLogEntryData): Promise<void> {
     await this._lock(jobName);
     try {
       const logData = await this.getLogFile(jobName);
-      logData.workLog.unshift(entry); // Prepend to keep latest on top
+      logData.workLog.unshift(entry);
       await this.updateLogFile(jobName, logData);
     } finally {
       this._unlock(jobName);
