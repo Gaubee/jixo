@@ -8,7 +8,7 @@ const RoadmapTaskNodeBaseSchema = z.object({
   details: z.string().optional(), // Detailed, step-by-step instructions for the executor.
   // A task now enters 'PendingReview' after execution.
   status: z.enum(["Pending", "Locked", "Completed", "Failed", "Cancelled", "PendingReview"]),
-  executor: z.string().optional(), // Renamed from runner
+  executor: z.string().optional(),
   reviewer: z.string().optional(), // The ID of the reviewer for this task.
   dependsOn: z.array(z.string()).optional(), // IDs of tasks that must be completed first.
   tags: z.array(z.string()).optional(), // For categorization and specialized routing.

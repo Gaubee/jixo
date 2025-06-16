@@ -6,7 +6,7 @@ import {LibSQLStore} from "@mastra/libsql";
 import {PinoLogger} from "@mastra/loggers";
 import path from "node:path";
 import {z} from "zod";
-import {LogFileSchema, RoadmapTaskNodeSchema, type LogFileData, type RoadmapTaskNodeData} from "./entities.js";
+import {LogFileSchema, RoadmapTaskNodeSchema, type LogFileData} from "./entities.js";
 import {commonModel, thinkModel} from "./llm/index.js";
 import {logManager, type NewTaskInput} from "./services/logManager.js";
 import {tools} from "./tools/index.js";
@@ -49,16 +49,6 @@ const reviewerAgent = new Agent({
 });
 
 // --- Utility Functions ---
-const findTask = (predicate: (task: RoadmapTaskNodeData) => boolean, tasks: RoadmapTaskNodeData[]): RoadmapTaskNodeData | null => {
-  for (const task of tasks) {
-    if (predicate(task)) return task;
-    if (task.children) {
-      const found = findTask(predicate, task.children);
-      if (found) return found;
-    }
-  }
-  return null;
-};
 const isJobCompleted = (log: LogFileData) => (!log.roadmap.length ? false : log.roadmap.every((t) => t.status === "Completed"));
 
 // --- Inner Loop Workflow (`jixoJobWorkflow`) ---
@@ -88,20 +78,27 @@ const triageStep = createStep({
   outputSchema: TriageOutputSchema,
   async execute({inputData}): Promise<TriageOutputData> {
     const log = await logManager.getLogFile(inputData.jobName);
+
+    // If roadmap is empty, we must plan first.
     if (!log.roadmap.length) {
-      return {action: "plan", log, exitInfo: {exitCode: 2, reason: "Roadmap empty. Planning."}};
+      return {action: "plan", log};
     }
-    const taskToReview = findTask((t) => t.status === "PendingReview", log.roadmap);
-    if (taskToReview) return {action: "review", log, task: taskToReview};
 
-    // Simplified dependency check for demo: find a pending task with no pending dependencies.
-    const pendingTask = findTask(
-      (t) => t.status === "Pending" && (t.dependsOn ?? []).every((depId) => findTask((d) => d.id === depId, log.roadmap)?.status === "Completed"),
-      log.roadmap,
-    );
-    if (pendingTask) return {action: "execute", log, task: pendingTask};
+    // Delegate task selection to the LogManager
+    const {type, task} = await logManager.getNextActionableTask(inputData.jobName);
 
-    if (isJobCompleted(log)) return {action: "exit", log, exitInfo: {exitCode: 0, reason: "All tasks completed."}};
+    if (type === "review") {
+      return {action: "review", log, task: task!};
+    }
+
+    if (type === "execute") {
+      return {action: "execute", log, task: task!};
+    }
+
+    // If no actionable tasks, check for job completion or go to standby.
+    if (isJobCompleted(log)) {
+      return {action: "exit", log, exitInfo: {exitCode: 0, reason: "All tasks completed."}};
+    }
     return {action: "exit", log, exitInfo: {exitCode: 2, reason: "No tasks ready to execute. Standby."}};
   },
 });
@@ -199,7 +196,7 @@ const reviewStep = createStep({
 const jixoJobWorkflow = createWorkflow({
   id: "jixoJobWorkflow",
   inputSchema: JixoJobWorkflowInputSchema,
-  outputSchema: z.record(JixoJobWorkflowExitInfoSchema), // Adopting your discovery
+  outputSchema: z.record(JixoJobWorkflowExitInfoSchema),
 })
   .then(triageStep)
   .branch([
@@ -217,8 +214,6 @@ const jixoJobWorkflow = createWorkflow({
     ],
   ])
   .commit();
-
-// --- Outer Loop Workflow (`jixoMasterWorkflow`) ---
 
 const JixoMasterWorkflowInputSchema = z.object({
   jobName: z.string(),
@@ -262,17 +257,9 @@ const jixoMasterWorkflow = createWorkflow({
   )
   .commit();
 
-// --- Mastra Instance Registration ---
 export const mastra = new Mastra({
-  agents: {
-    plannerAgent,
-    executorAgent,
-    reviewerAgent,
-  },
-  workflows: {
-    jixoJobWorkflow,
-    jixoMasterWorkflow,
-  },
+  agents: {plannerAgent, executorAgent, reviewerAgent},
+  workflows: {jixoJobWorkflow, jixoMasterWorkflow},
   storage: new LibSQLStore({url: ":memory:"}),
   logger: new PinoLogger({name: "JIXO-on-Mastra", level: "info"}),
 });

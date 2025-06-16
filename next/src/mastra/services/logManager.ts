@@ -22,9 +22,16 @@ progress: '0%'
 
 `;
 
-// Type for the data required to create a new task.
-// We only require the title from the AI.
-export type NewTaskInput = Pick<RoadmapTaskNodeData, "title"> & Partial<Omit<RoadmapTaskNodeData, "id" | "status" | "children" | "description">>;
+// The input type now supports recursive children.
+export type NewTaskInput = Pick<RoadmapTaskNodeData, "title"> &
+  Partial<Omit<RoadmapTaskNodeData, "id" | "status" | "children">> & {
+    children?: NewTaskInput[];
+  };
+
+export type NextActionableTaskResult = {
+  type: "review" | "execute" | "none";
+  task: RoadmapTaskNodeData | null;
+};
 
 class LogManager {
   private _parserAgent;
@@ -46,7 +53,7 @@ class LogManager {
 
   private async _lock(jobName: string) {
     while (this._locks.get(jobName)) {
-      await new Promise((resolve) => setTimeout(resolve, 50)); // Simple spin lock
+      await new Promise((resolve) => setTimeout(resolve, 50));
     }
     this._locks.set(jobName, true);
   }
@@ -66,21 +73,55 @@ class LogManager {
     return {content, hash};
   }
 
+  private _findTask(predicate: (task: RoadmapTaskNodeData) => boolean, tasks: RoadmapTaskNodeData[]): RoadmapTaskNodeData | null {
+    for (const task of tasks) {
+      if (predicate(task)) return task;
+      const found = this._findTask(predicate, task.children);
+      if (found) return found;
+    }
+    return null;
+  }
+
   private _findTaskByPath(roadmap: RoadmapTaskNodeData[], path: string): {task: RoadmapTaskNodeData | null} {
     const parts = path.split(".").filter(Boolean);
     if (parts.length === 0) return {task: null};
-
-    let currentTasks: RoadmapTaskNodeData[] | undefined = roadmap;
+    let currentTasks: RoadmapTaskNodeData[] = roadmap;
     let task: RoadmapTaskNodeData | null = null;
-
     for (const part of parts) {
-      if (!currentTasks) return {task: null};
       task = currentTasks.find((t) => t.id === part) ?? null;
       if (!task) return {task: null};
       currentTasks = task.children;
     }
-
     return {task};
+  }
+
+  /**
+   * Private helper to recursively create task objects in memory.
+   * This is the core of the new recursive addTask functionality.
+   */
+  private _createTaskRecursive(taskInput: NewTaskInput, parentChildrenList: RoadmapTaskNodeData[], parentId: string): RoadmapTaskNodeData {
+    const {children: childInputs, ...restOfInput} = taskInput;
+
+    const newId = parentId ? `${parentId}.${parentChildrenList.length + 1}` : `${parentChildrenList.length + 1}`;
+
+    const newTask: RoadmapTaskNodeData = {
+      ...restOfInput,
+      id: newId,
+      status: "Pending",
+      children: [],
+    };
+
+    // Add the new task to its parent's list
+    parentChildrenList.push(newTask);
+
+    // If there are child inputs, recurse
+    if (childInputs && childInputs.length > 0) {
+      for (const childInput of childInputs) {
+        this._createTaskRecursive(childInput, newTask.children, newTask.id);
+      }
+    }
+
+    return newTask;
   }
 
   // --- Public High-Level API ---
@@ -97,12 +138,11 @@ class LogManager {
     const filePath = this._getLogFilePath(jobName);
     const {content, hash} = await this._readFileWithHash(filePath);
     const cachePath = this._getCacheFilePath(hash);
-
     try {
       const cachedData = await fsp.readFile(cachePath, "utf-8");
       return LogFileSchema.parse(JSON.parse(cachedData));
     } catch {
-      console.log(`[LogManager] Cache miss. Invoking ParserAgent for job '${jobName}'...`);
+      // console.log(`[LogManager] Cache miss for '${jobName}'. Parsing...`);
       const result = await this._parserAgent.generate(content, {output: LogFileSchema});
       const parsedData = result.object;
       await fsp.writeFile(cachePath, JSON.stringify(parsedData, null, 2));
@@ -114,39 +154,60 @@ class LogManager {
     const validatedData = LogFileSchema.parse(data);
     const markdownContent = serializeLogFile(validatedData);
     const hash = createHash("sha256").update(markdownContent).digest("hex");
-
     await fsp.writeFile(this._getLogFilePath(jobName), markdownContent, "utf-8");
     await fsp.writeFile(this._getCacheFilePath(hash), JSON.stringify(validatedData, null, 2), "utf-8");
+  }
+
+  public async getNextActionableTask(jobName: string): Promise<NextActionableTaskResult> {
+    const logData = await this.getLogFile(jobName);
+    const {roadmap} = logData;
+
+    const taskToReview = this._findTask((t) => t.status === "PendingReview", roadmap);
+    if (taskToReview) {
+      return {type: "review", task: taskToReview};
+    }
+
+    const allTasksMap = new Map<string, RoadmapTaskNodeData>();
+    const flatten = (tasks: RoadmapTaskNodeData[]) => {
+      tasks.forEach((t) => {
+        allTasksMap.set(t.id, t);
+        flatten(t.children);
+      });
+    };
+    flatten(roadmap);
+
+    const pendingTask = this._findTask((t) => t.status === "Pending" && (t.dependsOn ?? []).every((depId) => allTasksMap.get(depId)?.status === "Completed"), roadmap);
+
+    if (pendingTask) {
+      return {type: "execute", task: pendingTask};
+    }
+
+    return {type: "none", task: null};
   }
 
   public async addTask(jobName: string, parentPath: string, taskInput: NewTaskInput): Promise<RoadmapTaskNodeData> {
     await this._lock(jobName);
     try {
       const logData = await this.getLogFile(jobName);
-      let targetChildrenList: RoadmapTaskNodeData[];
-      let newId: string;
+
+      let parentChildrenList: RoadmapTaskNodeData[];
+      let parentIdPrefix: string;
 
       if (parentPath === "") {
-        targetChildrenList = logData.roadmap;
-        newId = (targetChildrenList.length + 1).toString();
+        parentChildrenList = logData.roadmap;
+        parentIdPrefix = "";
       } else {
         const {task: parentTask} = this._findTaskByPath(logData.roadmap, parentPath);
-        if (!parentTask) throw new Error(`Parent task with path '${parentPath}' not found.`);
-        parentTask.children = parentTask.children ?? []; // Handle optional children
-        targetChildrenList = parentTask.children;
-        newId = `${parentTask.id}.${targetChildrenList.length + 1}`;
+        if (!parentTask) throw new Error(`Parent task '${parentPath}' not found.`);
+        parentChildrenList = parentTask.children;
+        parentIdPrefix = parentTask.id;
       }
 
-      const newTask: RoadmapTaskNodeData = {
-        ...taskInput,
-        id: newId,
-        status: "Pending",
-        children: [],
-      };
+      const createdTask = this._createTaskRecursive(taskInput, parentChildrenList, parentIdPrefix);
 
-      targetChildrenList.push(newTask);
       await this.updateLogFile(jobName, logData);
-      return JSON.parse(JSON.stringify(newTask));
+
+      return JSON.parse(JSON.stringify(createdTask));
     } finally {
       this._unlock(jobName);
     }
