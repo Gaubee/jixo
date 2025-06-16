@@ -9,13 +9,35 @@ const NewSubTaskSchema = z.object({
   tags: z.array(z.string()).optional().describe("Keywords for categorizing the task."),
   gitCommit: z.boolean().optional().describe("Instruction for git commit after completion."),
 });
+export type NewSubTaskData = z.infer<typeof NewSubTaskSchema>;
 
 // Schema for a root-level task input. It can have an array of sub-tasks.
-const NewTaskSchema = NewSubTaskSchema.extend({
+export const NewTaskSchema = NewSubTaskSchema.extend({
   children: z.array(NewSubTaskSchema).optional().describe("A list of sub-tasks to be completed as part of this main task."),
 });
+export type NewTaskData = z.infer<typeof NewTaskSchema>;
 
-// The final schema that the PlannerAgent must adhere to.
-export const PlannerOutputSchema = z.object({
-  tasks: z.array(NewTaskSchema).describe("An array of new tasks to be added to the roadmap."),
-});
+export const AddTasksSchema = z
+  .array(NewTaskSchema)
+  .describe("A list of new root-level tasks to add to the roadmap. For sub-tasks, use the 'update' operation on the parent task's 'children' field.");
+
+export const UpdateTasksSchema = z
+  .array(
+    z.object({
+      id: z.string().describe("The ID of the task to update."),
+      changes: NewTaskSchema.partial().describe("An object containing the fields to be updated on the specified task."),
+    }),
+  )
+  .describe("A list of updates to apply to existing tasks.");
+
+export const CancelTasksSchema = z.array(z.string()).describe("A list of task IDs to be marked as 'Cancelled'.");
+
+// The final, powerful schema that the PlannerAgent must adhere to.
+export const PlannerOutputSchema = z
+  .object({
+    add: AddTasksSchema,
+    update: UpdateTasksSchema,
+    cancel: CancelTasksSchema,
+  })
+  .partial()
+  .describe("A set of instructions to dynamically modify the project roadmap.");

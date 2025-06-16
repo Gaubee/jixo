@@ -11,7 +11,7 @@ export const SubTaskSchema = z.object({
   reviewer: z.string().optional().describe("The ID of the runner assigned to review this task."),
   dependsOn: z.array(z.string()).optional().describe("A list of task IDs that must be completed before this task can start."),
   tags: z.array(z.string()).optional().describe("Keywords for categorizing the task (e.g., 'backend', 'refactor')."),
-  gitCommit: z.union([z.boolean(), z.string()]).optional().describe("Whether to perform a git commit after completion. A string value can be a suggested commit message style."),
+  gitCommit: z.boolean().optional().describe("Whether to perform a git commit after completion. A string value can be a suggested commit message style."),
 });
 
 // A root-level task can have children, but only of the SubTask type.
@@ -24,7 +24,6 @@ export const AnyTaskSchema = z.union([RoadmapTaskNodeSchema, SubTaskSchema]);
 
 export type RoadmapTaskNodeData = z.infer<typeof RoadmapTaskNodeSchema>;
 export type SubTaskData = z.infer<typeof SubTaskSchema>;
-
 
 export const WorkLogEntrySchema = z.object({
   timestamp: z.string().datetime().describe("The ISO 8601 timestamp of when the log entry was created."),

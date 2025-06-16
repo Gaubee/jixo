@@ -1,3 +1,4 @@
+import type {NewTaskData} from "../agent/schemas.js";
 import type {RoadmapTaskNodeData, SubTaskData} from "../entities.js";
 
 /**
@@ -39,25 +40,24 @@ export function findTaskByPath(roadmap: RoadmapTaskNodeData[], path: string): {t
 }
 
 /**
- * Creates a full RoadmapTaskNodeData object from a NewTaskInput object.
- * This function now only handles one level of nesting.
+ * Creates a full RoadmapTaskNodeData object from a NewTaskInput object
+ * and adds it to the provided list of root tasks.
  * @param taskInput The input data for the task and its potential children.
- * @param parentChildrenList The list where the new task will be added.
- * @param parentId The ID of the parent task, used to construct the new ID.
+ * @param rootTasks The list where the new root task will be added.
  * @returns The fully constructed RoadmapTaskNodeData object.
  */
-export function createTask(taskInput: import("./logManager.js").NewTaskInput, parentChildrenList: RoadmapTaskNodeData[]): RoadmapTaskNodeData {
+export function createTask(taskInput: NewTaskData, rootTasks: RoadmapTaskNodeData[]): RoadmapTaskNodeData {
   const {children: subTaskInputs, ...restOfInput} = taskInput;
-  const newId = `${parentChildrenList.length + 1}`;
+  const newId = `${rootTasks.length + 1}`;
 
   const newTask: RoadmapTaskNodeData = {
-    ...restOfInput,
+    ...(restOfInput as Omit<typeof restOfInput, "children">),
     id: newId,
     status: "Pending",
     children: [],
   };
 
-  parentChildrenList.push(newTask);
+  rootTasks.push(newTask);
 
   if (subTaskInputs) {
     for (const subTaskInput of subTaskInputs) {
@@ -79,7 +79,7 @@ export const isJobCompleted = (log: import("../entities.js").LogFileData) => {
   return log.roadmap.every((task) => {
     const parentCompleted = task.status === "Completed" || task.status === "Cancelled";
     if (!parentCompleted) return false;
-    // If parent is not cancelled, all its children must also be completed/cancelled
+
     if (task.status !== "Cancelled") {
       return task.children.every((subTask) => subTask.status === "Completed" || subTask.status === "Cancelled");
     }

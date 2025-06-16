@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest",
-    "dev": "tsc",
+    "build": "tsc",
     "server:dev": "mastra dev",
     "server:build": "mastra build",
     "server:start": "mastra start"
@@ -37,7 +37,7 @@
     "zod-to-json-schema": "^3.24.5"
   },
   "devDependencies": {
-    "@types/node": "^24.0.1",
+    "@types/node": "^22",
     "mastra": "^0.10.5",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3"
