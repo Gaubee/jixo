@@ -18,7 +18,8 @@ const masterLoopStep = createStep({
   async execute({inputData, mastra}) {
     let loopCount = 0;
     let consecutiveErrors = 0;
-    await logManager.init(inputData.jobName);
+    const workDir = process.cwd(); // Get the CWD once here
+    await logManager.init(inputData.jobName, {workDir});
 
     while (loopCount < inputData.maxLoops) {
       loopCount++;
@@ -32,7 +33,7 @@ const masterLoopStep = createStep({
 
       try {
         const jobRun = (mastra.getWorkflow("jixoJobWorkflow") as typeof jixoJobWorkflow).createRun();
-        const result = await jobRun.start({inputData: {jobName: inputData.jobName, jobGoal: inputData.jobGoal, runnerId, otherRunners: []}});
+        const result = await jobRun.start({inputData: {jobName: inputData.jobName, jobGoal: inputData.jobGoal, runnerId, otherRunners: [], workDir}});
         consecutiveErrors = 0; // Reset on success
 
         if (result.status === "failed") {

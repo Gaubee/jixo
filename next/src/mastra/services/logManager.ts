@@ -4,7 +4,7 @@ import fsp from "node:fs/promises";
 import type {NewSubTaskData, NewTaskData} from "../agent/schemas.js";
 import {type LogFileData, LogFileSchema, type RoadmapTaskNodeData, type SubTaskData, SubTaskSchema, type WorkLogEntryData} from "../entities.js";
 import {thinkModel} from "../llm/index.js";
-import {calcContentHash, EMPTY_JOB_CONTENT, ensureJixoDirsExist, getCacheFilePath, getLogFilePath} from "./internal.js";
+import {calcContentHash, ensureJixoDirsExist, getCacheFilePath, getLogFilePath} from "./internal.js";
 import {createTask, findTask, findTaskByPath} from "./logHelper.js";
 import {serializeLogFile} from "./logSerializer.js";
 
@@ -43,7 +43,16 @@ class LogManager {
     try {
       content = await fsp.readFile(filePath, "utf-8");
     } catch {
-      content = EMPTY_JOB_CONTENT;
+      // If the file doesn't exist, create it with initial content including env
+      const initialLogData: LogFileData = {
+        title: "_undefined_",
+        progress: "0%",
+        env: {}, // Start with an empty env
+        roadmap: [],
+        workLog: [],
+      };
+      content = serializeLogFile(initialLogData);
+      await fsp.writeFile(filePath, content, "utf-8");
     }
     const hash = calcContentHash(content);
     return {content, hash};
@@ -51,11 +60,19 @@ class LogManager {
 
   // --- Public High-Level API ---
 
-  public async init(jobName: string) {
+  public async init(jobName: string, env: Record<string, string> = {}) {
     await ensureJixoDirsExist();
     const logFilePath = getLogFilePath(jobName);
     if (!fs.existsSync(logFilePath)) {
-      await fsp.writeFile(logFilePath, EMPTY_JOB_CONTENT);
+      const initialLogData: LogFileData = {
+        title: "_undefined_",
+        progress: "0%",
+        env: env,
+        roadmap: [],
+        workLog: [],
+      };
+      const content = serializeLogFile(initialLogData);
+      await fsp.writeFile(logFilePath, content, "utf-8");
     }
   }
 

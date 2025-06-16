@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "vitest",
-    "demo": "cd demo && node ../dist/mastra/index.demo.js",
+    "demo": "node scripts/run-demo.ts",
     "build": "tsc",
     "server:dev": "mastra dev",
     "server:build": "mastra build",

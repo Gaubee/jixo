@@ -7,6 +7,7 @@ export const JixoJobWorkflowInputSchema = z.object({
   jobGoal: z.string(),
   runnerId: z.string(),
   otherRunners: z.array(z.string()),
+  workDir: z.string(),
 });
 
 export const JixoJobWorkflowExitInfoSchema = z.object({

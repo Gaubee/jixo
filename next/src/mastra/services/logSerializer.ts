@@ -1,3 +1,4 @@
+import matter from "gray-matter";
 import {type LogFileData, type RoadmapTaskNodeData} from "../entities.js";
 
 function serializeRoadmap(tasks: RoadmapTaskNodeData[], level = 0): string {
@@ -54,23 +55,17 @@ function serializeWorkLog(entries: LogFileData["workLog"]): string {
   return mdLines.join("\n");
 }
 
-const JOB_CONTENT_TEMPLATE = (data: {title: string; progress: string; roadmap: string; worklog: string}) => `---
-title: ${data.title}
-progress: ${data.progress}
----
-
+export function serializeLogFile(data: LogFileData): string {
+  const {roadmap, workLog, ...metadata} = data;
+  return matter.stringify(
+    `
 ## Roadmap
 
-${data.roadmap}
+${serializeRoadmap(data.roadmap) || "_No tasks planned yet._"}
 
 ## Work Log
 
-${data.worklog}`;
-
-export function serializeLogFile(data: LogFileData): string {
-  return JOB_CONTENT_TEMPLATE({
-    ...data,
-    roadmap: serializeRoadmap(data.roadmap),
-    worklog: serializeWorkLog(data.workLog),
-  });
+${serializeWorkLog(data.workLog) || "_No work logged yet._"}`,
+    metadata,
+  );
 }

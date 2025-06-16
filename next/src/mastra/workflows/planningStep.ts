@@ -1,11 +1,8 @@
-import {createStep, createWorkflow} from "@mastra/core/workflows";
-import {z} from "zod";
+import {RuntimeContext} from "@mastra/core/runtime-context";
+import {createStep} from "@mastra/core/workflows";
 import {PlannerOutputSchema} from "../agent/schemas.js";
-import {isJobCompleted} from "../services/logHelper.js";
 import {logManager} from "../services/logManager.js";
-import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageOutputSchema, type TriageOutputData} from "./schemas.js";
-import {REWORK_MARKER} from "./utils.js";
-import {triageStep} from './triageStep.js'
+import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageOutputSchema} from "./schemas.js";
 
 export const planningStep = createStep({
   id: "planning",
@@ -13,7 +10,7 @@ export const planningStep = createStep({
   outputSchema: JixoJobWorkflowExitInfoSchema,
   async execute({inputData, mastra, getInitData}) {
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
-    const {planningContext} = inputData;
+    const {planningContext, log} = inputData;
     const {jobName, runnerId} = init;
 
     let prompt: string;
@@ -22,7 +19,7 @@ export const planningStep = createStep({
     switch (planningContext?.type) {
       case "fixFailure":
         const failedTask = planningContext.task!;
-        const failureLog = inputData.log.workLog.find((w) => w.objective.includes(failedTask.id) && w.result === "Failed");
+        const failureLog = log.workLog.find((w) => w.objective.includes(failedTask.id) && w.result === "Failed");
         prompt = `### Failure Recovery Planning\nFailed Task: '${failedTask.id} ${failedTask.title}'\nError Summary: ${failureLog?.summary ?? "Unknown error"}`;
         objective = `Fix failed task ${failedTask.id}`;
         break;
@@ -37,8 +34,14 @@ export const planningStep = createStep({
         break;
     }
 
+    const runtimeContext = new RuntimeContext();
+    runtimeContext.set("jobGoal", init.jobGoal);
+    runtimeContext.set("roadmap", log.roadmap);
+    runtimeContext.set("workDir", log.env?.workDir ?? init.workDir);
+
     const result = await mastra.getAgent("plannerAgent").generate(prompt, {
       output: PlannerOutputSchema,
+      runtimeContext,
     });
 
     const plan = result.object;
@@ -53,8 +56,6 @@ export const planningStep = createStep({
 
     if (plan.update && plan.update.length > 0) {
       for (const item of plan.update) {
-        // Here we assume updates don't add sub-tasks for simplicity, though the schema allows it.
-        // A more complex implementation would handle adding children via update.
         await logManager.updateTask(jobName, item.id, item.changes);
       }
       summary.push(`Updated ${plan.update.length} task(s).`);
@@ -62,7 +63,6 @@ export const planningStep = createStep({
 
     if (plan.add && plan.add.length > 0) {
       for (const task of plan.add) {
-        // addTask now correctly handles adding new root tasks with their children.
         await logManager.addTask(jobName, task);
       }
       summary.push(`Added ${plan.add.length} new root task(s).`);

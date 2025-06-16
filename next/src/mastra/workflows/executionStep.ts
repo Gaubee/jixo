@@ -1,10 +1,7 @@
-import {createStep, createWorkflow} from "@mastra/core/workflows";
-import {z} from "zod";
+import {createStep} from "@mastra/core/workflows";
+import {RuntimeContext} from "@mastra/core/runtime-context";
 import {logManager} from "../services/logManager.js";
-import {planningStep} from "./planningStep.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageOutputSchema} from "./schemas.js";
-import {triageStep} from "./triageStep.js";
-import {REWORK_MARKER} from "./utils.js";
 
 export const executionStep = createStep({
   id: "execution",
@@ -14,12 +11,19 @@ export const executionStep = createStep({
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const task = inputData.task!;
 
+    const runtimeContext = new RuntimeContext();
+    runtimeContext.set("cwd", init.workDir);
+
     try {
       await logManager.updateTask(init.jobName, task.id, {status: "Locked", executor: init.runnerId});
-      const result = await mastra.getAgent("executorAgent").generate(`Task: ${task.title}. Details: ${task.details ?? "N/A"}`);
+      const result = await mastra.getAgent("executorAgent").generate(`Task: ${task.title}. Details: ${task.details ?? "N/A"}`, {runtimeContext});
+
       if (task.gitCommit) {
-        console.log(`[Executor] Simulating: git commit -m "feat(task-${task.id}): ${result.text}"`);
+        // Standardized commit message format
+        const commitMessage = `feat(task-${task.id}): ${task.title}\n\n${result.text}`;
+        console.log(`[Executor] Simulating: git commit -m "${commitMessage}"`);
       }
+
       await logManager.updateTask(init.jobName, task.id, {status: "PendingReview"});
       await logManager.addWorkLog(init.jobName, {
         timestamp: new Date().toISOString(),

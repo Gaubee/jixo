@@ -11,7 +11,7 @@ export const SubTaskSchema = z.object({
   reviewer: z.string().optional().describe("The ID of the runner assigned to review this task."),
   dependsOn: z.array(z.string()).optional().describe("A list of task IDs that must be completed before this task can start."),
   tags: z.array(z.string()).optional().describe("Keywords for categorizing the task (e.g., 'backend', 'refactor')."),
-  gitCommit: z.boolean().optional().describe("Whether to perform a git commit after completion. A string value can be a suggested commit message style."),
+  gitCommit: z.boolean().optional().describe("Whether to perform a git commit after completion."),
 });
 
 // A root-level task can have children, but only of the SubTask type.
@@ -38,6 +38,7 @@ export type WorkLogEntryData = z.infer<typeof WorkLogEntrySchema>;
 export const LogFileSchema = z.object({
   title: z.string().describe("The overall title of the job, derived from the user's goal."),
   progress: z.string().describe("A percentage string representing the job's estimated completion."),
+  env: z.record(z.string()).optional().describe("Environment variables for the job, e.g., workDir."),
   roadmap: z.array(RoadmapTaskNodeSchema).optional().default([]).describe("The hierarchical list of tasks to be executed for the job."),
   workLog: z.array(WorkLogEntrySchema).optional().default([]).describe("An immutable, time-ordered log of all actions taken during the job."),
 });
