@@ -1,53 +1,13 @@
 import {delay} from "@gaubee/util";
 import {Mastra} from "@mastra/core";
-import {Agent} from "@mastra/core/agent";
 import {createStep, createWorkflow} from "@mastra/core/workflows";
 import {LibSQLStore} from "@mastra/libsql";
 import {PinoLogger} from "@mastra/loggers";
 import path from "node:path";
 import {z} from "zod";
+import {createExecutorAgent, plannerAgent, reviewerAgent} from "./agent/index.js";
 import {LogFileSchema, RoadmapTaskNodeSchema, type LogFileData} from "./entities.js";
-import {commonModel, thinkModel} from "./llm/index.js";
 import {logManager, type NewTaskInput} from "./services/logManager.js";
-import {tools} from "./tools/index.js";
-
-// --- Agent Definitions ---
-const plannerAgent = new Agent({
-  name: "PlannerAgent",
-  instructions: `You are an expert project planner. Your job is to create and modify a project roadmap.
-- Tasks MUST have a 'title'.
-- Use 'details' for complex implementation steps for the Executor.
-- Use 'dependsOn' to specify task dependencies using their IDs.
-- Use 'tags' to categorize tasks (e.g., 'backend', 'frontend', 'refactor').
-- For rework, analyze the provided review feedback and create new sub-tasks to address the issues.
-Your output is ONLY the raw Markdown for the task list.`,
-  model: thinkModel,
-});
-
-const executorAgent = new Agent({
-  name: "ExecutorAgent",
-  instructions: `You are a diligent software engineer. You will receive a task with its full context (parent tasks).
-- Your primary instruction is the 'details' field of your target task. If not present, use the 'title'.
-- Execute the task using the provided tools.
-- If 'gitCommit' is specified, use the git tool to commit your changes with a descriptive message.
-Your output is a concise, one-sentence summary of the work you performed.`,
-  model: commonModel,
-  tools: {
-    ...(await tools.fileSystem(path.join(process.cwd(), "demo"))),
-    ...(await tools.pnpm()),
-    // git tools will be added here later
-  },
-});
-
-const reviewerAgent = new Agent({
-  name: "ReviewerAgent",
-  instructions: `You are a meticulous code reviewer and QA engineer. You will be given a completed task and a summary from the Executor.
-- Your goal is to determine if the work meets the task's objective.
-- If it meets the objective, respond with ONLY the word "Approved".
-- If it does NOT meet the objective, provide a concise, actionable list of changes required for the Planner to create rework tasks. Example: "- The function is missing error handling for null inputs.\n- The UI component does not match the design spec."`,
-  model: thinkModel,
-});
-
 // --- Utility Functions ---
 const isJobCompleted = (log: LogFileData) => (!log.roadmap.length ? false : log.roadmap.every((t) => t.status === "Completed"));
 
@@ -257,9 +217,11 @@ const jixoMasterWorkflow = createWorkflow({
   )
   .commit();
 
+const workDir = path.join(process.cwd(), "./");
+
 export const mastra = new Mastra({
-  agents: {plannerAgent, executorAgent, reviewerAgent},
+  agents: {plannerAgent, executorAgent: await createExecutorAgent(workDir), reviewerAgent},
   workflows: {jixoJobWorkflow, jixoMasterWorkflow},
   storage: new LibSQLStore({url: ":memory:"}),
-  logger: new PinoLogger({name: "JIXO-on-Mastra", level: "info"}),
+  logger: new PinoLogger({name: "JIXO", level: "info"}),
 });

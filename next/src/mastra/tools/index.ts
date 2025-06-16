@@ -9,7 +9,7 @@ export const tools = {
       map_get_or_put_async(caches, dir, async () => {
         const client = new MCPClient({
           servers: {
-            fileSystem: {
+            fs: {
               command: "pnpm",
               args: ["mcp-fs", dir],
             },
@@ -28,5 +28,22 @@ export const tools = {
       },
     });
     return client.getTools();
+  }),
+  git: func_lazy(() => {
+    const caches = new Map<string, ToolsInput>();
+    return (repo: string) => {
+      return map_get_or_put_async(caches, repo, async () => {
+        const client = new MCPClient({
+          servers: {
+            git: {
+              command: "uvx",
+              args: ["mcp-server-git", "--repository", repo],
+            },
+          },
+        });
+        const tools = await client.getTools();
+        return tools;
+      });
+    };
   }),
 };

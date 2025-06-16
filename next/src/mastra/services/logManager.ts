@@ -207,7 +207,7 @@ class LogManager {
 
       await this.updateLogFile(jobName, logData);
 
-      return JSON.parse(JSON.stringify(createdTask));
+      return structuredClone(createdTask);
     } finally {
       this._unlock(jobName);
     }
@@ -229,7 +229,7 @@ class LogManager {
         }
       }
       await this.updateLogFile(jobName, logData);
-      return JSON.parse(JSON.stringify(task));
+      return structuredClone(task);
     } finally {
       this._unlock(jobName);
     }
