@@ -1,3 +1,4 @@
+import path from "node:path";
 import {mastra} from "./index.js";
 // --- Main Execution Block ---
 async function main() {
@@ -7,7 +8,7 @@ async function main() {
     inputData: {
       jobName: "jixo-v3-demo",
       jobGoal: "Create a simple 'hello world' nodejs project and run it.",
-      maxLoops: 40,
+      maxLoops: 20,
     },
   });
 
@@ -20,7 +21,7 @@ async function main() {
   }
 }
 
-process.loadEnvFile();
+process.loadEnvFile(path.resolve(import.meta.dirname, "../../.env"));
 main();
 
 // import {describe, it} from "vitest";

@@ -1,3 +1,4 @@
 .env
 .jixo/cache
 .jixo/*.md
+demo/

@@ -1,11 +1,7 @@
-import {createStep, createWorkflow} from "@mastra/core/workflows";
-import {z} from "zod";
+import {createStep} from "@mastra/core/workflows";
 import {logManager} from "../services/logManager.js";
-import {planningStep} from "./planningStep.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageOutputSchema} from "./schemas.js";
-import {triageStep} from "./triageStep.js";
 import {REWORK_MARKER} from "./utils.js";
-import{executionStep}from './executionStep.js'
 
 export const reviewStep = createStep({
   id: "review",
@@ -14,11 +10,42 @@ export const reviewStep = createStep({
   async execute({inputData, mastra, getInitData}) {
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const task = inputData.task!;
-    const lastWorkLog = inputData.log.workLog[0];
 
-    const result = await mastra.getAgent("reviewerAgent").generate(`Task Title: ${task.title}\nExecutor's Summary: ${lastWorkLog.summary}\n\nDoes this meet the objective?`);
+    // Provide context: the last 5 work log entries
+    const recentLogs = inputData.log.workLog
+      .slice(0, 5)
+      .map((log) => `- ${log.timestamp} [${log.role}] Objective: ${log.objective} -> Result: ${log.result}, Summary: ${log.summary}`)
+      .join("\n");
+    const executorSummary = inputData.log.workLog[0].summary;
 
-    if (result.text.trim().toLowerCase() === "approved") {
+    const prompt = `
+Task to Review: ${task.id} ${task.title}
+Executor's Summary: ${executorSummary}
+
+Recent Work Log (for context on repetitive errors):
+${recentLogs}
+
+Based on all the above, does the work meet the task's objective?
+    `.trim();
+
+    const result = await mastra.getAgent("reviewerAgent").generate(prompt);
+    const resultText = result.text.trim();
+
+    if (resultText.startsWith("ABORT:")) {
+      // The reviewer has detected a fatal loop and aborted.
+      await logManager.addWorkLog(init.jobName, {
+        timestamp: new Date().toISOString(),
+        runnerId: init.runnerId,
+        role: "Reviewer",
+        objective: `Review task ${task.id}`,
+        result: "Failed",
+        summary: `Reviewer aborted job: ${resultText}`,
+      });
+      // This exit code will terminate the master workflow.
+      return {exitCode: 1, reason: `Reviewer aborted job: ${resultText}`};
+    }
+
+    if (resultText.toLowerCase() === "approved") {
       await logManager.updateTask(init.jobName, task.id, {status: "Completed", reviewer: init.runnerId});
       await logManager.addWorkLog(init.jobName, {
         timestamp: new Date().toISOString(),

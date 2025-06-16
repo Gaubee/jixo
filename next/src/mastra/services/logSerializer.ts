@@ -54,29 +54,23 @@ function serializeWorkLog(entries: LogFileData["workLog"]): string {
   return mdLines.join("\n");
 }
 
-const JOB_CONTENT_TEMPLATE = `---
-title: {{title}}
-progress: {{progress}}
+const JOB_CONTENT_TEMPLATE = (data: {title: string; progress: string; roadmap: string; worklog: string}) => `---
+title: ${data.title}
+progress: ${data.progress}
 ---
 
 ## Roadmap
 
-{{roadmap}}
+${data.roadmap}
 
 ## Work Log
 
-{{worklog}}`;
+${data.worklog}`;
 
 export function serializeLogFile(data: LogFileData): string {
-  const roadmapContent = serializeRoadmap(data.roadmap);
-  const workLogContent = serializeWorkLog(data.workLog);
-
-  return (
-    JOB_CONTENT_TEMPLATE
-      //
-      .replace("{{title}}", JSON.stringify(data.title))
-      .replace("{{progress}}", JSON.stringify(data.progress))
-      .replace("{{roadmap}}", roadmapContent || "_No tasks planned yet._")
-      .replace("{{worklog}}", workLogContent || "_No work logged yet._")
-  );
+  return JOB_CONTENT_TEMPLATE({
+    ...data,
+    roadmap: serializeRoadmap(data.roadmap),
+    worklog: serializeWorkLog(data.workLog),
+  });
 }
