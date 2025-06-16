@@ -14,41 +14,52 @@ import {tools} from "./tools/index.js";
 // --- Agent Definitions ---
 const plannerAgent = new Agent({
   name: "PlannerAgent",
-  instructions: `You are a master planner. Your role is to analyze a job goal and create a 'Roadmap'. The roadmap should be a series of clear, atomic, and sequential tasks in Markdown checklist format. Each task should start with a Markdown checklist item '- [ ]'. You must only return the markdown for the tasks themselves. Example: '- [ ] Task 1\n- [ ] Task 2'`,
+  instructions: `You are an expert project planner. Your job is to create and modify a project roadmap.
+- Tasks MUST have a 'title'.
+- Use 'details' for complex implementation steps for the Executor.
+- Use 'dependsOn' to specify task dependencies using their IDs.
+- Use 'tags' to categorize tasks (e.g., 'backend', 'frontend', 'refactor').
+- For rework, analyze the provided review feedback and create new sub-tasks to address the issues.
+Your output is ONLY the raw Markdown for the task list.`,
   model: thinkModel,
 });
 
-const runnerAgent = new Agent({
-  name: "RunnerAgent",
-  instructions: `You are an executor. You will be given a specific task to complete. Perform the task and return a concise, one-sentence summary of the work you did.`,
+const executorAgent = new Agent({
+  name: "ExecutorAgent",
+  instructions: `You are a diligent software engineer. You will receive a task with its full context (parent tasks).
+- Your primary instruction is the 'details' field of your target task. If not present, use the 'title'.
+- Execute the task using the provided tools.
+- If 'gitCommit' is specified, use the git tool to commit your changes with a descriptive message.
+Your output is a concise, one-sentence summary of the work you performed.`,
   model: commonModel,
   tools: {
     ...(await tools.fileSystem(path.join(process.cwd(), "demo"))),
     ...(await tools.pnpm()),
+    // git tools will be added here later
   },
 });
 
+const reviewerAgent = new Agent({
+  name: "ReviewerAgent",
+  instructions: `You are a meticulous code reviewer and QA engineer. You will be given a completed task and a summary from the Executor.
+- Your goal is to determine if the work meets the task's objective.
+- If it meets the objective, respond with ONLY the word "Approved".
+- If it does NOT meet the objective, provide a concise, actionable list of changes required for the Planner to create rework tasks. Example: "- The function is missing error handling for null inputs.\n- The UI component does not match the design spec."`,
+  model: thinkModel,
+});
+
 // --- Utility Functions ---
-function findNextPendingTask(tasks: RoadmapTaskNodeData[]): RoadmapTaskNodeData | null {
+const findTask = (predicate: (task: RoadmapTaskNodeData) => boolean, tasks: RoadmapTaskNodeData[]): RoadmapTaskNodeData | null => {
   for (const task of tasks) {
-    if (task.status === "Pending") return task;
+    if (predicate(task)) return task;
     if (task.children) {
-      const pendingChild = findNextPendingTask(task.children);
-      if (pendingChild) return pendingChild;
+      const found = findTask(predicate, task.children);
+      if (found) return found;
     }
   }
   return null;
-}
-
-function isJobCompleted(log: LogFileData): boolean {
-  if (log.roadmap.length === 0) return false;
-  const flattenTasks = (tasks: RoadmapTaskNodeData[]): RoadmapTaskNodeData[] => {
-    return tasks.flatMap((t) => [t, ...(t.children ? flattenTasks(t.children) : [])]);
-  };
-  return flattenTasks(log.roadmap)
-    .filter((t) => t.status !== "Cancelled")
-    .every((t) => t.status === "Completed");
-}
+};
+const isJobCompleted = (log: LogFileData) => (!log.roadmap.length ? false : log.roadmap.every((t) => t.status === "Completed"));
 
 // --- Inner Loop Workflow (`jixoJobWorkflow`) ---
 
@@ -59,135 +70,147 @@ const JixoJobWorkflowInputSchema = z.object({
   otherRunners: z.array(z.string()),
 });
 const JixoJobWorkflowExitInfoSchema = z.object({
-  exitCode: z.number(), // 0: Success, 1: Error, 2: Standby
+  exitCode: z.number(), // 0: Complete, 1: Error, 2: Standby/Continue
   reason: z.string(),
 });
 
-const JixoJobWorkflowOutputSchema = z.object({
-  action: z.enum(["plan", "run", "exit"]),
+const TriageOutputSchema = z.object({
+  action: z.enum(["plan", "execute", "review", "exit"]),
   log: LogFileSchema,
-  taskToRun: RoadmapTaskNodeSchema.optional(),
+  task: RoadmapTaskNodeSchema.optional(),
   exitInfo: JixoJobWorkflowExitInfoSchema.optional(),
 });
-type JixoJobWorkflowOutputData = z.TypeOf<typeof JixoJobWorkflowOutputSchema>;
+type TriageOutputData = z.infer<typeof TriageOutputSchema>;
 
 const triageStep = createStep({
   id: "triage",
   inputSchema: JixoJobWorkflowInputSchema,
-  outputSchema: JixoJobWorkflowOutputSchema,
-  async execute({inputData}) {
-    console.log(`[Triage] Runner ${inputData.runnerId} starting triage...`);
+  outputSchema: TriageOutputSchema,
+  async execute({inputData}): Promise<TriageOutputData> {
     const log = await logManager.getLogFile(inputData.jobName);
-
-    // Protocol 0: Health Check (Stale Locks) - Simplified for now
-
-    // Protocol 0: Failed Task Triage - TODO
-
-    // Protocol 0: Main Triage Logic
-    if (log.roadmap.length === 0) {
-      /**<!--[[你这里结构错了，我给你补全了，但是exitCode是不是0？我不确定你的意图]]--> */
-      return {action: "plan", log, exitInfo: {exitCode: 0, reason: "Roadmap is empty. Planning initial tasks."}} satisfies JixoJobWorkflowOutputData;
+    if (!log.roadmap.length) {
+      return {action: "plan", log, exitInfo: {exitCode: 2, reason: "Roadmap empty. Planning."}};
     }
+    const taskToReview = findTask((t) => t.status === "PendingReview", log.roadmap);
+    if (taskToReview) return {action: "review", log, task: taskToReview};
 
-    const pendingTask = findNextPendingTask(log.roadmap);
-    if (pendingTask) {
-      return {action: "run", log, taskToRun: pendingTask} satisfies JixoJobWorkflowOutputData;
-    }
+    // Simplified dependency check for demo: find a pending task with no pending dependencies.
+    const pendingTask = findTask(
+      (t) => t.status === "Pending" && (t.dependsOn ?? []).every((depId) => findTask((d) => d.id === depId, log.roadmap)?.status === "Completed"),
+      log.roadmap,
+    );
+    if (pendingTask) return {action: "execute", log, task: pendingTask};
 
-    if (isJobCompleted(log)) {
-      return {action: "exit", log, exitInfo: {exitCode: 0, reason: "All tasks completed successfully."}} satisfies JixoJobWorkflowOutputData;
-    }
-
-    // No pending tasks, but not complete -> Standby
-    return {action: "exit", log, exitInfo: {exitCode: 2, reason: "No available tasks. Other runners may be active."}} satisfies JixoJobWorkflowOutputData;
+    if (isJobCompleted(log)) return {action: "exit", log, exitInfo: {exitCode: 0, reason: "All tasks completed."}};
+    return {action: "exit", log, exitInfo: {exitCode: 2, reason: "No tasks ready to execute. Standby."}};
   },
 });
 
 const planningStep = createStep({
   id: "planning",
-  inputSchema: triageStep.outputSchema,
+  inputSchema: TriageOutputSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
   async execute({inputData, mastra, getInitData}) {
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
-    const planner = mastra.getAgent("plannerAgent");
-
-    console.log("[Planner] Invoking PlannerAgent to create initial plan...");
-    const result = await planner.generate(`The job goal is: "${init.jobGoal}". Create a plan.`);
-    const newTasksText = result.text.split("\n").filter((line) => line.trim().startsWith("- [ ]"));
-
-    const newTasks: NewTaskInput[] = newTasksText.map((line) => ({
-      description: line.replace(/- \[\s*\]\s*/, "").trim(),
-    }));
-
-    for (const task of newTasks) {
-      await logManager.addTask(init.jobName, "", task);
-    }
-
+    // Here we would handle rework based on review feedback passed in inputData
+    // For now, we only handle initial planning.
+    const result = await mastra.getAgent("plannerAgent").generate(`Goal: "${init.jobGoal}". Create a plan.`);
+    const newTasks: NewTaskInput[] = result.text
+      .split("\n")
+      .filter((l) => l.includes("- [ ]"))
+      .map((l) => ({title: l.replace(/- \[\s*\]\s*/, "").trim()}));
+    for (const task of newTasks) await logManager.addTask(init.jobName, "", task);
     await logManager.addWorkLog(init.jobName, {
       timestamp: new Date().toISOString(),
       runnerId: init.runnerId,
       role: "Planner",
-      objective: "Create initial project plan.",
+      objective: "Create initial plan",
       result: "Succeeded",
-      summary: `Created ${newTasks.length} initial tasks.`,
+      summary: `Created ${newTasks.length} tasks.`,
     });
-
-    return {exitCode: 2, reason: "Planning complete, will re-triage in next loop."};
+    return {exitCode: 2, reason: "Planning complete."};
   },
 });
 
 const executionStep = createStep({
   id: "execution",
-  inputSchema: triageStep.outputSchema,
+  inputSchema: TriageOutputSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
   async execute({inputData, mastra, getInitData}) {
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
-    const runner = mastra.getAgent("runnerAgent");
-    const task = inputData.taskToRun!;
-
-    console.log(`[Runner] ${init.runnerId} starting task "${task.id}: ${task.description}"`);
-
-    await logManager.updateTask(init.jobName, task.id, {status: "Locked", runner: init.runnerId});
-
-    const result = await runner.generate(`Complete this task: "${task.description}". Provide a one-sentence summary.`);
-    const summary = result.text;
-
-    await logManager.updateTask(init.jobName, task.id, {status: "Completed"});
-
+    const task = inputData.task!;
+    await logManager.updateTask(init.jobName, task.id, {status: "Locked", executor: init.runnerId});
+    const result = await mastra.getAgent("executorAgent").generate(`Task: ${task.title}. Details: ${task.details ?? "N/A"}`);
+    if (task.gitCommit) {
+      console.log(`[Executor] Simulating: git commit -m "feat(task-${task.id}): ${result.text}"`);
+    }
+    await logManager.updateTask(init.jobName, task.id, {status: "PendingReview"});
     await logManager.addWorkLog(init.jobName, {
       timestamp: new Date().toISOString(),
       runnerId: init.runnerId,
-      role: "Runner",
-      objective: `Execute task ${task.id}: ${task.description}`,
+      role: "Executor",
+      objective: `Execute task ${task.id}`,
       result: "Succeeded",
-      summary,
+      summary: result.text,
     });
+    return {exitCode: 2, reason: `Task ${task.id} executed, now pending review.`};
+  },
+});
 
-    console.log(`[Runner] Task ${task.id} completed.`);
-    return {exitCode: 2, reason: `Task ${task.id} executed.`};
+const reviewStep = createStep({
+  id: "review",
+  inputSchema: TriageOutputSchema,
+  outputSchema: JixoJobWorkflowExitInfoSchema,
+  async execute({inputData, mastra, getInitData}) {
+    const init = getInitData<typeof JixoJobWorkflowInputSchema>();
+    const task = inputData.task!;
+    const lastWorkLog = inputData.log.workLog[0]; // Assumes latest log is relevant
+
+    const result = await mastra.getAgent("reviewerAgent").generate(`Task Title: ${task.title}\nExecutor's Summary: ${lastWorkLog.summary}\n\nDoes this meet the objective?`);
+
+    if (result.text.trim().toLowerCase() === "approved") {
+      await logManager.updateTask(init.jobName, task.id, {status: "Completed", reviewer: init.runnerId});
+      await logManager.addWorkLog(init.jobName, {
+        timestamp: new Date().toISOString(),
+        runnerId: init.runnerId,
+        role: "Reviewer",
+        objective: `Review task ${task.id}`,
+        result: "Succeeded",
+        summary: "Approved.",
+      });
+      return {exitCode: 2, reason: `Task ${task.id} approved.`};
+    } else {
+      // Revert task to pending and add the feedback to the task's details for the planner.
+      const reworkDetails = `**Rework Required (Reviewer Feedback):**\n${result.text}`;
+      await logManager.updateTask(init.jobName, task.id, {status: "Pending", details: reworkDetails});
+      await logManager.addWorkLog(init.jobName, {
+        timestamp: new Date().toISOString(),
+        runnerId: init.runnerId,
+        role: "Reviewer",
+        objective: `Review task ${task.id}`,
+        result: "Failed",
+        summary: "Requires rework.",
+      });
+      return {exitCode: 2, reason: `Task ${task.id} requires rework.`};
+    }
   },
 });
 
 const jixoJobWorkflow = createWorkflow({
   id: "jixoJobWorkflow",
   inputSchema: JixoJobWorkflowInputSchema,
-  // outputSchema:JixoJobWorkflowExitInfoSchema
-  outputSchema: z.record(JixoJobWorkflowExitInfoSchema),
-  //  z.union([
-  //   z.object({[planningStep.id]: planningStep.outputSchema}),
-  //   z.object({[executionStep.id]: executionStep.outputSchema}),
-  //   z.object({exit: JixoJobWorkflowExitInfoSchema}),
-  // ]),
+  outputSchema: z.record(JixoJobWorkflowExitInfoSchema), // Adopting your discovery
 })
   .then(triageStep)
   .branch([
     [async (res) => res.inputData.action === "plan", planningStep],
-    [async (res) => res.inputData.action === "run", executionStep],
+    [async (res) => res.inputData.action === "execute", executionStep],
+    [async (res) => res.inputData.action === "review", reviewStep],
     [
       async (res) => res.inputData.action === "exit",
       createStep({
         id: "exit",
-        inputSchema: triageStep.outputSchema,
+        inputSchema: TriageOutputSchema,
         outputSchema: JixoJobWorkflowExitInfoSchema,
         execute: async ({inputData}) => inputData.exitInfo!,
       }),
@@ -200,7 +223,7 @@ const jixoJobWorkflow = createWorkflow({
 const JixoMasterWorkflowInputSchema = z.object({
   jobName: z.string(),
   jobGoal: z.string(),
-  maxLoops: z.number().default(10),
+  maxLoops: z.number().default(20),
 });
 
 const jixoMasterWorkflow = createWorkflow({
@@ -208,7 +231,6 @@ const jixoMasterWorkflow = createWorkflow({
   inputSchema: JixoMasterWorkflowInputSchema,
   outputSchema: z.object({finalStatus: z.string()}),
 })
-  /**<!--[[没有step这个函数，我印象是用then？请你检查mastra的文档]]--> */
   .then(
     createStep({
       id: "masterLoop",
@@ -217,50 +239,22 @@ const jixoMasterWorkflow = createWorkflow({
       async execute({inputData, mastra}) {
         let loopCount = 0;
         await logManager.init(inputData.jobName);
-        const BREAK_LINE = "─".repeat(Math.max(process.stdout.columns, 10));
-
         while (loopCount < inputData.maxLoops) {
           loopCount++;
-          console.log("\n" + BREAK_LINE + `\n JIXO Master Loop - Run #${loopCount}\n` + BREAK_LINE);
-
+          console.log(`\n--- JIXO Master Loop #${loopCount} ---`);
           const runnerId = `runner-${loopCount}`;
           const jobRun = (mastra.getWorkflow("jixoJobWorkflow") as typeof jixoJobWorkflow).createRun();
-          const result = await jobRun.start({
-            inputData: {
-              jobName: inputData.jobName,
-              jobGoal: inputData.jobGoal,
-              runnerId: runnerId,
-              otherRunners: [], // Concurrency simulation comes later
-            },
-          });
-          if (result.status === "suspended") {
-            /**<!--[[这里suspended状态应该如何处理呢？什么时候回触发suspended状态？]]-->> */
-            throw new Error("workflow Suspended, should no happend");
-          }
+          const result = await jobRun.start({inputData: {jobName: inputData.jobName, jobGoal: inputData.jobGoal, runnerId, otherRunners: []}});
 
-          if (result.status === "failed") {
-            return {finalStatus: `Job failed with error: ${result.error}`};
-          }
-          // console.log("QAQ", result);
-          /**
-           * <!--[[
-           * 经过日志调试，我发现这里的输出是基于branch的id来做key，我觉得这个设计非常吊诡。但只又相对合理。
-           * mastra的api的类型安全并不够好，很多时候，官方文档也是模凌两可，所以以我的测试结果得出的正确代码为准。
-           * ]]-->
-           */
+          if (result.status === "failed") return {finalStatus: `Job failed: ${result.error}`};
+          if (result.status === "suspended") throw new Error("Workflow suspended unexpectedly.");
+
           const {exitCode, reason} = Object.values(result.result)[0];
-          console.log(`[Master Loop] Inner workflow finished with code ${exitCode}: ${reason}`);
+          console.log(`[Master Loop] Inner cycle finished with code ${exitCode}: ${reason}`);
 
-          if (exitCode === 0) {
-            // Success
-            return {finalStatus: "Job completed successfully."};
-          }
-          if (exitCode === 1) {
-            // Error
-            return {finalStatus: `Job failed with reason: ${reason}`};
-          }
-          // if exitCode is 2 (Standby), loop continues...
-          await delay(2000);
+          if (exitCode === 0) return {finalStatus: "Job completed successfully."};
+          if (exitCode === 1) return {finalStatus: `Job failed: ${reason}`};
+          await delay(1500);
         }
         return {finalStatus: "Job stopped: Max loop count reached."};
       },
@@ -272,7 +266,8 @@ const jixoMasterWorkflow = createWorkflow({
 export const mastra = new Mastra({
   agents: {
     plannerAgent,
-    runnerAgent,
+    executorAgent,
+    reviewerAgent,
   },
   workflows: {
     jixoJobWorkflow,

@@ -1,6 +1,7 @@
 import _fs from "node:fs";
 import path from "node:path";
 import {beforeEach, describe, expect, it} from "vitest";
+import type {WorkLogEntryData} from "../entities.js";
 import {logManager} from "./logManager.js";
 
 const TEST_JOB_NAME = "test-job-for-logmanager";
@@ -26,12 +27,12 @@ describe("LogManager", () => {
 
   it("should add a root-level task and return its full data", async () => {
     await logManager.init(TEST_JOB_NAME);
-    const description = "This is the first root task";
+    const title = "This is the first root task";
 
-    const createdTask = await logManager.addTask(TEST_JOB_NAME, "", {description});
+    const createdTask = await logManager.addTask(TEST_JOB_NAME, "", {title});
 
     expect(createdTask.id).toBe("1");
-    expect(createdTask.description).toBe(description);
+    expect(createdTask.title).toBe(title);
     expect(createdTask.status).toBe("Pending");
 
     const logData = await logManager.getLogFile(TEST_JOB_NAME);
@@ -41,13 +42,13 @@ describe("LogManager", () => {
 
   it("should add a child task and generate a nested ID", async () => {
     await logManager.init(TEST_JOB_NAME);
-    await logManager.addTask(TEST_JOB_NAME, "", {description: "Root task"});
+    await logManager.addTask(TEST_JOB_NAME, "", {title: "Root task"});
 
     const childDescription = "This is a child task";
-    const childTask = await logManager.addTask(TEST_JOB_NAME, "1", {description: childDescription});
+    const childTask = await logManager.addTask(TEST_JOB_NAME, "1", {title: childDescription});
 
     expect(childTask.id).toBe("1.1");
-    expect(childTask.description).toBe(childDescription);
+    expect(childTask.title).toBe(childDescription);
 
     const logData = await logManager.getLogFile(TEST_JOB_NAME);
     expect(logData.roadmap[0].children).toHaveLength(1);
@@ -56,13 +57,13 @@ describe("LogManager", () => {
 
   it("should update a task and return the updated data", async () => {
     await logManager.init(TEST_JOB_NAME);
-    await logManager.addTask(TEST_JOB_NAME, "", {description: "Task to be updated"});
+    await logManager.addTask(TEST_JOB_NAME, "", {title: "Task to be updated"});
 
     const updates = {status: "Completed" as const, runner: "test-runner"};
     const updatedTask = await logManager.updateTask(TEST_JOB_NAME, "1", updates);
 
     expect(updatedTask.status).toBe("Completed");
-    expect(updatedTask.runner).toBe("test-runner");
+    expect(updatedTask.executor).toBe("test-runner");
 
     const logData = await logManager.getLogFile(TEST_JOB_NAME);
     expect(logData.roadmap[0].status).toBe("Completed");
@@ -73,11 +74,11 @@ describe("LogManager", () => {
     const logEntry = {
       timestamp: new Date().toISOString(),
       runnerId: "test-runner",
-      role: "Runner" as const,
+      role: "Executor",
       objective: "Testing addWorkLog",
-      result: "Succeeded" as const,
+      result: "Succeeded",
       summary: "The log was added.",
-    };
+    } satisfies WorkLogEntryData;
 
     await logManager.addWorkLog(TEST_JOB_NAME, logEntry);
 

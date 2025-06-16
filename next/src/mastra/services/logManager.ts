@@ -23,8 +23,8 @@ progress: '0%'
 `;
 
 // Type for the data required to create a new task.
-// We only require the description from the AI.
-export type NewTaskInput = Pick<RoadmapTaskNodeData, "description"> & Partial<Omit<RoadmapTaskNodeData, "id" | "status" | "children" | "description">>;
+// We only require the title from the AI.
+export type NewTaskInput = Pick<RoadmapTaskNodeData, "title"> & Partial<Omit<RoadmapTaskNodeData, "id" | "status" | "children" | "description">>;
 
 class LogManager {
   private _parserAgent;
