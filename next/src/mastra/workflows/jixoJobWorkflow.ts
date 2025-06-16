@@ -1,8 +1,9 @@
 import {createStep, createWorkflow} from "@mastra/core/workflows";
 import {z} from "zod";
-import {LogFileSchema, RoadmapTaskNodeSchema} from "../entities.js";
+import {PlannerOutputSchema} from "../agent/schemas.js";
+import {AnyTaskSchema, LogFileSchema} from "../entities.js";
 import {isJobCompleted} from "../services/logHelper.js";
-import {logManager, type NewTaskInput} from "../services/logManager.js";
+import {logManager} from "../services/logManager.js";
 import {REWORK_MARKER} from "./utils.js";
 
 // --- Schema Definitions for the Inner Loop ---
@@ -21,13 +22,13 @@ export const JixoJobWorkflowExitInfoSchema = z.object({
 
 const PlanningContextSchema = z.object({
   type: z.enum(["initial", "rework", "fixFailure"]),
-  task: RoadmapTaskNodeSchema.optional(), // The task needing rework or fixing
+  task: AnyTaskSchema.optional(), // Can be a root or sub-task
 });
 
 const TriageOutputSchema = z.object({
   action: z.enum(["plan", "execute", "review", "exit"]),
   log: LogFileSchema,
-  task: RoadmapTaskNodeSchema.optional(),
+  task: AnyTaskSchema.optional(), // Use the flexible union type
   planningContext: PlanningContextSchema.optional(),
   exitInfo: JixoJobWorkflowExitInfoSchema.optional(),
 });
@@ -91,6 +92,8 @@ const planningStep = createStep({
         const failureLog = inputData.log.workLog.find((w) => w.objective.includes(failedTask.id) && w.result === "Failed");
         prompt = `### Failure Recovery Planning\nFailed Task: '${failedTask.id} ${failedTask.title}'\nError Summary: ${failureLog?.summary ?? "Unknown error"}`;
         objective = `Fix failed task ${failedTask.id}`;
+        // When fixing a failure, we add sub-tasks under it.
+        parentTaskId = failedTask.id;
         break;
       case "rework":
         const reworkTask = planningContext.task!;
@@ -104,11 +107,11 @@ const planningStep = createStep({
         break;
     }
 
-    const result = await mastra.getAgent("plannerAgent").generate(prompt);
-    const newTasks: NewTaskInput[] = result.text
-      .split("\n")
-      .filter((l) => l.includes("- [ ]"))
-      .map((l) => ({title: l.replace(/- \[\s*\]\s*/, "").trim()}));
+    const result = await mastra.getAgent("plannerAgent").generate(prompt, {
+      output: PlannerOutputSchema,
+    });
+
+    const newTasks = result.object.tasks;
 
     for (const task of newTasks) {
       await logManager.addTask(init.jobName, parentTaskId, task);

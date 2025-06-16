@@ -1,52 +1,54 @@
-import type {LogFileData, RoadmapTaskNodeData} from "../entities.js";
+import type {RoadmapTaskNodeData, SubTaskData} from "../entities.js";
 
 /**
- * Recursively searches for a task within a tree structure that satisfies a predicate.
+ * Searches for a task within a two-level hierarchy that satisfies a predicate.
  * @param predicate A function that returns true for the desired task.
- * @param tasks The array of tasks to search through.
+ * @param tasks The array of root tasks to search through.
  * @returns The found task node, or null if not found.
  */
-export function findTask(predicate: (task: RoadmapTaskNodeData) => boolean | undefined, tasks: RoadmapTaskNodeData[]): RoadmapTaskNodeData | null {
+export function findTask(predicate: (task: RoadmapTaskNodeData | SubTaskData) => boolean | undefined, tasks: RoadmapTaskNodeData[]): RoadmapTaskNodeData | SubTaskData | null {
   for (const task of tasks) {
     if (predicate(task)) return task;
-    const found = findTask(predicate, task.children);
-    if (found) return found;
+    // Only search one level deep.
+    for (const subTask of task.children) {
+      if (predicate(subTask)) return subTask;
+    }
   }
   return null;
 }
 
 /**
- * Finds a task node by its period-separated ID path (e.g., "1.2.1").
+ * Finds a task node by its period-separated ID path (e.g., "1" or "1.2").
  * @param roadmap The root array of roadmap tasks.
  * @param path The ID path to search for.
  * @returns An object containing the found task, or null if not found.
  */
-export function findTaskByPath(roadmap: RoadmapTaskNodeData[], path: string): {task: RoadmapTaskNodeData | null} {
+export function findTaskByPath(roadmap: RoadmapTaskNodeData[], path: string): {task: RoadmapTaskNodeData | SubTaskData | null} {
   const parts = path.split(".").filter(Boolean);
-  if (parts.length === 0) return {task: null};
+  if (parts.length === 0 || parts.length > 2) return {task: null};
 
-  let currentTasks: RoadmapTaskNodeData[] = roadmap;
-  let task: RoadmapTaskNodeData | null = null;
-  for (const part of parts) {
-    task = currentTasks.find((t) => t.id === part) ?? null;
-    if (!task) return {task: null};
-    currentTasks = task.children;
+  const rootTask = roadmap.find((t) => t.id === parts[0]);
+  if (!rootTask) return {task: null};
+
+  if (parts.length === 1) {
+    return {task: rootTask};
+  } else {
+    const subTask = rootTask.children.find((t) => t.id === path);
+    return {task: subTask ?? null};
   }
-  return {task};
 }
 
 /**
- * Recursively creates a full RoadmapTaskNodeData object from a NewTaskInput object.
- * This function assigns IDs and default statuses.
+ * Creates a full RoadmapTaskNodeData object from a NewTaskInput object.
+ * This function now only handles one level of nesting.
  * @param taskInput The input data for the task and its potential children.
  * @param parentChildrenList The list where the new task will be added.
  * @param parentId The ID of the parent task, used to construct the new ID.
  * @returns The fully constructed RoadmapTaskNodeData object.
  */
-export function createTaskRecursive(taskInput: import("./logManager.js").NewTaskInput, parentChildrenList: RoadmapTaskNodeData[], parentId: string): RoadmapTaskNodeData {
-  const {children: childInputs, ...restOfInput} = taskInput;
-
-  const newId = parentId ? `${parentId}.${parentChildrenList.length + 1}` : `${parentChildrenList.length + 1}`;
+export function createTask(taskInput: import("./logManager.js").NewTaskInput, parentChildrenList: RoadmapTaskNodeData[]): RoadmapTaskNodeData {
+  const {children: subTaskInputs, ...restOfInput} = taskInput;
+  const newId = `${parentChildrenList.length + 1}`;
 
   const newTask: RoadmapTaskNodeData = {
     ...restOfInput,
@@ -55,26 +57,32 @@ export function createTaskRecursive(taskInput: import("./logManager.js").NewTask
     children: [],
   };
 
-  // Add the new task to its parent's list
   parentChildrenList.push(newTask);
 
-  // If there are child inputs, recurse
-  if (childInputs && childInputs.length > 0) {
-    for (const childInput of childInputs) {
-      createTaskRecursive(childInput, newTask.children, newTask.id);
+  if (subTaskInputs) {
+    for (const subTaskInput of subTaskInputs) {
+      const subTaskId = `${newId}.${newTask.children.length + 1}`;
+      newTask.children.push({
+        ...subTaskInput,
+        id: subTaskId,
+        status: "Pending",
+      });
     }
   }
 
   return newTask;
 }
-export const isJobCompleted = (log: LogFileData) => {
+
+export const isJobCompleted = (log: import("../entities.js").LogFileData) => {
   if (!log.roadmap.length) return false;
 
-  const flattenTasks = (tasks: LogFileData["roadmap"]): LogFileData["roadmap"] => {
-    return tasks.flatMap((t) => [t, ...flattenTasks(t.children)]);
-  };
-
-  return flattenTasks(log.roadmap)
-    .filter((t) => t.status !== "Cancelled")
-    .every((t) => t.status === "Completed");
+  return log.roadmap.every((task) => {
+    const parentCompleted = task.status === "Completed" || task.status === "Cancelled";
+    if (!parentCompleted) return false;
+    // If parent is not cancelled, all its children must also be completed/cancelled
+    if (task.status !== "Cancelled") {
+      return task.children.every((subTask) => subTask.status === "Completed" || subTask.status === "Cancelled");
+    }
+    return true;
+  });
 };

@@ -1,15 +1,9 @@
 import {Agent} from "@mastra/core/agent";
-import {zodToJsonSchema} from "zod-to-json-schema";
 import {thinkModel} from "../llm/index.js";
-import {PlannerOutputSchema} from "./schemas.js";
 
 export const plannerAgent = new Agent({
   name: "PlannerAgent",
-  instructions: `You are an expert project planner AI. Your job is to create and modify a project roadmap in response to different situations. 
-Your output MUST be a JSON object that strictly adheres to the following JSON Schema. The output should be a JSON object with a single key "tasks", which is an array of task objects.
-
-### JSON Schema for your output:
-${JSON.stringify(zodToJsonSchema(PlannerOutputSchema), null, 2)}
+  instructions: `You are an expert project planner AI. Your job is to create and modify a project roadmap in response to different situations by generating a JSON object that adheres to the provided schema.
 
 ### Scenarios:
 
@@ -28,6 +22,6 @@ ${JSON.stringify(zodToJsonSchema(PlannerOutputSchema), null, 2)}
     -   **Action**: Analyze the feedback. Create new, concrete **sub-tasks** under the original task that directly address all points in the feedback.
     -   **Example Input**: "### Rework Planning\nOriginal Task: '3 Create endpoint'\nReview Feedback: 'The endpoint should return JSON, not a string.' Create corrective sub-tasks."
 
-Your primary goal is to generate a structured, actionable, and forward-moving plan within the "tasks" array.`,
+Your primary goal is to generate a structured, actionable, and forward-moving plan within the "tasks" array of the JSON output.`,
   model: thinkModel,
 });

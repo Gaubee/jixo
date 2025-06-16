@@ -14,7 +14,7 @@ Your output is a concise, one-sentence summary of the work you performed.`,
     tools: {
       ...(await tools.fileSystem(dir)),
       ...(await tools.pnpm()),
-      ...(await tools.git(dir)),
+    //   ...(await tools.git(dir)),
       // git tools will be added here later
     },
   });

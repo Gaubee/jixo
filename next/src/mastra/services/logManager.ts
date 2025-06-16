@@ -2,10 +2,11 @@ import {Agent} from "@mastra/core";
 import {createHash} from "node:crypto";
 import _fs from "node:fs";
 import path from "node:path";
+import {z} from "zod";
 import {zodToJsonSchema} from "zod-to-json-schema";
-import {DELETE_FIELD_MARKER, type LogFileData, LogFileSchema, type RoadmapTaskNodeData, type WorkLogEntryData} from "../entities.js";
+import {DELETE_FIELD_MARKER, type LogFileData, LogFileSchema, type RoadmapTaskNodeData, SubTaskSchema, type WorkLogEntryData} from "../entities.js";
 import {thinkModel} from "../llm/index.js";
-import {createTaskRecursive, findTask, findTaskByPath} from "./logHelper.js";
+import {createTask, findTask, findTaskByPath} from "./logHelper.js";
 import {serializeLogFile} from "./logSerializer.js";
 
 const fsp = _fs.promises;
@@ -23,14 +24,11 @@ progress: '0%'
 
 `;
 
-export type NewTaskInput = Pick<RoadmapTaskNodeData, "title"> &
-  Partial<Omit<RoadmapTaskNodeData, "id" | "status" | "children">> & {
-    children?: NewTaskInput[];
-  };
+export type NewTaskInput = z.infer<typeof import("../agent/schemas.js").PlannerOutputSchema>["tasks"][number];
 
 export type NextActionableTaskResult = {
   type: "review" | "execute" | "none";
-  task: RoadmapTaskNodeData | null;
+  task: RoadmapTaskNodeData | import("../entities.js").SubTaskData | null;
 };
 
 class LogManager {
@@ -106,7 +104,10 @@ class LogManager {
     await fsp.writeFile(this._getCacheFilePath(hash), JSON.stringify(validatedData, null, 2), "utf-8");
   }
 
-  public async findTask(predicate: (task: RoadmapTaskNodeData) => boolean | undefined, jobName: string): Promise<RoadmapTaskNodeData | null> {
+  public async findTask(
+    predicate: (task: RoadmapTaskNodeData | import("../entities.js").SubTaskData) => boolean | undefined,
+    jobName: string,
+  ): Promise<RoadmapTaskNodeData | import("../entities.js").SubTaskData | null> {
     const logData = await this.getLogFile(jobName);
     return findTask(predicate, logData.roadmap);
   }
@@ -120,14 +121,11 @@ class LogManager {
       return {type: "review", task: taskToReview};
     }
 
-    const allTasksMap = new Map<string, RoadmapTaskNodeData>();
-    const flatten = (tasks: RoadmapTaskNodeData[]) => {
-      tasks.forEach((t) => {
-        allTasksMap.set(t.id, t);
-        flatten(t.children);
-      });
-    };
-    flatten(roadmap);
+    const allTasksMap = new Map<string, RoadmapTaskNodeData | import("../entities.js").SubTaskData>();
+    roadmap.forEach((t) => {
+      allTasksMap.set(t.id, t);
+      t.children.forEach((st) => allTasksMap.set(st.id, st));
+    });
 
     const pendingTask = findTask((t) => t.status === "Pending" && (t.dependsOn ?? []).every((depId) => allTasksMap.get(depId)?.status === "Completed"), roadmap);
 
@@ -143,29 +141,38 @@ class LogManager {
     try {
       const logData = await this.getLogFile(jobName);
 
-      let parentChildrenList: RoadmapTaskNodeData[];
-      let parentIdPrefix: string;
-
       if (parentPath === "") {
-        parentChildrenList = logData.roadmap;
-        parentIdPrefix = "";
+        // Adding a new root task
+        const createdTask = createTask(taskInput, logData.roadmap);
+        await this.updateLogFile(jobName, logData);
+        return structuredClone(createdTask);
       } else {
+        // Adding sub-tasks to an existing root task
         const {task: parentTask} = findTaskByPath(logData.roadmap, parentPath);
-        if (!parentTask) throw new Error(`Parent task '${parentPath}' not found.`);
-        parentChildrenList = parentTask.children;
-        parentIdPrefix = parentTask.id;
+        if (!parentTask || !("children" in parentTask)) {
+          throw new Error(`Parent task '${parentPath}' not found or is not a root task.`);
+        }
+
+        const subTaskId = `${parentTask.id}.${parentTask.children.length + 1}`;
+        const newSubTask = SubTaskSchema.parse({
+          ...taskInput,
+          id: subTaskId,
+          status: "Pending",
+        });
+        parentTask.children.push(newSubTask);
+        await this.updateLogFile(jobName, logData);
+        return structuredClone(parentTask as RoadmapTaskNodeData);
       }
-
-      const createdTask = createTaskRecursive(taskInput, parentChildrenList, parentIdPrefix);
-
-      await this.updateLogFile(jobName, logData);
-      return structuredClone(createdTask);
     } finally {
       this._unlock(jobName);
     }
   }
 
-  public async updateTask(jobName: string, path: string, updates: Partial<Omit<RoadmapTaskNodeData, "id" | "children">>): Promise<RoadmapTaskNodeData> {
+  public async updateTask(
+    jobName: string,
+    path: string,
+    updates: Partial<Omit<RoadmapTaskNodeData, "id" | "children">>,
+  ): Promise<RoadmapTaskNodeData | import("../entities.js").SubTaskData> {
     await this._lock(jobName);
     try {
       const logData = await this.getLogFile(jobName);
@@ -175,7 +182,7 @@ class LogManager {
       for (const key in updates) {
         const value = updates[key as keyof typeof updates];
         if (value === DELETE_FIELD_MARKER) {
-          delete task[key as keyof typeof task];
+          delete (task as any)[key as keyof typeof task];
         } else {
           Object.assign(task, {[key]: value});
         }
