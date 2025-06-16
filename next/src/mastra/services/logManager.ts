@@ -5,6 +5,7 @@ import path from "node:path";
 import {zodToJsonSchema} from "zod-to-json-schema";
 import {DELETE_FIELD_MARKER, type LogFileData, LogFileSchema, type RoadmapTaskNodeData, type WorkLogEntryData} from "../entities.js";
 import {thinkModel} from "../llm/index.js";
+import {createTaskRecursive, findTask, findTaskByPath} from "./logHelper.js";
 import {serializeLogFile} from "./logSerializer.js";
 
 const fsp = _fs.promises;
@@ -22,7 +23,6 @@ progress: '0%'
 
 `;
 
-// The input type now supports recursive children.
 export type NewTaskInput = Pick<RoadmapTaskNodeData, "title"> &
   Partial<Omit<RoadmapTaskNodeData, "id" | "status" | "children">> & {
     children?: NewTaskInput[];
@@ -47,7 +47,7 @@ class LogManager {
     });
   }
 
-  // --- Private Low-Level Methods ---
+  // --- Private Low-Level Methods (I/O and Locking) ---
   private _getLogFilePath = (jobName: string) => path.join(LOG_FILE_DIR, `${jobName}.log.md`);
   private _getCacheFilePath = (hash: string) => path.join(CACHE_DIR, `${hash}.json`);
 
@@ -73,57 +73,6 @@ class LogManager {
     return {content, hash};
   }
 
-  private _findTask(predicate: (task: RoadmapTaskNodeData) => boolean, tasks: RoadmapTaskNodeData[]): RoadmapTaskNodeData | null {
-    for (const task of tasks) {
-      if (predicate(task)) return task;
-      const found = this._findTask(predicate, task.children);
-      if (found) return found;
-    }
-    return null;
-  }
-
-  private _findTaskByPath(roadmap: RoadmapTaskNodeData[], path: string): {task: RoadmapTaskNodeData | null} {
-    const parts = path.split(".").filter(Boolean);
-    if (parts.length === 0) return {task: null};
-    let currentTasks: RoadmapTaskNodeData[] = roadmap;
-    let task: RoadmapTaskNodeData | null = null;
-    for (const part of parts) {
-      task = currentTasks.find((t) => t.id === part) ?? null;
-      if (!task) return {task: null};
-      currentTasks = task.children;
-    }
-    return {task};
-  }
-
-  /**
-   * Private helper to recursively create task objects in memory.
-   * This is the core of the new recursive addTask functionality.
-   */
-  private _createTaskRecursive(taskInput: NewTaskInput, parentChildrenList: RoadmapTaskNodeData[], parentId: string): RoadmapTaskNodeData {
-    const {children: childInputs, ...restOfInput} = taskInput;
-
-    const newId = parentId ? `${parentId}.${parentChildrenList.length + 1}` : `${parentChildrenList.length + 1}`;
-
-    const newTask: RoadmapTaskNodeData = {
-      ...restOfInput,
-      id: newId,
-      status: "Pending",
-      children: [],
-    };
-
-    // Add the new task to its parent's list
-    parentChildrenList.push(newTask);
-
-    // If there are child inputs, recurse
-    if (childInputs && childInputs.length > 0) {
-      for (const childInput of childInputs) {
-        this._createTaskRecursive(childInput, newTask.children, newTask.id);
-      }
-    }
-
-    return newTask;
-  }
-
   // --- Public High-Level API ---
 
   public async init(jobName: string) {
@@ -142,7 +91,6 @@ class LogManager {
       const cachedData = await fsp.readFile(cachePath, "utf-8");
       return LogFileSchema.parse(JSON.parse(cachedData));
     } catch {
-      // console.log(`[LogManager] Cache miss for '${jobName}'. Parsing...`);
       const result = await this._parserAgent.generate(content, {output: LogFileSchema});
       const parsedData = result.object;
       await fsp.writeFile(cachePath, JSON.stringify(parsedData, null, 2));
@@ -158,11 +106,16 @@ class LogManager {
     await fsp.writeFile(this._getCacheFilePath(hash), JSON.stringify(validatedData, null, 2), "utf-8");
   }
 
+  public async findTask(predicate: (task: RoadmapTaskNodeData) => boolean | undefined, jobName: string): Promise<RoadmapTaskNodeData | null> {
+    const logData = await this.getLogFile(jobName);
+    return findTask(predicate, logData.roadmap);
+  }
+
   public async getNextActionableTask(jobName: string): Promise<NextActionableTaskResult> {
     const logData = await this.getLogFile(jobName);
     const {roadmap} = logData;
 
-    const taskToReview = this._findTask((t) => t.status === "PendingReview", roadmap);
+    const taskToReview = findTask((t) => t.status === "PendingReview", roadmap);
     if (taskToReview) {
       return {type: "review", task: taskToReview};
     }
@@ -176,7 +129,7 @@ class LogManager {
     };
     flatten(roadmap);
 
-    const pendingTask = this._findTask((t) => t.status === "Pending" && (t.dependsOn ?? []).every((depId) => allTasksMap.get(depId)?.status === "Completed"), roadmap);
+    const pendingTask = findTask((t) => t.status === "Pending" && (t.dependsOn ?? []).every((depId) => allTasksMap.get(depId)?.status === "Completed"), roadmap);
 
     if (pendingTask) {
       return {type: "execute", task: pendingTask};
@@ -197,16 +150,15 @@ class LogManager {
         parentChildrenList = logData.roadmap;
         parentIdPrefix = "";
       } else {
-        const {task: parentTask} = this._findTaskByPath(logData.roadmap, parentPath);
+        const {task: parentTask} = findTaskByPath(logData.roadmap, parentPath);
         if (!parentTask) throw new Error(`Parent task '${parentPath}' not found.`);
         parentChildrenList = parentTask.children;
         parentIdPrefix = parentTask.id;
       }
 
-      const createdTask = this._createTaskRecursive(taskInput, parentChildrenList, parentIdPrefix);
+      const createdTask = createTaskRecursive(taskInput, parentChildrenList, parentIdPrefix);
 
       await this.updateLogFile(jobName, logData);
-
       return structuredClone(createdTask);
     } finally {
       this._unlock(jobName);
@@ -217,7 +169,7 @@ class LogManager {
     await this._lock(jobName);
     try {
       const logData = await this.getLogFile(jobName);
-      const {task} = this._findTaskByPath(logData.roadmap, path);
+      const {task} = findTaskByPath(logData.roadmap, path);
       if (!task) throw new Error(`Task with path '${path}' not found.`);
 
       for (const key in updates) {
