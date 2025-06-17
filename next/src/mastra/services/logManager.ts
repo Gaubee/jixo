@@ -1,11 +1,9 @@
-import {Agent} from "@mastra/core";
-import fs from "node:fs";
+import {type Agent} from "@mastra/core/agent";
 import fsp from "node:fs/promises";
 import type {NewSubTaskData, NewTaskData} from "../agent/schemas.js";
-import {type LogFileData, LogFileSchema, type RoadmapTaskNodeData, type SubTaskData, SubTaskSchema, type WorkLogEntryData} from "../entities.js";
-import {thinkModel} from "../llm/index.js";
-import {calcContentHash, ensureJixoDirsExist, getCacheFilePath, getLogFilePath} from "./internal.js";
-import {createTask, findTask, findTaskByPath} from "./logHelper.js";
+import {DELETE_FIELD_MARKER, type LogFileData, LogFileSchema, type RoadmapTaskNodeData, type SubTaskData, SubTaskSchema, type WorkLogEntryData} from "../entities.js";
+import {calcContentHash, getCacheFilePath, getLogFilePath} from "./internal.js";
+import {createTask, findTask, findTaskByPath, isJobCompleted} from "./logHelper.js";
 import {serializeLogFile} from "./logSerializer.js";
 
 export type NextActionableTaskResult = {
@@ -13,171 +11,200 @@ export type NextActionableTaskResult = {
   task: RoadmapTaskNodeData | SubTaskData | null;
 };
 
-class LogManager {
-  private _parserAgent;
+/**
+ * Manages the state and persistence of a single job's log file.
+ * Instances should be created via the `logManagerFactory`.
+ */
+export class LogManager {
   private _locks = new Map<string, boolean>();
+  private parserAgent: Agent;
 
-  constructor() {
-    this._parserAgent = new Agent({
-      name: "ParserAgent_Internal",
-      instructions: `You are a highly-structured data parser. Your task is to receive a Markdown file content with YAML front matter and convert it into a valid JSON object that strictly adheres to the provided Zod schema. You must extract the front matter fields AND parse the 'Roadmap' and 'Work Log' sections. The 'Roadmap' is a nested Markdown checklist. Your output MUST be ONLY the JSON object, without any surrounding text or markdown backticks.`, // Truncated for brevity
-      model: thinkModel,
-    });
+  /**
+   * @internal - Should be constructed via `logManagerFactory.getOrCreate`.
+   */
+  constructor(
+    private jobName: string,
+    private logData: LogFileData,
+    parserAgent: Agent,
+  ) {
+    this.parserAgent = parserAgent;
   }
 
   // --- Private Low-Level Methods (I/O and Locking) ---
-  private async _lock(jobName: string) {
-    while (this._locks.get(jobName)) {
+
+  private async _lock() {
+    while (this._locks.get(this.jobName)) {
       await new Promise((resolve) => setTimeout(resolve, 50));
     }
-    this._locks.set(jobName, true);
+    this._locks.set(this.jobName, true);
   }
 
-  private _unlock(jobName: string) {
-    this._locks.set(jobName, false);
+  private _unlock() {
+    this._locks.set(this.jobName, false);
   }
 
-  private async _readFileWithHash(jobName: string): Promise<{content: string; hash: string}> {
-    const filePath = getLogFilePath(jobName);
-    let content: string;
-    try {
-      content = await fsp.readFile(filePath, "utf-8");
-    } catch {
-      // If the file doesn't exist, create it with initial content including env
-      const initialLogData: LogFileData = {
-        title: "_undefined_",
-        progress: "0%",
-        env: {}, // Start with an empty env
-        roadmap: [],
-        workLog: [],
-      };
-      content = serializeLogFile(initialLogData);
-      await fsp.writeFile(filePath, content, "utf-8");
-    }
-    const hash = calcContentHash(content);
-    return {content, hash};
-  }
-
-  // --- Public High-Level API ---
-
-  public async init(jobName: string, env: Record<string, string> = {}) {
-    await ensureJixoDirsExist();
-    const logFilePath = getLogFilePath(jobName);
-    if (!fs.existsSync(logFilePath)) {
-      const initialLogData: LogFileData = {
-        title: "_undefined_",
-        progress: "0%",
-        env: env,
-        roadmap: [],
-        workLog: [],
-      };
-      const content = serializeLogFile(initialLogData);
-      await fsp.writeFile(logFilePath, content, "utf-8");
-    }
-  }
-
-  public async getLogFile(jobName: string): Promise<LogFileData> {
-    const {content, hash} = await this._readFileWithHash(jobName);
-    const cachePath = getCacheFilePath(hash);
-    try {
-      const cachedData = await fsp.readFile(cachePath, "utf-8");
-      return LogFileSchema.parse(JSON.parse(cachedData));
-    } catch {
-      const result = await this._parserAgent.generate(content, {output: LogFileSchema});
-      const parsedData = result.object;
-      await fsp.writeFile(cachePath, JSON.stringify(parsedData, null, 2));
-      return parsedData;
-    }
-  }
-
-  private async updateLogFile(jobName: string, data: LogFileData): Promise<void> {
-    const validatedData = LogFileSchema.parse(data);
+  private async _persist() {
+    const validatedData = LogFileSchema.parse(this.logData);
     const markdownContent = serializeLogFile(validatedData);
     const hash = calcContentHash(markdownContent);
-    const logFilePath = getLogFilePath(jobName);
+    const logFilePath = getLogFilePath(this.jobName);
     const cachePath = getCacheFilePath(hash);
     await fsp.writeFile(logFilePath, markdownContent, "utf-8");
     await fsp.writeFile(cachePath, JSON.stringify(validatedData, null, 2), "utf-8");
   }
 
-  public async findTask(predicate: (task: RoadmapTaskNodeData | SubTaskData) => boolean | undefined, jobName: string): Promise<RoadmapTaskNodeData | SubTaskData | null> {
-    const logData = await this.getLogFile(jobName);
-    return findTask(predicate, logData.roadmap);
+  // --- Public High-Level API ---
+
+  /**
+   * Forces a reload of the log file from disk, overwriting the current in-memory state.
+   */
+  public async reload(): Promise<void> {
+    const logFilePath = getLogFilePath(this.jobName);
+    const content = await fsp.readFile(logFilePath, "utf-8");
+    const hash = calcContentHash(content);
+    const cachePath = getCacheFilePath(hash);
+
+    try {
+      const cachedData = await fsp.readFile(cachePath, "utf-8");
+      this.logData = LogFileSchema.parse(JSON.parse(cachedData));
+    } catch {
+      const result = await this.parserAgent.generate(content, {output: LogFileSchema});
+      this.logData = result.object;
+      await fsp.writeFile(cachePath, JSON.stringify(this.logData, null, 2));
+    }
   }
 
-  public async getNextActionableTask(jobName: string): Promise<NextActionableTaskResult> {
-    const logData = await this.getLogFile(jobName);
-    const {roadmap} = logData;
+  /**
+   * Returns a deep clone of the current in-memory log file data.
+   */
+  public getLogFile(): LogFileData {
+    return structuredClone(this.logData);
+  }
+
+  /**
+   * Finds a task in the roadmap using a predicate function.
+   * @param predicate Function to test each task.
+   * @returns The found task or null.
+   */
+  public findTask(predicate: (task: RoadmapTaskNodeData | SubTaskData) => boolean | undefined): RoadmapTaskNodeData | SubTaskData | null {
+    return findTask(predicate, this.logData.roadmap);
+  }
+
+  /**
+   * Determines the next actionable task based on the current roadmap state.
+   * @returns An object indicating the action type ('review', 'execute', 'none') and the relevant task.
+   */
+  public getNextActionableTask(): NextActionableTaskResult {
+    const {roadmap} = this.logData;
+
     const taskToReview = findTask((t) => t.status === "PendingReview", roadmap);
     if (taskToReview) {
       return {type: "review", task: taskToReview};
     }
+
     const allTasksMap = new Map<string, RoadmapTaskNodeData | SubTaskData>();
     roadmap.forEach((t) => {
       allTasksMap.set(t.id, t);
       t.children.forEach((st) => allTasksMap.set(st.id, st));
     });
+
     const pendingTask = findTask((t) => t.status === "Pending" && (t.dependsOn ?? []).every((depId) => allTasksMap.get(depId)?.status === "Completed"), roadmap);
     if (pendingTask) {
       return {type: "execute", task: pendingTask};
     }
+
     return {type: "none", task: null};
   }
 
-  public async addTask(jobName: string, taskInput: NewTaskData): Promise<RoadmapTaskNodeData> {
-    await this._lock(jobName);
+  /**
+   * Checks if all tasks in the roadmap are either Completed or Cancelled.
+   * @returns True if the job is complete, false otherwise.
+   */
+  public isJobCompleted(): boolean {
+    return isJobCompleted(this.logData);
+  }
+
+  /**
+   * Adds a new root-level task to the roadmap.
+   * @param taskInput The data for the new task.
+   * @returns A clone of the newly created task.
+   */
+  public async addTask(taskInput: NewTaskData): Promise<RoadmapTaskNodeData> {
+    await this._lock();
     try {
-      const logData = await this.getLogFile(jobName);
-      const createdTask = createTask(taskInput, logData.roadmap);
-      await this.updateLogFile(jobName, logData);
+      const createdTask = createTask(taskInput, this.logData.roadmap);
+      await this._persist();
       return structuredClone(createdTask);
     } finally {
-      this._unlock(jobName);
+      this._unlock();
     }
   }
 
-  public async addSubTask(jobName: string, parentId: string, subTaskInput: NewSubTaskData): Promise<SubTaskData> {
-    await this._lock(jobName);
+  /**
+   * Adds a new sub-task to an existing root-level task.
+   * @param parentId The ID of the parent task.
+   * @param subTaskInput The data for the new sub-task.
+   * @returns A clone of the newly created sub-task.
+   */
+  public async addSubTask(parentId: string, subTaskInput: NewSubTaskData): Promise<SubTaskData> {
+    await this._lock();
     try {
-      const logData = await this.getLogFile(jobName);
-      const {task: parentTask} = findTaskByPath(logData.roadmap, parentId);
+      const {task: parentTask} = findTaskByPath(this.logData.roadmap, parentId);
       if (!parentTask || !("children" in parentTask)) {
         throw new Error(`Parent task '${parentId}' not found or is not a root task.`);
       }
       const subTaskId = `${parentTask.id}.${parentTask.children.length + 1}`;
       const newSubTask = SubTaskSchema.parse({...subTaskInput, id: subTaskId, status: "Pending"});
       parentTask.children.push(newSubTask);
-      await this.updateLogFile(jobName, logData);
+      await this._persist();
       return structuredClone(newSubTask);
     } finally {
-      this._unlock(jobName);
+      this._unlock();
     }
   }
 
-  public async updateTask(jobName: string, path: string, updates: Partial<Omit<RoadmapTaskNodeData, "id" | "children">>): Promise<RoadmapTaskNodeData | SubTaskData> {
-    await this._lock(jobName);
+  /**
+   * Updates an existing task or sub-task in the roadmap.
+   * @param path The ID path of the task to update (e.g., "1" or "1.2").
+   * @param updates A partial object of fields to update.
+   * @returns A clone of the updated task.
+   */
+  public async updateTask(path: string, updates: Partial<Omit<RoadmapTaskNodeData, "id" | "children">>): Promise<RoadmapTaskNodeData | SubTaskData> {
+    await this._lock();
     try {
-      const logData = await this.getLogFile(jobName);
-      const {task} = findTaskByPath(logData.roadmap, path);
+      const {task} = findTaskByPath(this.logData.roadmap, path);
       if (!task) throw new Error(`Task with path '${path}' not found.`);
-      Object.assign(task, updates);
-      await this.updateLogFile(jobName, logData);
+
+      // Special handling for DELETE_FIELD_MARKER to remove optional properties
+      for (const key in updates) {
+        if (Object.prototype.hasOwnProperty.call(updates, key)) {
+          const value = updates[key as keyof typeof updates];
+          if (value === DELETE_FIELD_MARKER) {
+            delete task[key as keyof typeof task];
+          } else {
+            (task as any)[key] = value;
+          }
+        }
+      }
+
+      await this._persist();
       return structuredClone(task);
     } finally {
-      this._unlock(jobName);
+      this._unlock();
     }
   }
 
-  public async addWorkLog(jobName: string, entry: WorkLogEntryData): Promise<void> {
-    await this._lock(jobName);
+  /**
+   * Adds a new work log entry to the beginning of the work log.
+   * @param entry The work log entry data.
+   */
+  public async addWorkLog(entry: WorkLogEntryData): Promise<void> {
+    await this._lock();
     try {
-      const logData = await this.getLogFile(jobName);
-      logData.workLog.unshift(entry);
-      await this.updateLogFile(jobName, logData);
+      this.logData.workLog.unshift(entry);
+      await this._persist();
     } finally {
-      this._unlock(jobName);
+      this._unlock();
     }
   }
 }
-
-export const logManager = new LogManager();

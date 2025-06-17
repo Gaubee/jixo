@@ -1,8 +1,7 @@
 import {delay} from "@gaubee/util";
 import {createStep, createWorkflow} from "@mastra/core/workflows";
 import {z} from "zod";
-import {isJobCompleted} from "../services/logHelper.js";
-import {logManager} from "../services/logManager.js";
+import {logManagerFactory} from "../services/logManagerFactory.js";
 import {jixoJobWorkflow} from "./jixoJobWorkflow.js";
 
 const JixoMasterWorkflowInputSchema = z.object({
@@ -19,12 +18,15 @@ const masterLoopStep = createStep({
     let loopCount = 0;
     let consecutiveErrors = 0;
     const workDir = process.cwd(); // Get the CWD once here
-    await logManager.init(inputData.jobName, {workDir});
+    const logManager = await logManagerFactory.getOrCreate(inputData.jobName, {workDir});
 
     while (loopCount < inputData.maxLoops) {
       loopCount++;
-      const logData = await logManager.getLogFile(inputData.jobName);
-      if (isJobCompleted(logData)) {
+      // Reload from disk to catch changes made by other processes if necessary in a multi-runner env
+      // For this single-process simulation, it ensures we have the latest state from the previous loop.
+      await logManager.reload();
+
+      if (logManager.isJobCompleted()) {
         return {finalStatus: "Job completed successfully."};
       }
 

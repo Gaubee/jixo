@@ -2,9 +2,11 @@ import fsp from "node:fs/promises";
 import {beforeEach, describe, expect, it} from "vitest";
 import type {NewSubTaskData, NewTaskData} from "../agent/schemas.js";
 import type {RoadmapTaskNodeData, SubTaskData, WorkLogEntryData} from "../entities.js";
-import {logManager} from "./logManager.js";
+import type {LogManager} from "./logManager.js";
+import {logManagerFactory} from "./logManagerFactory.js";
 
 const TEST_JOB_NAME = "test-job-for-logmanager";
+let logManager: LogManager;
 
 // Clean up and initialize before each test to ensure isolation.
 beforeEach(async () => {
@@ -12,12 +14,13 @@ beforeEach(async () => {
   await ensureJixoDirsExist();
   const logFilePath = getLogFilePath(TEST_JOB_NAME);
   await fsp.unlink(logFilePath).catch(() => {});
-  await logManager.init(TEST_JOB_NAME);
+  // Get a fresh instance for each test
+  logManager = await logManagerFactory.getOrCreate(TEST_JOB_NAME);
 });
 
 describe("LogManager Basic CRUD", () => {
   it("should initialize and create an empty log file", async () => {
-    const logData = await logManager.getLogFile(TEST_JOB_NAME);
+    const logData = logManager.getLogFile();
     expect(logData.title).toBe("_undefined_");
     expect(logData.roadmap).toEqual([]);
     expect(logData.workLog).toEqual([]);
@@ -25,7 +28,7 @@ describe("LogManager Basic CRUD", () => {
 
   it("should add a root-level task without children", async () => {
     const title = "This is the first root task";
-    const createdTask = await logManager.addTask(TEST_JOB_NAME, {title});
+    const createdTask = await logManager.addTask({title});
     expect(createdTask.id).toBe("1");
     expect(createdTask.title).toBe(title);
     expect(createdTask.children).toEqual([]);
@@ -36,8 +39,8 @@ describe("LogManager Basic CRUD", () => {
       title: "Parent Task",
       children: [{title: "Child 1"}, {title: "Child 2"}],
     };
-    await logManager.addTask(TEST_JOB_NAME, nestedTaskInput);
-    const logData = await logManager.getLogFile(TEST_JOB_NAME);
+    await logManager.addTask(nestedTaskInput);
+    const logData = logManager.getLogFile();
     const parent = logData.roadmap[0];
     expect(parent.id).toBe("1");
     expect(parent.children).toHaveLength(2);
@@ -46,34 +49,34 @@ describe("LogManager Basic CRUD", () => {
   });
 
   it("should add a sub-task to an existing root task using addSubTask", async () => {
-    await logManager.addTask(TEST_JOB_NAME, {title: "Root task"});
+    await logManager.addTask({title: "Root task"});
     const subTaskInput: NewSubTaskData = {title: "New Sub-task"};
-    const newSubTask = await logManager.addSubTask(TEST_JOB_NAME, "1", subTaskInput);
+    const newSubTask = await logManager.addSubTask("1", subTaskInput);
 
     expect(newSubTask.id).toBe("1.1");
     expect(newSubTask.title).toBe("New Sub-task");
 
-    const logData = await logManager.getLogFile(TEST_JOB_NAME);
+    const logData = logManager.getLogFile();
     const rootTask = logData.roadmap[0];
     expect(rootTask.children).toHaveLength(1);
     expect(rootTask.children[0]).toEqual(newSubTask);
   });
 
   it("should update a root task and return the updated data", async () => {
-    await logManager.addTask(TEST_JOB_NAME, {title: "Task to be updated"});
+    await logManager.addTask({title: "Task to be updated"});
     const updates = {status: "Completed" as const, executor: "test-executor"};
-    const updatedTask = await logManager.updateTask(TEST_JOB_NAME, "1", updates);
+    const updatedTask = await logManager.updateTask("1", updates);
     expect(updatedTask.status).toBe("Completed");
     expect((updatedTask as RoadmapTaskNodeData).executor).toBe("test-executor");
   });
 
   it("should update a sub-task and return the updated data", async () => {
-    await logManager.addTask(TEST_JOB_NAME, {
+    await logManager.addTask({
       title: "Root",
       children: [{title: "Sub-task to update"}],
     });
     const updates = {status: "Locked" as const, executor: "sub-task-executor"};
-    const updatedTask = await logManager.updateTask(TEST_JOB_NAME, "1.1", updates);
+    const updatedTask = await logManager.updateTask("1.1", updates);
     expect(updatedTask.status).toBe("Locked");
     expect((updatedTask as SubTaskData).executor).toBe("sub-task-executor");
   });
@@ -87,7 +90,7 @@ describe("LogManager Basic CRUD", () => {
       result: "Succeeded",
       summary: "First log.",
     } satisfies WorkLogEntryData;
-    await logManager.addWorkLog(TEST_JOB_NAME, firstLogEntry);
+    await logManager.addWorkLog(firstLogEntry);
 
     const secondLogEntry = {
       timestamp: new Date().toISOString(),
@@ -97,9 +100,9 @@ describe("LogManager Basic CRUD", () => {
       result: "Succeeded",
       summary: "Second log.",
     } satisfies WorkLogEntryData;
-    await logManager.addWorkLog(TEST_JOB_NAME, secondLogEntry);
+    await logManager.addWorkLog(secondLogEntry);
 
-    const logData = await logManager.getLogFile(TEST_JOB_NAME);
+    const logData = logManager.getLogFile();
     expect(logData.workLog).toHaveLength(2);
     expect(logData.workLog[0]).toMatchObject(secondLogEntry);
     expect(logData.workLog[1]).toMatchObject(firstLogEntry);
@@ -108,51 +111,51 @@ describe("LogManager Basic CRUD", () => {
 
 describe("logManager.getNextActionableTask", () => {
   it("should return 'none' for an empty roadmap", async () => {
-    const result = await logManager.getNextActionableTask(TEST_JOB_NAME);
+    const result = logManager.getNextActionableTask();
     expect(result.type).toBe("none");
     expect(result.task).toBeNull();
   });
 
   it("should prioritize a task pending review over any other task", async () => {
-    await logManager.addTask(TEST_JOB_NAME, {title: "A pending task"});
-    await logManager.addTask(TEST_JOB_NAME, {title: "A task for review"});
-    await logManager.updateTask(TEST_JOB_NAME, "2", {status: "PendingReview"});
+    await logManager.addTask({title: "A pending task"});
+    await logManager.addTask({title: "A task for review"});
+    await logManager.updateTask("2", {status: "PendingReview"});
 
-    const result = await logManager.getNextActionableTask(TEST_JOB_NAME);
+    const result = logManager.getNextActionableTask();
     expect(result.type).toBe("review");
     expect(result.task?.id).toBe("2");
   });
 
   it("should return an executable task when no review tasks are present", async () => {
-    await logManager.addTask(TEST_JOB_NAME, {title: "A pending task"});
-    const result = await logManager.getNextActionableTask(TEST_JOB_NAME);
+    await logManager.addTask({title: "A pending task"});
+    const result = logManager.getNextActionableTask();
     expect(result.type).toBe("execute");
     expect(result.task?.id).toBe("1");
   });
 
   it("should return the dependent task once its dependency is completed", async () => {
-    await logManager.addTask(TEST_JOB_NAME, {title: "Task 1"});
-    await logManager.addTask(TEST_JOB_NAME, {title: "Task 2", dependsOn: ["1"]});
-    await logManager.updateTask(TEST_JOB_NAME, "1", {status: "Completed"});
+    await logManager.addTask({title: "Task 1"});
+    await logManager.addTask({title: "Task 2", dependsOn: ["1"]});
+    await logManager.updateTask("1", {status: "Completed"});
 
-    const result = await logManager.getNextActionableTask(TEST_JOB_NAME);
+    const result = logManager.getNextActionableTask();
     expect(result.type).toBe("execute");
     expect(result.task?.id).toBe("2");
   });
 
   it("should return 'none' if the only pending task has an unmet dependency", async () => {
-    await logManager.addTask(TEST_JOB_NAME, {title: "Task 1"});
-    await logManager.updateTask(TEST_JOB_NAME, "1", {status: "Locked"});
-    await logManager.addTask(TEST_JOB_NAME, {title: "Task 2", dependsOn: ["1"]});
+    await logManager.addTask({title: "Task 1"});
+    await logManager.updateTask("1", {status: "Locked"});
+    await logManager.addTask({title: "Task 2", dependsOn: ["1"]});
 
-    const result = await logManager.getNextActionableTask(TEST_JOB_NAME);
+    const result = logManager.getNextActionableTask();
     expect(result.type).toBe("none");
   });
 
   it("should return 'none' if all tasks are completed", async () => {
-    await logManager.addTask(TEST_JOB_NAME, {title: "Task 1"});
-    await logManager.updateTask(TEST_JOB_NAME, "1", {status: "Completed"});
-    const result = await logManager.getNextActionableTask(TEST_JOB_NAME);
+    await logManager.addTask({title: "Task 1"});
+    await logManager.updateTask("1", {status: "Completed"});
+    const result = logManager.getNextActionableTask();
     expect(result.type).toBe("none");
   });
 });

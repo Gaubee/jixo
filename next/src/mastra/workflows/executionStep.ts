@@ -1,6 +1,7 @@
 import {RuntimeContext} from "@mastra/core/runtime-context";
 import {createStep} from "@mastra/core/workflows";
-import {logManager} from "../services/logManager.js";
+import {DELETE_FIELD_MARKER} from "../entities.js";
+import {logManagerFactory} from "../services/logManagerFactory.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageExecuteSchema} from "./schemas.js";
 
 export const executionStep = createStep({
@@ -10,12 +11,13 @@ export const executionStep = createStep({
   async execute({inputData, mastra, getInitData}) {
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const task = inputData.task!;
+    const logManager = await logManagerFactory.getOrCreate(init.jobName);
 
     const runtimeContext = new RuntimeContext();
     runtimeContext.set("cwd", init.workDir);
 
     try {
-      await logManager.updateTask(init.jobName, task.id, {status: "Locked", executor: init.runnerId});
+      await logManager.updateTask(task.id, {status: "Locked", executor: init.runnerId});
       const result = await mastra.getAgent("executorAgent").generate(`Task: ${task.title}. Details: ${task.details ?? "N/A"}`, {runtimeContext});
 
       if (task.gitCommit) {
@@ -24,8 +26,8 @@ export const executionStep = createStep({
         console.log(`[Executor] Simulating: git commit -m "${commitMessage}"`);
       }
 
-      await logManager.updateTask(init.jobName, task.id, {status: "PendingReview"});
-      await logManager.addWorkLog(init.jobName, {
+      await logManager.updateTask(task.id, {status: "PendingReview", executor: DELETE_FIELD_MARKER as any});
+      await logManager.addWorkLog({
         timestamp: new Date().toISOString(),
         runnerId: init.runnerId,
         role: "Executor",
@@ -37,8 +39,8 @@ export const executionStep = createStep({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[Executor] Task ${task.id} failed:`, errorMessage);
-      await logManager.updateTask(init.jobName, task.id, {status: "Failed"});
-      await logManager.addWorkLog(init.jobName, {
+      await logManager.updateTask(task.id, {status: "Failed"});
+      await logManager.addWorkLog({
         timestamp: new Date().toISOString(),
         runnerId: init.runnerId,
         role: "Executor",

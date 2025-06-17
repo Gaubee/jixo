@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "fmt": "prettier --write \"src/**/*.ts\"",
     "test": "vitest",
     "demo": "node scripts/run-demo.ts",
     "build": "tsc",
@@ -40,6 +41,7 @@
   "devDependencies": {
     "@types/node": "^22",
     "mastra": "^0.10.5",
+    "prettier": "^3.5.3",
     "typescript": "^5.8.3",
     "vitest": "^3.2.3"
   }

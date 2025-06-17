@@ -1,7 +1,7 @@
 import {RuntimeContext} from "@mastra/core/runtime-context";
 import {createStep} from "@mastra/core/workflows";
 import {PlannerOutputSchema} from "../agent/schemas.js";
-import {logManager} from "../services/logManager.js";
+import {logManagerFactory} from "../services/logManagerFactory.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriagePlanSchema} from "./schemas.js";
 
 export const planningStep = createStep({
@@ -12,6 +12,7 @@ export const planningStep = createStep({
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const {planningContext, log} = inputData;
     const {jobName, runnerId} = init;
+    const logManager = await logManagerFactory.getOrCreate(jobName);
 
     let prompt: string;
     let objective = "";
@@ -49,30 +50,30 @@ export const planningStep = createStep({
 
     if (plan.cancel && plan.cancel.length > 0) {
       for (const taskId of plan.cancel) {
-        await logManager.updateTask(jobName, taskId, {status: "Cancelled"});
+        await logManager.updateTask(taskId, {status: "Cancelled"});
       }
       summary.push(`Cancelled ${plan.cancel.length} task(s).`);
     }
 
     if (plan.update && plan.update.length > 0) {
       for (const item of plan.update) {
-        await logManager.updateTask(jobName, item.id, item.changes);
+        await logManager.updateTask(item.id, item.changes);
       }
       summary.push(`Updated ${plan.update.length} task(s).`);
     }
 
     if (plan.add && plan.add.length > 0) {
       for (const task of plan.add) {
-        await logManager.addTask(jobName, task);
+        await logManager.addTask(task);
       }
       summary.push(`Added ${plan.add.length} new root task(s).`);
     }
 
     if (planningContext?.type === "rework") {
-      await logManager.updateTask(jobName, planningContext.task!.id, {details: ""});
+      await logManager.updateTask(planningContext.task!.id, {details: ""});
     }
 
-    await logManager.addWorkLog(jobName, {
+    await logManager.addWorkLog({
       timestamp: new Date().toISOString(),
       runnerId: runnerId,
       role: "Planner",

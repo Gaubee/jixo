@@ -1,5 +1,6 @@
 import {createStep} from "@mastra/core/workflows";
-import {logManager} from "../services/logManager.js";
+import {DELETE_FIELD_MARKER} from "../entities.js";
+import {logManagerFactory} from "../services/logManagerFactory.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageReviewSchema} from "./schemas.js";
 import {REWORK_MARKER} from "./utils.js";
 
@@ -10,6 +11,7 @@ export const reviewStep = createStep({
   async execute({inputData, mastra, getInitData}) {
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const task = inputData.task!;
+    const logManager = await logManagerFactory.getOrCreate(init.jobName);
 
     // Provide context: the last 5 work log entries
     const recentLogs = inputData.log.workLog
@@ -33,7 +35,7 @@ Based on all the above, does the work meet the task's objective?
 
     if (resultText.startsWith("ABORT:")) {
       // The reviewer has detected a fatal loop and aborted.
-      await logManager.addWorkLog(init.jobName, {
+      await logManager.addWorkLog({
         timestamp: new Date().toISOString(),
         runnerId: init.runnerId,
         role: "Reviewer",
@@ -46,8 +48,8 @@ Based on all the above, does the work meet the task's objective?
     }
 
     if (resultText.toLowerCase() === "approved") {
-      await logManager.updateTask(init.jobName, task.id, {status: "Completed", reviewer: init.runnerId});
-      await logManager.addWorkLog(init.jobName, {
+      await logManager.updateTask(task.id, {status: "Completed", reviewer: init.runnerId});
+      await logManager.addWorkLog({
         timestamp: new Date().toISOString(),
         runnerId: init.runnerId,
         role: "Reviewer",
@@ -58,8 +60,8 @@ Based on all the above, does the work meet the task's objective?
       return {exitCode: 2, reason: `Task ${task.id} approved.`};
     } else {
       const reworkDetails = `${REWORK_MARKER}:\n${result.text}`;
-      await logManager.updateTask(init.jobName, task.id, {status: "Pending", details: reworkDetails});
-      await logManager.addWorkLog(init.jobName, {
+      await logManager.updateTask(task.id, {status: "Pending", details: reworkDetails, executor: DELETE_FIELD_MARKER as any});
+      await logManager.addWorkLog({
         timestamp: new Date().toISOString(),
         runnerId: init.runnerId,
         role: "Reviewer",
