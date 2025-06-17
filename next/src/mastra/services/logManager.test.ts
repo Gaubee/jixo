@@ -13,9 +13,11 @@ beforeEach(async () => {
   const {getLogFilePath, ensureJixoDirsExist} = await import("./internal.js");
   await ensureJixoDirsExist();
   const logFilePath = getLogFilePath(TEST_JOB_NAME);
+  // Ensure the physical file is gone, so each test starts with a clean slate.
   await fsp.unlink(logFilePath).catch(() => {});
-  // Get a fresh instance for each test
-  logManager = await logManagerFactory.getOrCreate(TEST_JOB_NAME);
+
+  // Use the isolated factory method to get a pristine LogManager instance for each test.
+  logManager = await logManagerFactory.createIsolated(TEST_JOB_NAME);
 });
 
 describe("LogManager Basic CRUD", () => {
@@ -32,6 +34,11 @@ describe("LogManager Basic CRUD", () => {
     expect(createdTask.id).toBe("1");
     expect(createdTask.title).toBe(title);
     expect(createdTask.children).toEqual([]);
+
+    // Verify persistence
+    await logManager.reload();
+    const logData = logManager.getLogFile();
+    expect(logData.roadmap).toHaveLength(1);
   });
 
   it("should add a root task with nested sub-tasks", async () => {

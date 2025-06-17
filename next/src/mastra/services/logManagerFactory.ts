@@ -19,27 +19,13 @@ class LogManagerFactory {
     });
   }
 
-  /**
-   * Gets an existing LogManager instance for a job, or creates a new one if it doesn't exist.
-   * This method ensures that for any given jobName, only one LogManager instance is active,
-   * handling initialization and caching transparently.
-   * @param jobName The name of the job.
-   * @param env Optional environment variables to set during initialization if the log file is new.
-   * @returns A promise that resolves to the LogManager instance for the specified job.
-   */
-  public async getOrCreate(jobName: string, env: Record<string, string> = {}): Promise<LogManager> {
-    if (this.instances.has(jobName)) {
-      return this.instances.get(jobName)!;
-    }
-
+  private async _createManagerInstance(jobName: string, env: Record<string, string> = {}): Promise<LogManager> {
     await ensureJixoDirsExist();
-
     const logFilePath = getLogFilePath(jobName);
     let content: string;
     let initialData: LogFileData;
 
     if (!fs.existsSync(logFilePath)) {
-      // Create new log file if it doesn't exist
       initialData = {
         title: "_undefined_",
         progress: "0%",
@@ -52,7 +38,6 @@ class LogManagerFactory {
       const hash = calcContentHash(content);
       await fsp.writeFile(getCacheFilePath(hash), JSON.stringify(initialData, null, 2), "utf-8");
     } else {
-      // Read existing file and try to use cache
       content = await fsp.readFile(logFilePath, "utf-8");
       const hash = calcContentHash(content);
       const cachePath = getCacheFilePath(hash);
@@ -60,16 +45,40 @@ class LogManagerFactory {
         const cachedData = await fsp.readFile(cachePath, "utf-8");
         initialData = LogFileSchema.parse(JSON.parse(cachedData));
       } catch {
-        // Cache miss or invalid, parse from scratch
         const result = await this.parserAgent.generate(content, {output: LogFileSchema});
         initialData = result.object;
         await fsp.writeFile(cachePath, JSON.stringify(initialData, null, 2));
       }
     }
 
-    const manager = new LogManager(jobName, initialData, this.parserAgent);
+    return new LogManager(jobName, initialData, this.parserAgent);
+  }
+
+  /**
+   * Gets a cached LogManager instance for a job, or creates a new one if it doesn't exist.
+   * This method ensures that for any given jobName, only one LogManager instance is active.
+   * @param jobName The name of the job.
+   * @param env Optional environment variables to set during initialization if the log file is new.
+   * @returns A promise that resolves to the singleton LogManager instance for the specified job.
+   */
+  public async getOrCreate(jobName: string, env: Record<string, string> = {}): Promise<LogManager> {
+    if (this.instances.has(jobName)) {
+      return this.instances.get(jobName)!;
+    }
+    const manager = await this._createManagerInstance(jobName, env);
     this.instances.set(jobName, manager);
     return manager;
+  }
+
+  /**
+   * Creates a new, isolated LogManager instance for a job, bypassing the cache.
+   * This is useful for testing or scenarios requiring a completely fresh state.
+   * @param jobName The name of the job.
+   * @param env Optional environment variables to set during initialization if the log file is new.
+   * @returns A promise that resolves to a new, non-cached LogManager instance.
+   */
+  public async createIsolated(jobName: string, env: Record<string, string> = {}): Promise<LogManager> {
+    return this._createManagerInstance(jobName, env);
   }
 }
 
