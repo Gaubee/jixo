@@ -1,5 +1,5 @@
 import {z} from "zod";
-import {AnyTaskSchema, LogFileSchema} from "../entities.js";
+import {AnyTaskSchema, LogFileSchema, RoadmapTaskNodeSchema, WorkLogEntrySchema} from "../entities.js";
 
 // --- Schema Definitions for the Inner Loop ---
 export const JixoJobWorkflowInputSchema = z.object({
@@ -15,6 +15,20 @@ export const JixoJobWorkflowExitInfoSchema = z.object({
   reason: z.string(),
 });
 export type JixoJobWorkflowExitInfoData = z.infer<typeof JixoJobWorkflowExitInfoSchema>;
+
+export const JixoRuntimeContextSchema = z.object({
+  jobName: z.string().describe("The unique name of the current job."),
+  jobGoal: z.string().describe("The high-level goal of the job."),
+  workDir: z.string().describe("The absolute path to the sandboxed working directory for this job."),
+  roadmap: z.array(RoadmapTaskNodeSchema).optional().describe("The entire current roadmap, for planning context."),
+  task: AnyTaskSchema.optional().describe("The specific task being executed or reviewed."),
+  recentWorkLog: z.array(WorkLogEntrySchema).optional().describe("A slice of the most recent work log entries for context."),
+  taskSpecificLogs: z.array(WorkLogEntrySchema).optional().describe("Work logs filtered to be relevant only to the current task."),
+  executionSummary: z.string().optional().describe("The summary provided by the executor for a completed task."),
+  originalTaskDetails: z.string().optional().describe("The original 'details' of a task, used as an acceptance criteria for review."),
+});
+export type JixoRuntimeContextData = z.infer<typeof JixoRuntimeContextSchema>;
+
 const PlanningContextSchema = z.object({
   type: z.enum(["initial", "rework", "fixFailure"]),
   task: AnyTaskSchema.optional(), // Can be a root or sub-task

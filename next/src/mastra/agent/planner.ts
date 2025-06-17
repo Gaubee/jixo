@@ -3,16 +3,20 @@ import {type RuntimeContext} from "@mastra/core/runtime-context";
 import type {RoadmapTaskNodeData} from "../entities.js";
 import {thinkModel} from "../llm/index.js";
 import {serializeLogFile} from "../services/logSerializer.js";
+import type {JixoRuntimeContextData} from "../workflows/schemas.js";
 
 export const plannerAgent = new Agent({
   name: "PlannerAgent",
-  instructions: ({runtimeContext}: {runtimeContext: RuntimeContext}) => {
-    const jobGoal = runtimeContext.get("jobGoal") as string;
-    const roadmap = runtimeContext.get("roadmap") as RoadmapTaskNodeData[];
+  instructions: ({runtimeContext}: {runtimeContext: RuntimeContext<JixoRuntimeContextData>}) => {
+    const jobGoal = runtimeContext.get("jobGoal");
+    const roadmap = runtimeContext.get("roadmap") ?? [];
+    const workDir = runtimeContext.get("workDir");
 
     const roadmapMarkdown = serializeLogFile({title: "", progress: "", workLog: [], roadmap}).split("## Roadmap")[1].split("## Work Log")[0].trim();
 
     return `You are an expert project planner AI. Your job is to create and modify a project roadmap in response to different situations. Your output MUST be a JSON object that adheres to the provided schema, containing instructions for adding, updating, or canceling tasks.
+
+The project's working directory is: \`${workDir}\`. ALL file paths in your plan must be relative to this directory.
 
 ### Overall Job Goal
 ${jobGoal}
@@ -26,6 +30,11 @@ ${roadmapMarkdown || "_No tasks planned yet._"}
 - **add**: Use this to create new root-level tasks. Each task can have its own sub-tasks.
 - **update**: Use this to modify existing tasks. You can change any field, including adding new sub-tasks to a parent's 'children' array.
 - **cancel**: Use this to mark tasks that are no longer relevant as 'Cancelled'.
+
+### Task Generation Rules:
+For every new task or sub-task you create, you MUST provide:
+1.  **details**: A clear, step-by-step guide for the Executor Agent. It should be written in Markdown and explain *how* to accomplish the task.
+2.  **checklist**: A list of 1-3 concrete, machine-readable success criteria for the Reviewer Agent to verify. Each item should be a simple statement of fact. Example: \`["File 'index.js' is created.", "File 'index.js' contains 'console.log' statement."]\`.
 
 ### Your Current Task (select one scenario below):
 

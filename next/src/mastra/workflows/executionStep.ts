@@ -1,8 +1,9 @@
 import {RuntimeContext} from "@mastra/core/runtime-context";
 import {createStep} from "@mastra/core/workflows";
+import {ExecutionResultSchema} from "../agent/index.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
-import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageExecuteSchema} from "./schemas.js";
+import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, type JixoRuntimeContextData, TriageExecuteSchema} from "./schemas.js";
 
 export const executionStep = createStep({
   id: "execution",
@@ -13,16 +14,31 @@ export const executionStep = createStep({
     const task = inputData.task!;
     const logManager = await logManagerFactory.getOrCreate(init.jobName);
 
-    const runtimeContext = new RuntimeContext();
-    runtimeContext.set("cwd", init.workDir);
+    const runtimeContext = new RuntimeContext<JixoRuntimeContextData>();
+    runtimeContext.set("jobName", init.jobName);
+    runtimeContext.set("jobGoal", init.jobGoal);
+    runtimeContext.set("workDir", init.workDir);
+    runtimeContext.set("task", task);
+    // Provide the last 3 logs for context
+    runtimeContext.set("recentWorkLog", inputData.log.workLog.slice(0, 3));
 
     try {
       await logManager.updateTask(task.id, {status: "Locked", executor: init.runnerId});
-      const result = await mastra.getAgent("executorAgent").generate(`Task: ${task.title}. Details: ${task.details ?? "N/A"}`, {runtimeContext});
+
+      const result = await mastra.getAgent("executorAgent").generate(`Task: ${task.title}. Details: ${task.details ?? "N/A"}`, {
+        output: ExecutionResultSchema,
+        runtimeContext,
+      });
+
+      const executionResult = result.object;
+
+      if (executionResult.outcome === "failure") {
+        throw new Error(executionResult.errorMessage ?? "Executor reported a failure without an error message.");
+      }
 
       if (task.gitCommit) {
         // Standardized commit message format
-        const commitMessage = `feat(task-${task.id}): ${task.title}\n\n${result.text}`;
+        const commitMessage = `feat(task-${task.id}): ${task.title}\n\n${executionResult.summary}`;
         console.log(`[Executor] Simulating: git commit -m "${commitMessage}"`);
       }
 
@@ -33,7 +49,7 @@ export const executionStep = createStep({
         role: "Executor",
         objective: `Execute task ${task.id}`,
         result: "Succeeded",
-        summary: result.text,
+        summary: executionResult.summary,
       });
       return {exitCode: 2, reason: `Task ${task.id} executed, now pending review.`};
     } catch (error) {

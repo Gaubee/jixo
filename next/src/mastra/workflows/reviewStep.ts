@@ -1,7 +1,9 @@
+import {RuntimeContext} from "@mastra/core/runtime-context";
 import {createStep} from "@mastra/core/workflows";
+import {ReviewResultSchema} from "../agent/index.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
-import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageReviewSchema} from "./schemas.js";
+import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, type JixoRuntimeContextData, TriageReviewSchema} from "./schemas.js";
 import {REWORK_MARKER} from "./utils.js";
 
 export const reviewStep = createStep({
@@ -13,63 +15,78 @@ export const reviewStep = createStep({
     const task = inputData.task!;
     const logManager = await logManagerFactory.getOrCreate(init.jobName);
 
-    // Provide context: the last 5 work log entries
-    const recentLogs = inputData.log.workLog
-      .slice(0, 5)
-      .map((log) => `- ${log.timestamp} [${log.role}] Objective: ${log.objective} -> Result: ${log.result}, Summary: ${log.summary}`)
-      .join("\n");
-    const executorSummary = inputData.log.workLog[0].summary;
+    const taskSpecificLogs = inputData.log.workLog.filter((log) => log.objective.includes(`task ${task.id}`));
+    const executorSummary = taskSpecificLogs.find((log) => log.role === "Executor")?.summary || "No summary found.";
 
-    const prompt = `
-Task to Review: ${task.id} ${task.title}
-Executor's Summary: ${executorSummary}
+    const runtimeContext = new RuntimeContext<JixoRuntimeContextData>();
+    runtimeContext.set("jobName", init.jobName);
+    runtimeContext.set("jobGoal", init.jobGoal);
+    runtimeContext.set("workDir", init.workDir);
+    runtimeContext.set("task", task);
+    runtimeContext.set("taskSpecificLogs", taskSpecificLogs);
+    runtimeContext.set("executionSummary", executorSummary);
 
-Recent Work Log (for context on repetitive errors):
-${recentLogs}
+    const prompt = `Review task ${task.id} based on the provided context (checklist, logs, summary).`;
 
-Based on all the above, does the work meet the task's objective?
-    `.trim();
+    try {
+      const result = await mastra.getAgent("reviewerAgent").generate(prompt, {
+        output: ReviewResultSchema,
+        runtimeContext,
+      });
 
-    const result = await mastra.getAgent("reviewerAgent").generate(prompt);
-    const resultText = result.text.trim();
+      const reviewResult = result.object;
 
-    if (resultText.startsWith("ABORT:")) {
-      // The reviewer has detected a fatal loop and aborted.
+      // Handle ABORT case first
+      if (reviewResult.decision.startsWith("ABORT:")) {
+        await logManager.addWorkLog({
+          timestamp: new Date().toISOString(),
+          runnerId: init.runnerId,
+          role: "Reviewer",
+          objective: `Review task ${task.id}`,
+          result: "Failed",
+          summary: `Reviewer aborted job: ${reviewResult.decision}`,
+        });
+        return {exitCode: 1, reason: `Reviewer aborted job: ${reviewResult.decision}`};
+      }
+
+      if (reviewResult.decision === "approved") {
+        await logManager.updateTask(task.id, {status: "Completed", reviewer: init.runnerId});
+        await logManager.addWorkLog({
+          timestamp: new Date().toISOString(),
+          runnerId: init.runnerId,
+          role: "Reviewer",
+          objective: `Review task ${task.id}`,
+          result: "Succeeded",
+          summary: "Approved.",
+        });
+        return {exitCode: 2, reason: `Task ${task.id} approved.`};
+      } else {
+        // Decision is 'rejected'
+        const reworkDetails = `${REWORK_MARKER}:\n${reviewResult.feedback}`;
+        await logManager.updateTask(task.id, {status: "Pending", details: reworkDetails, executor: DELETE_FIELD_MARKER as any});
+        await logManager.addWorkLog({
+          timestamp: new Date().toISOString(),
+          runnerId: init.runnerId,
+          role: "Reviewer",
+          objective: `Review task ${task.id}`,
+          result: "Failed",
+          summary: `Requires rework. Feedback: ${reviewResult.feedback}`,
+        });
+        return {exitCode: 2, reason: `Task ${task.id} requires rework.`};
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`[Reviewer] Review for task ${task.id} failed with an exception:`, errorMessage);
+      await logManager.updateTask(task.id, {status: "Pending", details: `${REWORK_MARKER}:\nReview process failed: ${errorMessage}`});
       await logManager.addWorkLog({
         timestamp: new Date().toISOString(),
         runnerId: init.runnerId,
         role: "Reviewer",
         objective: `Review task ${task.id}`,
         result: "Failed",
-        summary: `Reviewer aborted job: ${resultText}`,
+        summary: `Review step crashed: ${errorMessage}`,
       });
-      // This exit code will terminate the master workflow.
-      return {exitCode: 1, reason: `Reviewer aborted job: ${resultText}`};
-    }
-
-    if (resultText.toLowerCase() === "approved") {
-      await logManager.updateTask(task.id, {status: "Completed", reviewer: init.runnerId});
-      await logManager.addWorkLog({
-        timestamp: new Date().toISOString(),
-        runnerId: init.runnerId,
-        role: "Reviewer",
-        objective: `Review task ${task.id}`,
-        result: "Succeeded",
-        summary: "Approved.",
-      });
-      return {exitCode: 2, reason: `Task ${task.id} approved.`};
-    } else {
-      const reworkDetails = `${REWORK_MARKER}:\n${result.text}`;
-      await logManager.updateTask(task.id, {status: "Pending", details: reworkDetails, executor: DELETE_FIELD_MARKER as any});
-      await logManager.addWorkLog({
-        timestamp: new Date().toISOString(),
-        runnerId: init.runnerId,
-        role: "Reviewer",
-        objective: `Review task ${task.id}`,
-        result: "Failed",
-        summary: `Requires rework. Feedback: ${result.text}`,
-      });
-      return {exitCode: 2, reason: `Task ${task.id} requires rework.`};
+      return {exitCode: 2, reason: `Review for task ${task.id} failed.`};
     }
   },
 });

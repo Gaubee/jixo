@@ -2,7 +2,7 @@ import {RuntimeContext} from "@mastra/core/runtime-context";
 import {createStep} from "@mastra/core/workflows";
 import {PlannerOutputSchema} from "../agent/schemas.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
-import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriagePlanSchema} from "./schemas.js";
+import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, type JixoRuntimeContextData, TriagePlanSchema} from "./schemas.js";
 
 export const planningStep = createStep({
   id: "planning",
@@ -35,7 +35,8 @@ export const planningStep = createStep({
         break;
     }
 
-    const runtimeContext = new RuntimeContext();
+    const runtimeContext = new RuntimeContext<JixoRuntimeContextData>();
+    runtimeContext.set("jobName", init.jobName);
     runtimeContext.set("jobGoal", init.jobGoal);
     runtimeContext.set("roadmap", log.roadmap);
     runtimeContext.set("workDir", log.env?.workDir ?? init.workDir);
