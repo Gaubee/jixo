@@ -14,6 +14,7 @@
     "bundle:js": "esbuild ./index.ts --format=cjs --outfile=./bundle/index.cjs --platform=node",
     "files-to-prompt": "node ./scripts/files-to-prompt.ts",
     "gen-prompt": "node ./scripts/gen-prompt.ts",
+    "apply-ai-response": "node ./scripts/apply-ai-response.ts",
     "jixo": "node bundle/index.cjs"
   },
   "bin": "./bundle/index.cjs",
