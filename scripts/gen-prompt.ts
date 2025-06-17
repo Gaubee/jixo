@@ -45,16 +45,26 @@ const gen_prompt = async (input: string, output: string, once: boolean) => {
       for (const filepath of globbySync(glob_or_filepath)) {
         const fileContent = getFileState(rootResolver(filepath), once).get();
         if (mode === "FILE") {
+          // const split = "````"; //fileContent.includes("```") ? "````" : "```";
+          // lines.push(
+          //   //
+          //   `<FILE path="${filepath}">`,
+          //   "<CONTENT>",
+          //   split + path.parse(filepath).ext.slice(1),
+          //   fileContent,
+          //   split,
+          //   "</CONTENT>",
+          //   "</FILE>\n",
+          // );
           const split = fileContent.includes("```") ? "````" : "```";
           lines.push(
             //
-            `<FILE path="${filepath}">`,
-            "<CONTENT>",
+            "",
+            filepath,
             split + path.parse(filepath).ext.slice(1),
             fileContent,
             split,
-            "</CONTENT>",
-            "</FILE>\n",
+            "",
           );
         } else if (mode === "INJECT") {
           lines.push(fileContent);
