@@ -24,6 +24,7 @@ export const AnyTaskSchema = z.union([RoadmapTaskNodeSchema, SubTaskSchema]);
 
 export type RoadmapTaskNodeData = z.infer<typeof RoadmapTaskNodeSchema>;
 export type SubTaskData = z.infer<typeof SubTaskSchema>;
+export type AnyTaskData = z.infer<typeof AnyTaskSchema>;
 
 export const WorkLogEntrySchema = z.object({
   timestamp: z.string().datetime().describe("The ISO 8601 timestamp of when the log entry was created."),

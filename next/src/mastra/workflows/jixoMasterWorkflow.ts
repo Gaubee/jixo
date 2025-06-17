@@ -34,7 +34,6 @@ const masterLoopStep = createStep({
       try {
         const jobRun = (mastra.getWorkflow("jixoJobWorkflow") as typeof jixoJobWorkflow).createRun();
         const result = await jobRun.start({inputData: {jobName: inputData.jobName, jobGoal: inputData.jobGoal, runnerId, otherRunners: [], workDir}});
-        consecutiveErrors = 0; // Reset on success
 
         if (result.status === "failed") {
           // This case handles errors within the workflow step logic itself
@@ -46,6 +45,7 @@ const masterLoopStep = createStep({
           await delay(2000); // Wait before retrying
           continue;
         }
+        consecutiveErrors = 0; // Reset on success
 
         if (result.status === "suspended") throw new Error("Workflow suspended unexpectedly.");
 

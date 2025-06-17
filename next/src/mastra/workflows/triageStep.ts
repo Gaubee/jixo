@@ -1,6 +1,6 @@
 import {createStep} from "@mastra/core/workflows";
 import {DELETE_FIELD_MARKER} from "../entities.js";
-import {isJobCompleted} from "../services/logHelper.js";
+import {isJobCompleted, walkJobRoadmap} from "../services/logHelper.js";
 import {logManager} from "../services/logManager.js";
 import {JixoJobWorkflowInputSchema, TriageOutputSchema, type TriageOutputData} from "./schemas.js";
 import {REWORK_MARKER} from "./utils.js";
@@ -14,17 +14,12 @@ export const triageStep = createStep({
 
     // --- Stale Lock Handling ---
     let staleLocksFound = false;
-    const activeRunnerIds = new Set([inputData.runnerId, ...inputData.otherRunners]);
-    for (const task of log.roadmap) {
-      if (task.status === "Locked" && task.executor && !activeRunnerIds.has(task.executor)) {
+    const otherRunnersIds = new Set(inputData.otherRunners);
+    // const activeRunnerIds = new Set([inputData.runnerId, ...inputData.otherRunners]);
+    for (const task of walkJobRoadmap(log.roadmap)) {
+      if (task.status === "Locked" && task.executor && !otherRunnersIds.has(task.executor)) {
         await logManager.updateTask(inputData.jobName, task.id, {status: "Pending", executor: DELETE_FIELD_MARKER});
         staleLocksFound = true;
-      }
-      for (const subTask of task.children) {
-        if (subTask.status === "Locked" && subTask.executor && !activeRunnerIds.has(subTask.executor)) {
-          await logManager.updateTask(inputData.jobName, subTask.id, {status: "Pending", executor: DELETE_FIELD_MARKER});
-          staleLocksFound = true;
-        }
       }
     }
     // If we found stale locks, re-read the log file to get the fresh state before proceeding.

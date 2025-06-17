@@ -1,11 +1,11 @@
-import {createStep} from "@mastra/core/workflows";
 import {RuntimeContext} from "@mastra/core/runtime-context";
+import {createStep} from "@mastra/core/workflows";
 import {logManager} from "../services/logManager.js";
-import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageOutputSchema} from "./schemas.js";
+import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageExecuteSchema} from "./schemas.js";
 
 export const executionStep = createStep({
   id: "execution",
-  inputSchema: TriageOutputSchema,
+  inputSchema: TriageExecuteSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
   async execute({inputData, mastra, getInitData}) {
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();

@@ -1,11 +1,11 @@
 import {createStep} from "@mastra/core/workflows";
 import {logManager} from "../services/logManager.js";
-import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageOutputSchema} from "./schemas.js";
+import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageReviewSchema} from "./schemas.js";
 import {REWORK_MARKER} from "./utils.js";
 
 export const reviewStep = createStep({
   id: "review",
-  inputSchema: TriageOutputSchema,
+  inputSchema: TriageReviewSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
   async execute({inputData, mastra, getInitData}) {
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();

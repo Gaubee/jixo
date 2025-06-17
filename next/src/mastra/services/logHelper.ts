@@ -1,5 +1,5 @@
 import type {NewTaskData} from "../agent/schemas.js";
-import type {RoadmapTaskNodeData, SubTaskData} from "../entities.js";
+import type {AnyTaskData, RoadmapTaskNodeData, SubTaskData} from "../entities.js";
 
 /**
  * Searches for a task within a two-level hierarchy that satisfies a predicate.
@@ -75,14 +75,20 @@ export function createTask(taskInput: NewTaskData, rootTasks: RoadmapTaskNodeDat
 
 export const isJobCompleted = (log: import("../entities.js").LogFileData) => {
   if (!log.roadmap.length) return false;
-
-  return log.roadmap.every((task) => {
-    const parentCompleted = task.status === "Completed" || task.status === "Cancelled";
-    if (!parentCompleted) return false;
-
-    if (task.status !== "Cancelled") {
-      return task.children.every((subTask) => subTask.status === "Completed" || subTask.status === "Cancelled");
-    }
-    return true;
-  });
+  for (const task of walkJobRoadmap(log.roadmap)) {
+    const taskDone = task.status === "Completed" || task.status === "Cancelled";
+    if (!taskDone) return false;
+  }
+  return true;
 };
+
+export function* walkJobRoadmap(roadmap: AnyTaskData[]) {
+  for (const task of roadmap) {
+    yield task;
+    if ("children" in task) {
+      for (const subTask of task.children) {
+        yield subTask;
+      }
+    }
+  }
+}
