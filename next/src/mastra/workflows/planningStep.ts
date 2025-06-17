@@ -1,77 +1,65 @@
-import {RuntimeContext} from "@mastra/core/runtime-context";
 import {createStep} from "@mastra/core/workflows";
-import {PlannerOutputSchema} from "../agent/schemas.js";
+import {match} from "ts-pattern";
+import {usePlannerAgent} from "../agent/planner.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
-import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, type JixoRuntimeContextData, TriagePlanSchema} from "./schemas.js";
-
+import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriagePlanSchema} from "./schemas.js";
 export const planningStep = createStep({
   id: "planning",
   inputSchema: TriagePlanSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
   async execute({inputData, mastra, getInitData}) {
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
-    const {planningContext, log} = inputData;
-    const {jobName, runnerId} = init;
-    const logManager = await logManagerFactory.getOrCreate(jobName);
+    const {planningContext} = inputData;
+    const {jobName, runnerId, jobGoal, workDir} = init;
+    const logManager = await logManagerFactory.getOrCreate(jobName, {jobGoal, workDir});
+    const currentLog = logManager.getLogFile();
 
-    let prompt: string;
+    let planningPrompt = "";
     let objective = "";
 
-    switch (planningContext?.type) {
-      case "fixFailure":
-        const failedTask = planningContext.task!;
-        const failureLog = log.workLog.find((w) => w.objective.includes(failedTask.id) && w.result === "Failed");
-        prompt = `### Failure Recovery Planning\nFailed Task: '${failedTask.id} ${failedTask.title}'\nError Summary: ${failureLog?.summary ?? "Unknown error"}`;
+    match(planningContext)
+      .with({type: "fixFailure"}, (fixPlan) => {
+        const failedTask = fixPlan.task;
+        const failureLog = currentLog.workLog.find((w) => w.objective.includes(failedTask.id) && w.result === "Failed");
+        planningPrompt = `### Failure Recovery Planning\nFailed Task: '${failedTask.id} ${failedTask.title}'\nError Summary: ${failureLog?.summary ?? "Unknown error"}`;
         objective = `Fix failed task ${failedTask.id}`;
-        break;
-      case "rework":
-        const reworkTask = planningContext.task!;
-        prompt = `### Rework Planning\nOriginal Task: '${reworkTask.id} ${reworkTask.title}'\nReview Feedback: ${reworkTask.details}`;
+      })
+      .with({type: "rework"}, (reworkPlan) => {
+        const reworkTask = reworkPlan.task;
+        planningPrompt = `### Rework Planning\nOriginal Task: '${reworkTask.id} ${reworkTask.title}'\nReview Feedback: ${reworkTask.details}`;
         objective = `Rework task ${reworkTask.id} based on feedback`;
-        break;
-      default: // 'initial'
-        prompt = `### Initial Planning\nGoal: "${init.jobGoal}". Create a plan.`;
+      })
+      .with({type: "initial"}, () => {
+        planningPrompt = `### Initial Planning\nGoal: "${init.jobGoal}". Create a plan.`;
         objective = "Create initial project plan";
-        break;
+      })
+      .exhaustive();
+
+    const result = await usePlannerAgent(mastra, planningPrompt, {logManager});
+    console.log("QAQ plan result", result.object);
+
+    const plans = result.object;
+    let summary: string[] = [];
+    for (const plan of plans) {
+      await match(plan)
+        .with({type: "add"}, async (item) => {
+          const newTask = await logManager.addTask(item.task);
+          summary.push(`Added Task:${newTask.id}.`);
+        })
+        .with({type: "update"}, async (item) => {
+          await logManager.updateTask(item.id, item.changes);
+          summary.push(`Updated Task:${item.id}.`);
+        })
+        .with({type: "cancel"}, async (item) => {
+          await logManager.updateTask(item.id, {status: "Cancelled"});
+          summary.push(`Cancelled Task:${item.id}.`);
+        })
+        .exhaustive();
     }
 
-    const runtimeContext = new RuntimeContext<JixoRuntimeContextData>();
-    runtimeContext.set("jobName", init.jobName);
-    runtimeContext.set("jobGoal", init.jobGoal);
-    runtimeContext.set("roadmap", log.roadmap);
-    runtimeContext.set("workDir", log.env?.workDir ?? init.workDir);
-
-    const result = await mastra.getAgent("plannerAgent").generate(prompt, {
-      output: PlannerOutputSchema,
-      runtimeContext,
-    });
-
-    const plan = result.object;
-    let summary = [];
-
-    if (plan.cancel && plan.cancel.length > 0) {
-      for (const taskId of plan.cancel) {
-        await logManager.updateTask(taskId, {status: "Cancelled"});
-      }
-      summary.push(`Cancelled ${plan.cancel.length} task(s).`);
-    }
-
-    if (plan.update && plan.update.length > 0) {
-      for (const item of plan.update) {
-        await logManager.updateTask(item.id, item.changes);
-      }
-      summary.push(`Updated ${plan.update.length} task(s).`);
-    }
-
-    if (plan.add && plan.add.length > 0) {
-      for (const task of plan.add) {
-        await logManager.addTask(task);
-      }
-      summary.push(`Added ${plan.add.length} new root task(s).`);
-    }
-
-    if (planningContext?.type === "rework") {
-      await logManager.updateTask(planningContext.task!.id, {details: ""});
+    // <!--[[这里为什么要清空details呢？]]-->
+    if (planningContext.type === "rework") {
+      await logManager.updateTask(planningContext.task.id, {details: ""});
     }
 
     await logManager.addWorkLog({

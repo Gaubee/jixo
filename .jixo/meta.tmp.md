@@ -22,7 +22,7 @@
 ### **关于与我沟通需要遵守的纪律**
 
 1. 请使用中文与我沟通。
-2. 如果设计到代码文件修改，在进行变更文件后，需要在开头提供给我一个“变更日志”，使用 git-commit-message 格式，这里同样适用中文，开头使用Git-Emoji来对这次变更打标签，对于复杂的变更，可以打多个标签：
+2. 如果设计到代码文件修改，在进行变更文件后，需要在开头提供给我一个“变更日志”，使用 git-commit-message 格式，这里同样使用中文，并且一定要以我的口吻来生成变更日志，开头使用Git-Emoji来对这次变更打标签，对于复杂的变更，可以打多个标签：
    - 🎨 `:art:`: Improve structure / format of the code.
    - ⚡️ `:zap:`: Improve performance.
    - 🔥 `:fire:`: Remove code or files.

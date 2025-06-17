@@ -3,34 +3,26 @@ import {type LogFileData, type RoadmapTaskNodeData} from "../entities.js";
 
 function serializeRoadmap(tasks: RoadmapTaskNodeData[], level = 0): string {
   const mdLines: string[] = [];
-
   for (const task of tasks) {
     const indent = "  ".repeat(level);
     const checkbox = task.status === "Completed" ? "[x]" : task.status === "Cancelled" ? "[-]" : "[ ]";
-    mdLines.push(`${indent}- ${checkbox} ${task.id} ${task.title}`);
+    mdLines.push(`${indent}- ${checkbox} **${task.id}**: ${task.title}`);
 
-    const subIndent = indent + "  ";
-    mdLines.push(`${subIndent}- status: ${task.status}`);
-    if (task.executor) mdLines.push(`${subIndent}- executor: ${task.executor}`);
-    if (task.description) mdLines.push(`${subIndent}- description: ${task.description}`);
-    if (task.dependsOn && task.dependsOn.length > 0) mdLines.push(`${subIndent}- dependsOn: [${task.dependsOn.join(", ")}]`);
-    if (task.tags && task.tags.length > 0) mdLines.push(`${subIndent}- tags: [${task.tags.join(", ")}]`);
+    if (task.details) {
+      const detailsBlock = task.details
+        .split("\n")
+        .map((line) => `${indent}  > ${line}`)
+        .join("\n");
+      mdLines.push(detailsBlock);
+    }
 
-    // Type guard: Only recurse if the 'children' property exists.
+    if (task.checklist && task.checklist.length > 0) {
+      mdLines.push(`${indent}  - **Checklist**:`);
+      mdLines.push(task.checklist);
+    }
+
     if ("children" in task && task.children && task.children.length > 0) {
-      // We pass sub-tasks to a version of the function that expects them
-      const subTaskLines: string[] = task.children.map((subTask) => {
-        const subTaskIndent = "  ".repeat(level + 1);
-        const subTaskCheckbox = subTask.status === "Completed" ? "[x]" : subTask.status === "Cancelled" ? "[-]" : "[ ]";
-        const subTaskSubIndent = subTaskIndent + "  ";
-
-        let subLines = [`${subTaskIndent}- ${subTaskCheckbox} ${subTask.id} ${subTask.title}`];
-        subLines.push(`${subTaskSubIndent}- status: ${subTask.status}`);
-        if (subTask.executor) subLines.push(`${subTaskSubIndent}- executor: ${subTask.executor}`);
-
-        return subLines.join("\n");
-      });
-      mdLines.push(...subTaskLines);
+      mdLines.push(serializeRoadmap(task.children as RoadmapTaskNodeData[], level + 1));
     }
   }
   return mdLines.join("\n");
@@ -40,15 +32,13 @@ function serializeWorkLog(entries: LogFileData["workLog"]): string {
   const mdLines: string[] = [];
   for (const [index, entry] of Object.entries(entries)) {
     if (mdLines.length > 0) {
-      mdLines.push("");
+      mdLines.push("\n---");
     }
     mdLines.push(
-      //
-      `### Log-${entries.length - +index} @ ${entry.timestamp} for ${entry.runnerId}`,
-      "",
-      `- **Role**: ${entry.role}`,
+      `### Log #${entries.length - +index} | ${entry.role} @ ${entry.timestamp}`,
+      `- **Runner ID**: \`${entry.runnerId}\``,
       `- **Objective**: ${entry.objective}`,
-      `- **Result**: ${entry.result}`,
+      `- **Result**: **${entry.result}**`,
       `- **Summary**: ${entry.summary}`,
     );
   }
@@ -57,15 +47,17 @@ function serializeWorkLog(entries: LogFileData["workLog"]): string {
 
 export function serializeLogFile(data: LogFileData): string {
   const {roadmap, workLog, ...metadata} = data;
-  return matter.stringify(
-    `
+  const content = `
 ## Roadmap
 
 ${serializeRoadmap(data.roadmap) || "_No tasks planned yet._"}
 
+---
+
 ## Work Log
 
-${serializeWorkLog(data.workLog) || "_No work logged yet._"}`,
-    metadata,
-  );
+${serializeWorkLog(data.workLog) || "_No work logged yet._"}
+`;
+
+  return matter.stringify(content, metadata);
 }

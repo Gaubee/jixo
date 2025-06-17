@@ -1,15 +1,21 @@
 import {z} from "zod";
+import {SubTaskSchema} from "../entities.js";
 
 // Schema for a sub-task input. It cannot have children.
-const NewSubTaskSchema = z.object({
-  title: z.string().describe("The concise, human-readable title of the sub-task."),
-  description: z.string().optional().describe("An optional, brief explanation of the sub-task's objective."),
-  details: z.string().optional().describe("Detailed, step-by-step instructions for the executor."),
-  checklist: z.array(z.string()).optional().describe("A machine-readable list of success criteria for the reviewer to verify."),
-  dependsOn: z.array(z.string()).optional().describe("A list of task IDs that must be completed before this task can start."),
-  tags: z.array(z.string()).optional().describe("Keywords for categorizing the task."),
-  gitCommit: z.boolean().optional().describe("Instruction for git commit after completion."),
-});
+const NewSubTaskSchema = SubTaskSchema.omit({
+  id: true,
+  status: true,
+  executor: true,
+  reviewer: true,
+  gitCommit: true,
+})
+  .partial()
+  .required({
+    title: true,
+    description: true,
+    details: true,
+    checklist: true,
+  });
 export type NewSubTaskData = z.infer<typeof NewSubTaskSchema>;
 
 // Schema for a root-level task input. It can have an array of sub-tasks.
@@ -18,30 +24,34 @@ export const NewTaskSchema = NewSubTaskSchema.extend({
 });
 export type NewTaskData = z.infer<typeof NewTaskSchema>;
 
-export const AddTasksSchema = z
-  .array(NewTaskSchema)
-  .describe("A list of new root-level tasks to add to the roadmap. For sub-tasks, use the 'update' operation on the parent task's 'children' field.");
+export const AddTaskSchema = z.object({
+  type: z.literal("add"),
+  task: NewTaskSchema, //.pick({title: true, description: true}),
+});
+// export const AddTasksSchema = z.array(z.string());
 
-export const UpdateTasksSchema = z
-  .array(
-    z.object({
-      id: z.string().describe("The ID of the task to update."),
-      changes: NewTaskSchema.partial().describe("An object containing the fields to be updated on the specified task."),
-    }),
-  )
-  .describe("A list of updates to apply to existing tasks.");
+export const UpdateTaskSchema = z.object({
+  type: z.literal("update"),
+  id: z.string().describe("The ID of the task to update."),
+  changes: NewTaskSchema.partial().describe("An object containing the fields to be updated on the specified task."),
+});
 
-export const CancelTasksSchema = z.array(z.string()).describe("A list of task IDs to be marked as 'Cancelled'.");
+export const CancelTaskSchema = z.object({
+  type: z.literal("cancel"),
+  id: z.string().describe("The ID of the task to cancel."),
+});
 
 // The final, powerful schema that the PlannerAgent must adhere to.
-export const PlannerOutputSchema = z
-  .object({
-    add: AddTasksSchema,
-    update: UpdateTasksSchema,
-    cancel: CancelTasksSchema,
-  })
-  .partial()
-  .describe("A set of instructions to dynamically modify the project roadmap.");
+export const PlannerOutputSchema = z.union([AddTaskSchema, UpdateTaskSchema, CancelTaskSchema]).array();
+
+//   .object({
+//     add: AddTaskSchema.optional().describe(
+//       "A list of new root-level tasks to add to the roadmap. For sub-tasks, use the 'update' operation on the parent task's 'children' field.",
+//     ),
+//     update: UpdateTasksSchema.optional().describe("A list of updates to apply to existing tasks."),
+//     cancel: CancelTasksSchema.optional().describe("A list of task IDs to be marked as 'Cancelled'."),
+//   })
+//   .describe("A set of instructions to dynamically modify the project roadmap.");
 
 // Schema for the structured output from the ExecutorAgent.
 export const ExecutionResultSchema = z.object({

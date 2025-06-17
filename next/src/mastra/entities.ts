@@ -5,13 +5,14 @@ export const SubTaskSchema = z.object({
   id: z.string().describe("A unique, period-separated identifier for the sub-task (e.g., '1.1', '1.2')."),
   title: z.string().describe("The concise, human-readable title of the sub-task."),
   description: z.string().optional().describe("An optional, brief explanation of the sub-task's objective."),
-  details: z.string().optional().describe("Detailed, step-by-step instructions or context for the executor, potentially in Markdown format."),
-  checklist: z.array(z.string()).optional().describe("A machine-readable list of success criteria or deliverables for the reviewer to verify."),
+  details: z.string().optional().describe("Detailed, step-by-step instructions for the Execotor how to accomplish the task."),
+  checklist: z.string().optional().describe("A detailed description of the Reviewer, indicating the acceptance criteria of the acceptance task"),
   status: z.enum(["Pending", "Locked", "Completed", "Failed", "Cancelled", "PendingReview"]).describe("The current lifecycle status of the task."),
   executor: z.string().optional().describe("The ID of the runner currently assigned to execute this task."),
   reviewer: z.string().optional().describe("The ID of the runner assigned to review this task."),
   dependsOn: z.array(z.string()).optional().describe("A list of task IDs that must be completed before this task can start."),
   tags: z.array(z.string()).optional().describe("Keywords for categorizing the task (e.g., 'backend', 'refactor')."),
+  /**<!--[[gitCommit不该出现在这里，gitCommit应该是 jixoJobWorkflow 的一个输入字段，有的情况下，然后通过提示词告知 excutor或者reviewer来做git-commit]]--> */
   gitCommit: z.boolean().optional().describe("Whether to perform a git commit after completion."),
 });
 
@@ -37,10 +38,16 @@ export const WorkLogEntrySchema = z.object({
 });
 export type WorkLogEntryData = z.infer<typeof WorkLogEntrySchema>;
 
+// Defines the persistent metadata associated with a Job.
+export const JobInfoSchema = z.object({
+  jobGoal: z.string().describe("The high-level goal of the job."),
+  workDir: z.string().describe("The absolute path to the sandboxed working directory for this job."),
+  // Future fields like gitRepositoryUrl can be added here.
+});
+export type JobInfoData = z.infer<typeof JobInfoSchema>;
+
 export const LogFileSchema = z.object({
-  title: z.string().describe("The overall title of the job, derived from the user's goal."),
-  progress: z.string().describe("A percentage string representing the job's estimated completion."),
-  env: z.record(z.string()).optional().describe("Environment variables for the job, e.g., workDir."),
+  info: JobInfoSchema,
   roadmap: z.array(RoadmapTaskNodeSchema).optional().default([]).describe("The hierarchical list of tasks to be executed for the job."),
   workLog: z.array(WorkLogEntrySchema).optional().default([]).describe("An immutable, time-ordered log of all actions taken during the job."),
 });

@@ -7,6 +7,7 @@ import {jixoJobWorkflow} from "./jixoJobWorkflow.js";
 const JixoMasterWorkflowInputSchema = z.object({
   jobName: z.string(),
   jobGoal: z.string(),
+  workDir: z.string().optional(),
   maxLoops: z.number().default(20),
 });
 
@@ -17,13 +18,11 @@ const masterLoopStep = createStep({
   async execute({inputData, mastra}) {
     let loopCount = 0;
     let consecutiveErrors = 0;
-    const workDir = process.cwd(); // Get the CWD once here
-    const logManager = await logManagerFactory.getOrCreate(inputData.jobName, {workDir});
+    const {jobName, jobGoal, workDir = process.cwd(), maxLoops} = inputData;
+    const logManager = await logManagerFactory.getOrCreate(jobName, {jobGoal, workDir});
 
-    while (loopCount < inputData.maxLoops) {
+    while (loopCount < maxLoops) {
       loopCount++;
-      // Reload from disk to catch changes made by other processes if necessary in a multi-runner env
-      // For this single-process simulation, it ensures we have the latest state from the previous loop.
       await logManager.reload();
 
       if (logManager.isJobCompleted()) {
@@ -35,19 +34,18 @@ const masterLoopStep = createStep({
 
       try {
         const jobRun = (mastra.getWorkflow("jixoJobWorkflow") as typeof jixoJobWorkflow).createRun();
-        const result = await jobRun.start({inputData: {jobName: inputData.jobName, jobGoal: inputData.jobGoal, runnerId, otherRunners: [], workDir}});
+        const result = await jobRun.start({inputData: {jobName, jobGoal, runnerId, otherRunners: [], workDir}});
 
         if (result.status === "failed") {
-          // This case handles errors within the workflow step logic itself
           consecutiveErrors++;
           console.error(`[Master Loop] Unhandled workflow error: ${result.error}`);
           if (consecutiveErrors >= 3) {
             return {finalStatus: "Job failed: 3 consecutive unhandled workflow errors."};
           }
-          await delay(2000); // Wait before retrying
+          await delay(2000);
           continue;
         }
-        consecutiveErrors = 0; // Reset on success
+        consecutiveErrors = 0;
 
         if (result.status === "suspended") throw new Error("Workflow suspended unexpectedly.");
 
@@ -56,10 +54,7 @@ const masterLoopStep = createStep({
 
         if (exitCode === 0) return {finalStatus: "Job completed successfully."};
         if (exitCode === 1) return {finalStatus: `Job failed: ${reason}`};
-
-        // For exitCode 2 (Standby), we just continue the loop
       } catch (error) {
-        // This case handles unexpected crashes, e.g., service failures
         consecutiveErrors++;
         console.error(`[Master Loop] Caught exception during inner cycle:`, error);
         if (consecutiveErrors >= 3) {
@@ -67,7 +62,7 @@ const masterLoopStep = createStep({
         }
       }
 
-      await delay(1500); // A small delay between cycles
+      await delay(1500);
     }
     return {finalStatus: "Job stopped: Max loop count reached."};
   },

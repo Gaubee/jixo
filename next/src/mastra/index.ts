@@ -19,5 +19,5 @@ export const mastra = new Mastra({
     jixoMasterWorkflow,
   },
   storage: new LibSQLStore({url: ":memory:"}),
-  logger: new PinoLogger({name: "JIXO", level: "info"}),
+  logger: new PinoLogger({name: "JIXO", level: "debug"}),
 });

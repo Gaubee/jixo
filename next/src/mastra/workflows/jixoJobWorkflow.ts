@@ -13,11 +13,11 @@ export const jixoJobWorkflow = createWorkflow({
 })
   .then(triageStep)
   .branch([
-    [async (res) => res.inputData.action === "plan", planningStep as any as Step<"planning", typeof TriageOutputSchema, typeof JixoJobWorkflowExitInfoSchema>],
-    [async (res) => res.inputData.action === "execute", executionStep as any as Step<"execution", typeof TriageOutputSchema, typeof JixoJobWorkflowExitInfoSchema>],
-    [async (res) => res.inputData.action === "review", reviewStep as any as Step<"review", typeof TriageOutputSchema, typeof JixoJobWorkflowExitInfoSchema>],
+    [async (res) => "plan" === res.inputData.action, planningStep as any as Step<"planning", typeof TriageOutputSchema, typeof JixoJobWorkflowExitInfoSchema>],
+    [async (res) => "execute" === res.inputData.action, executionStep as any as Step<"execution", typeof TriageOutputSchema, typeof JixoJobWorkflowExitInfoSchema>],
+    [async (res) => "review" === res.inputData.action, reviewStep as any as Step<"review", typeof TriageOutputSchema, typeof JixoJobWorkflowExitInfoSchema>],
     [
-      async (res) => res.inputData.action === "exit",
+      async (res) => "exit" === res.inputData.action,
       createStep({
         id: "exit",
         inputSchema: TriageExitSchema,

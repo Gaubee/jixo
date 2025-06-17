@@ -1,9 +1,9 @@
 import {RuntimeContext} from "@mastra/core/runtime-context";
 import {createStep} from "@mastra/core/workflows";
-import {ExecutionResultSchema} from "../agent/index.js";
+import {useExecutorAgent} from "../agent/executor.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
-import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, type JixoRuntimeContextData, TriageExecuteSchema} from "./schemas.js";
+import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageExecuteSchema, type ExecutorRuntimeContextData} from "./schemas.js";
 
 export const executionStep = createStep({
   id: "execution",
@@ -12,24 +12,19 @@ export const executionStep = createStep({
   async execute({inputData, mastra, getInitData}) {
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const task = inputData.task!;
-    const logManager = await logManagerFactory.getOrCreate(init.jobName);
+    const logManager = await logManagerFactory.getOrCreate(init.jobName, init);
+    const currentLog = logManager.getLogFile();
 
-    const runtimeContext = new RuntimeContext<JixoRuntimeContextData>();
-    runtimeContext.set("jobName", init.jobName);
-    runtimeContext.set("jobGoal", init.jobGoal);
-    runtimeContext.set("workDir", init.workDir);
-    runtimeContext.set("task", task);
-    // Provide the last 3 logs for context
-    runtimeContext.set("recentWorkLog", inputData.log.workLog.slice(0, 3));
+    const runtimeContext = new RuntimeContext<ExecutorRuntimeContextData>([
+      ["logManager", logManager],
+      ["task", task],
+      ["recentWorkLog", currentLog.workLog.slice(0, 3)],
+    ]);
 
     try {
       await logManager.updateTask(task.id, {status: "Locked", executor: init.runnerId});
 
-      const result = await mastra.getAgent("executorAgent").generate(`Task: ${task.title}. Details: ${task.details ?? "N/A"}`, {
-        output: ExecutionResultSchema,
-        runtimeContext,
-      });
-
+      const result = await useExecutorAgent(mastra, {runtimeContext});
       const executionResult = result.object;
 
       if (executionResult.outcome === "failure") {
@@ -37,7 +32,6 @@ export const executionStep = createStep({
       }
 
       if (task.gitCommit) {
-        // Standardized commit message format
         const commitMessage = `feat(task-${task.id}): ${task.title}\n\n${executionResult.summary}`;
         console.log(`[Executor] Simulating: git commit -m "${commitMessage}"`);
       }

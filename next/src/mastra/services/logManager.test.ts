@@ -8,24 +8,37 @@ import {logManagerFactory} from "./logManagerFactory.js";
 const TEST_JOB_NAME = "test-job-for-logmanager";
 let logManager: LogManager;
 
-// Clean up and initialize before each test to ensure isolation.
 beforeEach(async () => {
   const {getLogFilePath, ensureJixoDirsExist} = await import("./internal.js");
   await ensureJixoDirsExist();
   const logFilePath = getLogFilePath(TEST_JOB_NAME);
-  // Ensure the physical file is gone, so each test starts with a clean slate.
   await fsp.unlink(logFilePath).catch(() => {});
 
-  // Use the isolated factory method to get a pristine LogManager instance for each test.
-  logManager = await logManagerFactory.createIsolated(TEST_JOB_NAME);
+  // Corrected: Pass a valid JobInfoData object
+  logManager = await logManagerFactory.createIsolated(TEST_JOB_NAME, {jobGoal: "testonly", workDir: "/tmp/jixo-test"});
 });
 
-describe("LogManager Basic CRUD", () => {
-  it("should initialize and create an empty log file", async () => {
+describe("LogManager Basic CRUD & Info", () => {
+  it("should initialize and create an empty log file with initial info", async () => {
     const logData = logManager.getLogFile();
-    expect(logData.title).toBe("_undefined_");
+    const jobInfo = logData.info;
+    // Corrected: `title` is no longer a top-level property
     expect(logData.roadmap).toEqual([]);
     expect(logData.workLog).toEqual([]);
+    expect(jobInfo?.workDir).toBe("/tmp/jixo-test");
+    // Corrected: The initial goal is passed during creation now
+    expect(jobInfo?.jobGoal).toBe("testonly");
+  });
+
+  it("should update job info correctly", async () => {
+    await logManager.updateJobInfo({jobGoal: "A new goal", workDir: "/new/dir"});
+    const jobInfo = logManager.getJobInfo();
+    expect(jobInfo?.jobGoal).toBe("A new goal");
+    expect(jobInfo?.workDir).toBe("/new/dir");
+
+    await logManager.reload();
+    const reloadedInfo = logManager.getJobInfo();
+    expect(reloadedInfo?.jobGoal).toBe("A new goal");
   });
 
   it("should add a root-level task without children", async () => {
@@ -35,7 +48,6 @@ describe("LogManager Basic CRUD", () => {
     expect(createdTask.title).toBe(title);
     expect(createdTask.children).toEqual([]);
 
-    // Verify persistence
     await logManager.reload();
     const logData = logManager.getLogFile();
     expect(logData.roadmap).toHaveLength(1);

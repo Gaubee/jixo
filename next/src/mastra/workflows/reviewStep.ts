@@ -1,9 +1,9 @@
 import {RuntimeContext} from "@mastra/core/runtime-context";
 import {createStep} from "@mastra/core/workflows";
-import {ReviewResultSchema} from "../agent/index.js";
+import {useReviewerAgent} from "../agent/reviewer.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
-import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, type JixoRuntimeContextData, TriageReviewSchema} from "./schemas.js";
+import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, type ReviewerRuntimeContextData, TriageReviewSchema} from "./schemas.js";
 import {REWORK_MARKER} from "./utils.js";
 
 export const reviewStep = createStep({
@@ -13,40 +13,33 @@ export const reviewStep = createStep({
   async execute({inputData, mastra, getInitData}) {
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const task = inputData.task!;
-    const logManager = await logManagerFactory.getOrCreate(init.jobName);
+    const logManager = await logManagerFactory.getOrCreate(init.jobName, init);
+    const currentLog = logManager.getLogFile();
 
-    const taskSpecificLogs = inputData.log.workLog.filter((log) => log.objective.includes(`task ${task.id}`));
+    const taskSpecificLogs = currentLog.workLog.filter((log) => log.objective.includes(`task ${task.id}`));
     const executorSummary = taskSpecificLogs.find((log) => log.role === "Executor")?.summary || "No summary found.";
 
-    const runtimeContext = new RuntimeContext<JixoRuntimeContextData>();
-    runtimeContext.set("jobName", init.jobName);
-    runtimeContext.set("jobGoal", init.jobGoal);
-    runtimeContext.set("workDir", init.workDir);
-    runtimeContext.set("task", task);
-    runtimeContext.set("taskSpecificLogs", taskSpecificLogs);
-    runtimeContext.set("executionSummary", executorSummary);
-
-    const prompt = `Review task ${task.id} based on the provided context (checklist, logs, summary).`;
+    const runtimeContext = new RuntimeContext<ReviewerRuntimeContextData>([
+      ["logManager", logManager],
+      ["task", task],
+      ["taskSpecificLogs", taskSpecificLogs],
+      ["executionSummary", executorSummary],
+    ]);
 
     try {
-      const result = await mastra.getAgent("reviewerAgent").generate(prompt, {
-        output: ReviewResultSchema,
-        runtimeContext,
-      });
-
+      const result = await useReviewerAgent(mastra, {runtimeContext});
       const reviewResult = result.object;
 
-      // Handle ABORT case first
-      if (reviewResult.decision.startsWith("ABORT:")) {
+      if (reviewResult.feedback?.startsWith("ABORT:")) {
         await logManager.addWorkLog({
           timestamp: new Date().toISOString(),
           runnerId: init.runnerId,
           role: "Reviewer",
           objective: `Review task ${task.id}`,
           result: "Failed",
-          summary: `Reviewer aborted job: ${reviewResult.decision}`,
+          summary: `Reviewer aborted job: ${reviewResult.feedback}`,
         });
-        return {exitCode: 1, reason: `Reviewer aborted job: ${reviewResult.decision}`};
+        return {exitCode: 1, reason: `Reviewer aborted job: ${reviewResult.feedback}`};
       }
 
       if (reviewResult.decision === "approved") {
@@ -61,7 +54,6 @@ export const reviewStep = createStep({
         });
         return {exitCode: 2, reason: `Task ${task.id} approved.`};
       } else {
-        // Decision is 'rejected'
         const reworkDetails = `${REWORK_MARKER}:\n${reviewResult.feedback}`;
         await logManager.updateTask(task.id, {status: "Pending", details: reworkDetails, executor: DELETE_FIELD_MARKER as any});
         await logManager.addWorkLog({
