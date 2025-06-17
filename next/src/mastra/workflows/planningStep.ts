@@ -13,16 +13,22 @@ export const planningStep = createStep({
     const {planningContext} = inputData;
     const {jobName, runnerId, jobGoal, workDir} = init;
     const logManager = await logManagerFactory.getOrCreate(jobName, {jobGoal, workDir});
-    const currentLog = logManager.getLogFile();
 
     let planningPrompt = "";
     let objective = "";
 
+    // Use ts-pattern to safely handle the different planning contexts
     match(planningContext)
       .with({type: "fixFailure"}, (fixPlan) => {
         const failedTask = fixPlan.task;
-        const failureLog = currentLog.workLog.find((w) => w.objective.includes(failedTask.id) && w.result === "Failed");
-        planningPrompt = `### Failure Recovery Planning\nFailed Task: '${failedTask.id} ${failedTask.title}'\nError Summary: ${failureLog?.summary ?? "Unknown error"}`;
+        planningPrompt = `### Failure Recovery Planning
+**Error Type**: ${fixPlan.errorType ?? "unknown"}
+**Failed Task**: '${failedTask.id} ${failedTask.title}'
+**Error Summary**: ${fixPlan.errorSummary ?? "Unknown error"}
+
+**Instruction**: Based on the error type, devise a recovery plan. 
+- If 'transient', create a new task to retry the original one.
+- If 'code_error', analyze the summary and create tasks to fix the code.`;
         objective = `Fix failed task ${failedTask.id}`;
       })
       .with({type: "rework"}, (reworkPlan) => {
@@ -37,7 +43,6 @@ export const planningStep = createStep({
       .exhaustive();
 
     const result = await usePlannerAgent(mastra, planningPrompt, {logManager});
-    console.log("QAQ plan result", result.object);
 
     const plans = result.object;
     let summary: string[] = [];

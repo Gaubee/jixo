@@ -20,7 +20,6 @@ export type JixoJobWorkflowExitInfoData = z.infer<typeof JixoJobWorkflowExitInfo
 // --- Role-Specific Runtime Context Schemas ---
 
 // Base context, providing the essential LogManager service.
-// This is primarily for tools that might need access to the LogManager.
 export const JobBaseRuntimeContextSchema = z.object({
   logManager: z.instanceof(LogManager),
 });
@@ -47,18 +46,34 @@ export type ReviewerRuntimeContextData = z.infer<typeof ReviewerRuntimeContextSc
 
 // --- Triage Step Schemas ---
 
+/**
+ * Defines the context for the initial planning phase.
+ */
 const PlanningInitialSchema = z.object({
   type: z.literal("initial"),
 });
+
+/**
+ * Defines the context for planning a rework of a task.
+ */
 const PlanningReworkSchema = z.object({
   type: z.literal("rework"),
   task: AnyTaskSchema,
 });
+
+/**
+ * Defines the context for planning a fix for a failed task.
+ */
 const PlanningFixFailureSchema = z.object({
   type: z.literal("fixFailure"),
   task: AnyTaskSchema,
+  errorType: z.enum(["transient", "code_error", "unknown"]).optional(),
+  errorSummary: z.string().optional(),
 });
 
+/**
+ * A union of all possible planning contexts, ensuring type-safe handling in the planning step.
+ */
 const PlanningContextSchema = z.union([
   //
   PlanningInitialSchema,
