@@ -1,6 +1,7 @@
 import {createStep} from "@mastra/core/workflows";
 import {match} from "ts-pattern";
 import {usePlannerAgent} from "../agent/planner.js";
+import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriagePlanSchema} from "./schemas.js";
 export const planningStep = createStep({
@@ -26,7 +27,7 @@ export const planningStep = createStep({
       })
       .with({type: "rework"}, (reworkPlan) => {
         const reworkTask = reworkPlan.task;
-        planningPrompt = `### Rework Planning\nOriginal Task: '${reworkTask.id} ${reworkTask.title}'\nReview Feedback: ${reworkTask.details}`;
+        planningPrompt = `### Rework Planning\nOriginal Task: '${reworkTask.id} ${reworkTask.title}'\nReview Feedback: ${reworkTask.reworkReason}`;
         objective = `Rework task ${reworkTask.id} based on feedback`;
       })
       .with({type: "initial"}, () => {
@@ -57,9 +58,8 @@ export const planningStep = createStep({
         .exhaustive();
     }
 
-    // <!--[[这里为什么要清空details呢？]]-->
     if (planningContext.type === "rework") {
-      await logManager.updateTask(planningContext.task.id, {details: ""});
+      await logManager.updateTask(planningContext.task.id, {reworkReason: DELETE_FIELD_MARKER});
     }
 
     await logManager.addWorkLog({

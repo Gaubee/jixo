@@ -7,15 +7,10 @@ const NewSubTaskSchema = SubTaskSchema.omit({
   status: true,
   executor: true,
   reviewer: true,
+  reworkReason: true,
   gitCommit: true,
-})
-  .partial()
-  .required({
-    title: true,
-    description: true,
-    details: true,
-    checklist: true,
-  });
+});
+
 export type NewSubTaskData = z.infer<typeof NewSubTaskSchema>;
 
 // Schema for a root-level task input. It can have an array of sub-tasks.
@@ -26,9 +21,12 @@ export type NewTaskData = z.infer<typeof NewTaskSchema>;
 
 export const AddTaskSchema = z.object({
   type: z.literal("add"),
-  task: NewTaskSchema, //.pick({title: true, description: true}),
+  task: NewTaskSchema.required({
+    description: true,
+    details: true,
+    checklist: true,
+  }),
 });
-// export const AddTasksSchema = z.array(z.string());
 
 export const UpdateTaskSchema = z.object({
   type: z.literal("update"),

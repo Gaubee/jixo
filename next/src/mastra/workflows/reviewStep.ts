@@ -4,7 +4,6 @@ import {useReviewerAgent} from "../agent/reviewer.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, type ReviewerRuntimeContextData, TriageReviewSchema} from "./schemas.js";
-import {REWORK_MARKER} from "./utils.js";
 
 export const reviewStep = createStep({
   id: "review",
@@ -43,7 +42,7 @@ export const reviewStep = createStep({
       }
 
       if (reviewResult.decision === "approved") {
-        await logManager.updateTask(task.id, {status: "Completed", reviewer: init.runnerId});
+        await logManager.updateTask(task.id, {status: "Completed", reviewer: init.runnerId, reworkReason: DELETE_FIELD_MARKER});
         await logManager.addWorkLog({
           timestamp: new Date().toISOString(),
           runnerId: init.runnerId,
@@ -54,8 +53,7 @@ export const reviewStep = createStep({
         });
         return {exitCode: 2, reason: `Task ${task.id} approved.`};
       } else {
-        const reworkDetails = `${REWORK_MARKER}:\n${reviewResult.feedback}`;
-        await logManager.updateTask(task.id, {status: "Pending", details: reworkDetails, executor: DELETE_FIELD_MARKER as any});
+        await logManager.updateTask(task.id, {status: "Pending", reworkReason: reviewResult.feedback, executor: DELETE_FIELD_MARKER});
         await logManager.addWorkLog({
           timestamp: new Date().toISOString(),
           runnerId: init.runnerId,
@@ -69,7 +67,7 @@ export const reviewStep = createStep({
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[Reviewer] Review for task ${task.id} failed with an exception:`, errorMessage);
-      await logManager.updateTask(task.id, {status: "Pending", details: `${REWORK_MARKER}:\nReview process failed: ${errorMessage}`});
+      await logManager.updateTask(task.id, {status: "Pending", reworkReason: `Review process failed: ${errorMessage}`, executor: DELETE_FIELD_MARKER});
       await logManager.addWorkLog({
         timestamp: new Date().toISOString(),
         runnerId: init.runnerId,

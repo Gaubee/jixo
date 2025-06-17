@@ -71,25 +71,25 @@ const TriageBaseSchema = z.object({
 });
 
 export const TriagePlanSchema = TriageBaseSchema.extend({
-  action: z.enum(["plan"]),
+  action: z.literal("plan"),
   planningContext: PlanningContextSchema,
 });
 export type TriagePlanData = z.infer<typeof TriagePlanSchema>;
 
 export const TriageExecuteSchema = TriageBaseSchema.extend({
-  action: z.enum(["execute"]),
+  action: z.literal("execute"),
   task: AnyTaskSchema,
 });
 export type TriageExecuteData = z.infer<typeof TriageExecuteSchema>;
 
 export const TriageReviewSchema = TriageBaseSchema.extend({
-  action: z.enum(["review"]),
+  action: z.literal("review"),
   task: AnyTaskSchema,
 });
 export type TriageReviewData = z.infer<typeof TriageReviewSchema>;
 
 export const TriageExitSchema = TriageBaseSchema.extend({
-  action: z.enum(["exit"]),
+  action: z.literal("exit"),
   exitInfo: JixoJobWorkflowExitInfoSchema,
 });
 export type TriageExitData = z.infer<typeof TriageExitSchema>;

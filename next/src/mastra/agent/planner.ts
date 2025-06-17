@@ -1,8 +1,8 @@
+import {YAML} from "@gaubee/nodekit";
 import type {Mastra} from "@mastra/core";
 import {Agent} from "@mastra/core/agent";
 import {thinkModel} from "../llm/index.js";
 import {type LogManager} from "../services/logManager.js";
-import {serializeLogFile} from "../services/logSerializer.js";
 import {PlannerOutputSchema} from "./schemas.js";
 
 export const plannerAgent = new Agent({
@@ -24,7 +24,7 @@ For every new task or sub-task you create, you MUST provide:
 Analyze the user's request carefully and provide a precise and actionable plan.`,
   model: thinkModel,
 });
-
+const split = "```";
 export const usePlannerAgent = (
   mastra: Mastra,
   // The specific planning scenario and context.
@@ -33,21 +33,23 @@ export const usePlannerAgent = (
   args: {logManager: LogManager},
 ) => {
   const {logManager} = args;
-  const jobInfo = logManager.getJobInfo();
-  const roadmap = logManager.getLogFile().roadmap ?? [];
-  const workDir = jobInfo.workDir;
-  const jobGoal = jobInfo.jobGoal;
+  const {
+    roadmap,
+    info: {workDir, jobGoal},
+  } = logManager.getLogFile();
 
-  const roadmapMarkdown = serializeLogFile({info: jobInfo, roadmap, workLog: []}).split("## Roadmap")[1].split("## Work Log")[0].trim();
+  const roadmapMd = roadmap.length ? `${split}yaml\n${YAML.stringify(roadmap)}\n${split}` : "";
 
   const finalPrompt = `
 The project's working directory is: \`${workDir}\`. ALL file paths in your plan must be relative to this directory.
 
 ### Overall Job Goal
+
 ${jobGoal}
 
-### Current Roadmap State
-${roadmapMarkdown || "_No tasks planned yet._"}
+### Current Roadmap
+
+${roadmapMd || "_No tasks planned yet._"}
 
 ---
 

@@ -3,7 +3,6 @@ import {DELETE_FIELD_MARKER} from "../entities.js";
 import {walkJobRoadmap} from "../services/logHelper.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
 import {JixoJobWorkflowInputSchema, TriageOutputSchema, type TriageOutputData} from "./schemas.js";
-import {REWORK_MARKER} from "./utils.js";
 
 export const triageStep = createStep({
   id: "triage",
@@ -42,7 +41,7 @@ export const triageStep = createStep({
       return {action: "review", task: taskToReview};
     }
 
-    const taskForRework = logManager.findTask((t) => t.status === "Pending" && t.details?.startsWith(REWORK_MARKER));
+    const taskForRework = logManager.findTask((t) => t.status === "Pending" && t.reworkReason != null);
     if (taskForRework) {
       return {action: "plan", planningContext: {type: "rework", task: taskForRework}};
     }

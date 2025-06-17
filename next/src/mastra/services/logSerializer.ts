@@ -8,17 +8,24 @@ function serializeRoadmap(tasks: RoadmapTaskNodeData[], level = 0): string {
     const checkbox = task.status === "Completed" ? "[x]" : task.status === "Cancelled" ? "[-]" : "[ ]";
     mdLines.push(`${indent}- ${checkbox} **${task.id}**: ${task.title}`);
 
-    if (task.details) {
-      const detailsBlock = task.details
-        .split("\n")
-        .map((line) => `${indent}  > ${line}`)
-        .join("\n");
-      mdLines.push(detailsBlock);
+    if (task.details.length > 0) {
+      mdLines.push(
+        `${indent}  - **Details**:`,
+        ...task.details
+          //
+          .map((line) => `${indent}    > ${line}`),
+        "",
+      );
     }
 
-    if (task.checklist && task.checklist.length > 0) {
-      mdLines.push(`${indent}  - **Checklist**:`);
-      mdLines.push(task.checklist);
+    if (task.checklist.length > 0) {
+      mdLines.push(
+        `${indent}  - **Checklist**:`,
+        ...task.checklist
+          //
+          .map((line) => `${indent}    > ${line}`),
+        "",
+      );
     }
 
     if ("children" in task && task.children && task.children.length > 0) {
@@ -46,7 +53,6 @@ function serializeWorkLog(entries: LogFileData["workLog"]): string {
 }
 
 export function serializeLogFile(data: LogFileData): string {
-  const {roadmap, workLog, ...metadata} = data;
   const content = `
 ## Roadmap
 
@@ -59,5 +65,5 @@ ${serializeRoadmap(data.roadmap) || "_No tasks planned yet._"}
 ${serializeWorkLog(data.workLog) || "_No work logged yet._"}
 `;
 
-  return matter.stringify(content, metadata);
+  return matter.stringify(content, data);
 }

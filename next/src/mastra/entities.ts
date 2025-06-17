@@ -5,11 +5,24 @@ export const SubTaskSchema = z.object({
   id: z.string().describe("A unique, period-separated identifier for the sub-task (e.g., '1.1', '1.2')."),
   title: z.string().describe("The concise, human-readable title of the sub-task."),
   description: z.string().optional().describe("An optional, brief explanation of the sub-task's objective."),
-  details: z.string().optional().describe("Detailed, step-by-step instructions for the Execotor how to accomplish the task."),
-  checklist: z.string().optional().describe("A detailed description of the Reviewer, indicating the acceptance criteria of the acceptance task"),
+  details: z
+    .string()
+    .array()
+    .default([])
+    .describe(
+      "Provide the performer with a step-by-step guide to complete this task. Each step should be a single line of text and follow the 'emoji + verb-starting phrase' format, which concisely describes a specific action. For example: '📝 Write a first draft of the report' or '📞 Contact the client to confirm requirements' (excluding line breaks).",
+    ),
+  checklist: z
+    .string()
+    .array()
+    .default([])
+    .describe(
+      "Provide the reviewer with a list of key criteria for accepting this task. Each criterion should be a single line of text and follow the 'emoji + verb-starting phrase' format, which clearly describes a point that needs to be verified or confirmed. For example: '✅ Verify that all data is accurate' or '📄 Check whether the format of the final document meets the specifications' (excluding line breaks).",
+    ),
   status: z.enum(["Pending", "Locked", "Completed", "Failed", "Cancelled", "PendingReview"]).describe("The current lifecycle status of the task."),
   executor: z.string().optional().describe("The ID of the runner currently assigned to execute this task."),
   reviewer: z.string().optional().describe("The ID of the runner assigned to review this task."),
+  reworkReason: z.string().optional().describe("The ID of the task that caused this task to be reworked."),
   dependsOn: z.array(z.string()).optional().describe("A list of task IDs that must be completed before this task can start."),
   tags: z.array(z.string()).optional().describe("Keywords for categorizing the task (e.g., 'backend', 'refactor')."),
   /**<!--[[gitCommit不该出现在这里，gitCommit应该是 jixoJobWorkflow 的一个输入字段，有的情况下，然后通过提示词告知 excutor或者reviewer来做git-commit]]--> */
