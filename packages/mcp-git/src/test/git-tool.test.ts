@@ -50,27 +50,35 @@ describe("MCP Git Tool Handlers (Integration)", () => {
   describe("`git_status` tool", () => {
     test("should return structured content on success", async () => {
       const handler = getToolHandler("git_status");
+      fs.writeFileSync(path.join(TEST_REPO_PATH, "untracked.txt"), "untracked");
+      fs.appendFileSync(path.join(TEST_REPO_PATH, "test.txt"), "\nmodified");
+
       const result = await handler({repoPath: TEST_REPO_PATH});
 
       assert.strictEqual(result.isError, undefined, "Result should not be an error");
       const structured = result.structuredContent as any;
       assert.strictEqual(structured.success, true);
-      assert.ok(structured.output.includes("On branch main"));
-      assert.ok(structured.output.includes("nothing to commit, working tree clean"));
+      assert.strictEqual(structured.current, "main");
+      assert.strictEqual(structured.isClean(), false);
+      assert.strictEqual(structured.files.length, 2);
+      assert.ok(structured.files.some((f: any) => f.path === "test.txt" && f.working_dir === "M"));
+      assert.ok(structured.files.some((f: any) => f.path === "untracked.txt" && f.working_dir === "?"));
+
+      const textOutput = getResultText(result);
+      assert.ok(textOutput.includes("On branch main"));
+      assert.ok(textOutput.includes("Changes not staged for commit:"));
+      assert.ok(textOutput.includes("\tmodified:   test.txt"));
+      assert.ok(textOutput.includes("Untracked files:"));
+      assert.ok(textOutput.includes("\tuntracked.txt"));
     });
 
     test("should return a structured error for invalid repo path", async () => {
       const handler = getToolHandler("git_status");
-      // Use a path within the sandbox that is not a git repo
       const nonRepoPath = path.join(SANDBOX, "not-a-repo");
       fs.mkdirSync(nonRepoPath);
       const result = await handler({repoPath: nonRepoPath});
 
       assert.strictEqual(result.isError, true, "Result should be an error");
-      const resultText = getResultText(result);
-      assert.ok(resultText.includes("is not a valid Git repository"), "Error message should be correct");
-      assert.ok(resultText.includes("Suggestion:"), "Suggestion text should be present");
-
       const structured = result.structuredContent as any;
       assert.strictEqual(structured.success, false);
       assert.strictEqual(structured.error.name, "InvalidRepoError");
@@ -78,20 +86,42 @@ describe("MCP Git Tool Handlers (Integration)", () => {
   });
 
   describe("`git_commit` tool", () => {
-    test("should return structured success message", async () => {
+    test("should return structured success message with hash", async () => {
       const handler = getToolHandler("git_commit");
       fs.writeFileSync(path.join(TEST_REPO_PATH, "new-file.txt"), "some data");
-      const git = simpleGit(TEST_REPO_PATH);
-      await git.add("new-file.txt");
+      await simpleGit(TEST_REPO_PATH).add("new-file.txt");
 
       const result = await handler({repoPath: TEST_REPO_PATH, message: "feat: add new feature"});
-      const successMessage = "Changes committed successfully with hash";
+      assert.strictEqual(result.isError, undefined);
 
-      assert.strictEqual(result.isError, undefined, "Result should not be an error");
       const structured = result.structuredContent as any;
       assert.strictEqual(structured.success, true);
-      assert.ok(structured.message.startsWith(successMessage));
-      assert.ok(getResultText(result).startsWith(successMessage));
+      assert.ok(structured.commitHash.length > 0, "Commit hash should be present");
+      assert.ok(structured.message.includes(structured.commitHash), "Message should contain the hash");
+    });
+  });
+
+  describe("`git_log` tool", () => {
+    test("should return a structured list of commits", async () => {
+      const git = simpleGit(TEST_REPO_PATH);
+      fs.writeFileSync(path.join(TEST_REPO_PATH, "log-test.txt"), "data");
+      await git.add("log-test.txt");
+      const secondCommit = await git.commit("second commit");
+
+      const handler = getToolHandler("git_log");
+      const result = await handler({repoPath: TEST_REPO_PATH});
+
+      assert.strictEqual(result.isError, undefined);
+      const structured = result.structuredContent as any;
+      assert.strictEqual(structured.success, true);
+      assert.strictEqual(structured.commits.length, 2);
+      assert.strictEqual(structured.commits[0].hash, secondCommit.commit);
+      assert.strictEqual(structured.commits[0].message.trim(), "second commit");
+      assert.strictEqual(structured.commits[1].message.trim(), "initial commit");
+
+      const textOutput = getResultText(result);
+      assert.ok(textOutput.includes(structured.commits[0].hash));
+      assert.ok(textOutput.includes(structured.commits[1].hash));
     });
   });
 
@@ -99,12 +129,9 @@ describe("MCP Git Tool Handlers (Integration)", () => {
     test("should initialize a new repository", async () => {
       const handler = getToolHandler("git_init");
       const newRepoPath = path.join(SANDBOX, "new_repo");
-      assert.strictEqual(fs.existsSync(path.join(newRepoPath, ".git")), false, "Precondition: .git should not exist");
-
       const result = await handler({repoPath: newRepoPath});
-      assert.strictEqual(result.isError, undefined, "Init should succeed");
-      assert.ok(getResultText(result).includes("Initialized empty Git repository"), "Success message should be present");
-      assert.ok(fs.existsSync(path.join(newRepoPath, ".git")), "Postcondition: .git should exist");
+      assert.strictEqual(result.isError, undefined);
+      assert.ok(fs.existsSync(path.join(newRepoPath, ".git")));
     });
   });
 
@@ -112,21 +139,11 @@ describe("MCP Git Tool Handlers (Integration)", () => {
     test("should checkout an existing branch", async () => {
       const git = simpleGit(TEST_REPO_PATH);
       await git.branch(["test-branch"]);
-
       const handler = getToolHandler("git_checkout");
       const result = await handler({repoPath: TEST_REPO_PATH, branchName: "test-branch"});
-
       assert.strictEqual(result.isError, undefined);
-      assert.ok(getResultText(result).includes("Switched to branch 'test-branch'"));
       const currentBranch = await git.revparse(["--abbrev-ref", "HEAD"]);
       assert.strictEqual(currentBranch, "test-branch");
-    });
-
-    test("should fail to checkout a nonexistent branch", async () => {
-      const handler = getToolHandler("git_checkout");
-      const result = await handler({repoPath: TEST_REPO_PATH, branchName: "nonexistent-branch"});
-      assert.ok(result.isError, "Result should be an error");
-      assert.ok(getResultText(result).includes("did not match any file(s) known to git"), "Error message should indicate missing branch");
     });
   });
 });

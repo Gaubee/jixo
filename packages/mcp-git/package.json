@@ -8,7 +8,7 @@
     ".": "./dist/index.js"
   },
   "bin": {
-    "mcp-fs": "./dist/index.js"
+    "mcp-git": "./dist/index.js"
   },
   "scripts": {
     "test": "node --test dist/test/*.test.js"

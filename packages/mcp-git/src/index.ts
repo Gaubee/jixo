@@ -7,7 +7,7 @@ async function main() {
   const program = new Command();
 
   program
-    .name("mcp-git")
+    .name(Object.keys(pkg.bin)[0])
     .version(pkg.version)
     .description("MCP Git Server - Git functionality for MCP")
     .option("-r, --repository <path>", "Git repository path")

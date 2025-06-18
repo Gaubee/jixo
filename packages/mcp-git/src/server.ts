@@ -3,6 +3,7 @@ import {McpServer} from "@modelcontextprotocol/sdk/server/mcp.js";
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
 import fs from "node:fs";
 import path from "node:path";
+import {type StatusResult} from "simple-git";
 import {z} from "zod";
 import pkg from "../package.json" with {type: "json"};
 import {GitCommandError, InvalidRepoError} from "./error.js";
@@ -20,19 +21,63 @@ const GenericErrorSchema = {
     .describe("Included only when 'success' is false."),
 };
 
-const SuccessOutputSchema = {
+const BaseSuccessSchema = {
   success: z.boolean().describe("Indicates if the operation was successful."),
+};
+
+// --- Output Schemas for specific tools ---
+
+const FileStatusSchema = z.object({
+  path: z.string(),
+  index: z.string().describe("Status of the file in the staging area."),
+  working_dir: z.string().describe("Status of the file in the working directory."),
+});
+
+const GitStatusOutputSchema = {
+  ...BaseSuccessSchema,
+  ...GenericErrorSchema,
+  current: z.string().optional().describe("Current branch name."),
+  tracking: z.string().nullable().optional().describe("Tracking branch name."),
+  ahead: z.number().optional().describe("Number of commits ahead of the tracking branch."),
+  behind: z.number().optional().describe("Number of commits behind the tracking branch."),
+  files: z.array(FileStatusSchema).optional().describe("List of files with their status."),
+  isClean: z.boolean().optional().describe("True if the working directory is clean."),
+};
+
+const CommitSchema = z.object({
+  hash: z.string(),
+  date: z.string(),
+  message: z.string(),
+  author_name: z.string(),
+  author_email: z.string(),
+});
+
+const GitLogOutputSchema = {
+  ...BaseSuccessSchema,
+  ...GenericErrorSchema,
+  commits: z.array(CommitSchema).optional().describe("An array of commit objects."),
+};
+
+const GitCommitOutputSchema = {
+  ...BaseSuccessSchema,
+  ...GenericErrorSchema,
   message: z.string().optional(),
-  ...GenericErrorSchema,
+  commitHash: z.string().optional().describe("The hash of the newly created commit."),
 };
 
-const TextOutputSchema = {
-  success: z.boolean().describe("Indicates if the operation was successful."),
-  output: z.string().optional(),
+const DiffOutputSchema = {
+  ...BaseSuccessSchema,
   ...GenericErrorSchema,
+  diff: z.string().optional().describe("The git diff output."),
 };
 
-// --- Tool Schemas ---
+const SuccessOutputSchema = {
+  ...BaseSuccessSchema,
+  ...GenericErrorSchema,
+  message: z.string().optional(),
+};
+
+// --- Tool Input Schemas ---
 const RepoPathArgSchema = {
   repoPath: z.string().describe("Path to the Git repository."),
 };
@@ -113,6 +158,41 @@ const handleToolError = (toolName: string, error: unknown) => {
   };
 };
 
+function formatStatus(status: StatusResult): string {
+  const output: string[] = [];
+  output.push(`On branch ${status.current}`);
+  if (status.tracking) {
+    if (status.ahead > 0 && status.behind > 0) {
+      output.push(`Your branch and '${status.tracking}' have diverged,`);
+      output.push(`and have ${status.ahead} and ${status.behind} different commits each, respectively.`);
+    } else if (status.ahead > 0) {
+      output.push(`Your branch is ahead of '${status.tracking}' by ${status.ahead} commit(s).`);
+    } else if (status.behind > 0) {
+      output.push(`Your branch is behind '${status.tracking}' by ${status.behind} commit(s).`);
+    } else {
+      output.push(`Your branch is up to date with '${status.tracking}'.`);
+    }
+  }
+  if (status.staged.length > 0) {
+    output.push("\nChanges to be committed:");
+    status.staged.forEach((file) => output.push(`\tmodified:   ${file}`));
+  }
+  const notStagedFiles = status.modified.filter((file) => !status.staged.includes(file));
+  if (notStagedFiles.length > 0 || status.deleted.length > 0) {
+    output.push("\nChanges not staged for commit:");
+    notStagedFiles.forEach((file) => output.push(`\tmodified:   ${file}`));
+    status.deleted.forEach((file) => output.push(`\tdeleted:    ${file}`));
+  }
+  if (status.not_added.length > 0) {
+    output.push("\nUntracked files:");
+    status.not_added.forEach((file) => output.push(`\t${file}`));
+  }
+  if (status.isClean()) {
+    output.push("\nnothing to commit, working tree clean");
+  }
+  return output.join("\n").trim();
+}
+
 async function withGit(repoPath: string, callback: (git: GitWrapper) => Promise<{structuredContent: any; content: any[]}>) {
   const git = new GitWrapper(repoPath);
   await git.validateRepo();
@@ -144,17 +224,18 @@ const git_status_tool = safeRegisterTool(
   server,
   "git_status",
   {
-    description: "Shows the working tree status.",
+    description: "Shows the working tree status, providing both structured data and a human-readable summary.",
     inputSchema: GitStatusArgsSchema,
-    outputSchema: TextOutputSchema,
+    outputSchema: GitStatusOutputSchema,
   },
   async ({repoPath}) => {
     try {
       return await withGit(repoPath, async (git) => {
-        const output = await git.status();
+        const status = await git.status();
+        const humanReadableStatus = formatStatus(status);
         return {
-          structuredContent: {success: true, output},
-          content: [{type: "text", text: `Repository status:\n${output}`}],
+          structuredContent: {success: true, ...status},
+          content: [{type: "text", text: humanReadableStatus}],
         };
       });
     } catch (error) {
@@ -169,15 +250,15 @@ const git_diff_unstaged_tool = safeRegisterTool(
   {
     description: "Shows changes in the working directory that are not yet staged.",
     inputSchema: GitDiffUnstagedArgsSchema,
-    outputSchema: TextOutputSchema,
+    outputSchema: DiffOutputSchema,
   },
   async ({repoPath}) => {
     try {
       return await withGit(repoPath, async (git) => {
-        const output = await git.diffUnstaged();
+        const diff = await git.diffUnstaged();
         return {
-          structuredContent: {success: true, output},
-          content: [{type: "text", text: output || "No unstaged changes."}],
+          structuredContent: {success: true, diff},
+          content: [{type: "text", text: diff || "No unstaged changes."}],
         };
       });
     } catch (error) {
@@ -192,15 +273,15 @@ const git_diff_staged_tool = safeRegisterTool(
   {
     description: "Shows changes that are staged for commit.",
     inputSchema: GitDiffStagedArgsSchema,
-    outputSchema: TextOutputSchema,
+    outputSchema: DiffOutputSchema,
   },
   async ({repoPath}) => {
     try {
       return await withGit(repoPath, async (git) => {
-        const output = await git.diffStaged();
+        const diff = await git.diffStaged();
         return {
-          structuredContent: {success: true, output},
-          content: [{type: "text", text: output || "No staged changes."}],
+          structuredContent: {success: true, diff},
+          content: [{type: "text", text: diff || "No staged changes."}],
         };
       });
     } catch (error) {
@@ -215,15 +296,15 @@ const git_diff_tool = safeRegisterTool(
   {
     description: "Shows differences between the current state and a branch or commit.",
     inputSchema: GitDiffArgsSchema,
-    outputSchema: TextOutputSchema,
+    outputSchema: DiffOutputSchema,
   },
   async ({repoPath, target}) => {
     try {
       return await withGit(repoPath, async (git) => {
-        const output = await git.diff(target);
+        const diff = await git.diff(target);
         return {
-          structuredContent: {success: true, output},
-          content: [{type: "text", text: output || `No differences found with '${target}'.`}],
+          structuredContent: {success: true, diff},
+          content: [{type: "text", text: diff || `No differences found with '${target}'.`}],
         };
       });
     } catch (error) {
@@ -238,15 +319,16 @@ const git_commit_tool = safeRegisterTool(
   {
     description: "Records changes to the repository.",
     inputSchema: GitCommitArgsSchema,
-    outputSchema: SuccessOutputSchema,
+    outputSchema: GitCommitOutputSchema,
   },
   async ({repoPath, message}) => {
     try {
       return await withGit(repoPath, async (git) => {
-        const output = await git.commit(message);
+        const commitResult = await git.commit(message);
+        const successMessage = `Changes committed successfully with hash ${commitResult.commit}`;
         return {
-          structuredContent: {success: true, message: output},
-          content: [{type: "text", text: output}],
+          structuredContent: {success: true, message: successMessage, commitHash: commitResult.commit},
+          content: [{type: "text", text: successMessage}],
         };
       });
     } catch (error) {
@@ -305,17 +387,25 @@ const git_log_tool = safeRegisterTool(
   server,
   "git_log",
   {
-    description: "Shows the commit logs.",
+    description: "Shows the commit logs as a structured list.",
     inputSchema: GitLogArgsSchema,
-    outputSchema: TextOutputSchema,
+    outputSchema: GitLogOutputSchema,
   },
   async ({repoPath, maxCount}) => {
     try {
       return await withGit(repoPath, async (git) => {
-        const output = await git.log(maxCount);
+        const commits = await git.log(maxCount);
+        const humanReadableLog =
+          "Commit history:\n" +
+          commits
+            .map(
+              (commit) =>
+                `Commit: ${commit.hash}\n` + `Author: ${commit.author_name} <${commit.author_email}>\n` + `Date: ${commit.date}\n` + `Message: ${commit.message}\n`,
+            )
+            .join("\n");
         return {
-          structuredContent: {success: true, output},
-          content: [{type: "text", text: `Commit history:\n${output}`}],
+          structuredContent: {success: true, commits: commits},
+          content: [{type: "text", text: humanReadableLog}],
         };
       });
     } catch (error) {
@@ -376,15 +466,15 @@ const git_show_tool = safeRegisterTool(
   {
     description: "Shows the contents and metadata of a commit.",
     inputSchema: GitShowArgsSchema,
-    outputSchema: TextOutputSchema,
+    outputSchema: DiffOutputSchema,
   },
   async ({repoPath, revision}) => {
     try {
       return await withGit(repoPath, async (git) => {
-        const output = await git.show(revision);
+        const diff = await git.show(revision);
         return {
-          structuredContent: {success: true, output},
-          content: [{type: "text", text: output}],
+          structuredContent: {success: true, diff},
+          content: [{type: "text", text: diff}],
         };
       });
     } catch (error) {
