@@ -1,12 +1,12 @@
 import {safeRegisterTool} from "@jixo/mcp-core";
 import {McpServer} from "@modelcontextprotocol/sdk/server/mcp.js";
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
+import fs from "node:fs";
+import path from "node:path";
 import {z} from "zod";
 import pkg from "../package.json" with {type: "json"};
 import {GitCommandError, InvalidRepoError} from "./error.js";
 import {GitWrapper} from "./git-wrapper.js";
-import path from "node:path";
-import fs from "node:fs";
 
 // --- Schema Definitions ---
 
@@ -36,42 +36,42 @@ const TextOutputSchema = {
 const RepoPathArgSchema = {
   repoPath: z.string().describe("Path to the Git repository."),
 };
-const GitStatusArgsSchema = z.object(RepoPathArgSchema);
-const GitDiffUnstagedArgsSchema = z.object(RepoPathArgSchema);
-const GitDiffStagedArgsSchema = z.object(RepoPathArgSchema);
-const GitDiffArgsSchema = z.object({
+const GitStatusArgsSchema = RepoPathArgSchema;
+const GitDiffUnstagedArgsSchema = RepoPathArgSchema;
+const GitDiffStagedArgsSchema = RepoPathArgSchema;
+const GitDiffArgsSchema = {
   ...RepoPathArgSchema,
   target: z.string().describe("Target branch or commit to compare with."),
-});
-const GitCommitArgsSchema = z.object({
+};
+const GitCommitArgsSchema = {
   ...RepoPathArgSchema,
   message: z.string().describe("Commit message."),
-});
-const GitAddArgsSchema = z.object({
+};
+const GitAddArgsSchema = {
   ...RepoPathArgSchema,
   files: z.array(z.string()).min(1).describe("Array of file paths to stage."),
-});
-const GitResetArgsSchema = z.object(RepoPathArgSchema);
-const GitLogArgsSchema = z.object({
+};
+const GitResetArgsSchema = RepoPathArgSchema;
+const GitLogArgsSchema = {
   ...RepoPathArgSchema,
   maxCount: z.number().int().min(1).optional().default(10).describe("Maximum number of commits to show."),
-});
-const GitCreateBranchArgsSchema = z.object({
+};
+const GitCreateBranchArgsSchema = {
   ...RepoPathArgSchema,
   branchName: z.string().describe("Name of the new branch."),
   baseBranch: z.string().optional().describe("Starting point for the new branch (branch name or commit hash)."),
-});
-const GitCheckoutArgsSchema = z.object({
+};
+const GitCheckoutArgsSchema = {
   ...RepoPathArgSchema,
   branchName: z.string().describe("Name of the branch to checkout."),
-});
-const GitShowArgsSchema = z.object({
+};
+const GitShowArgsSchema = {
   ...RepoPathArgSchema,
   revision: z.string().describe("The revision (commit hash, branch name, tag) to show."),
-});
-const GitInitArgsSchema = z.object({
+};
+const GitInitArgsSchema = {
   repoPath: z.string().describe("Path to the directory to initialize the git repo in."),
-});
+};
 
 // --- Server and Tool Registration ---
 

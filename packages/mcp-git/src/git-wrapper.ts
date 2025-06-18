@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {simpleGit, type SimpleGit, type SimpleGitOptions, type StatusResult} from "simple-git";
+import {simpleGit, type SimpleGit, type SimpleGitOptions} from "simple-git";
 import {InvalidRepoError} from "./error.js";
 
 export class GitWrapper {
@@ -37,8 +37,57 @@ export class GitWrapper {
     return `Initialized empty Git repository in ${repo.repoPath}`;
   }
 
-  async status(): Promise<StatusResult> {
-    return this.git.status();
+  async status(): Promise<string> {
+    const status = await this.git.status();
+    const output: string[] = [];
+
+    output.push(`On branch ${status.current}`);
+
+    if (status.tracking) {
+      if (status.ahead > 0 && status.behind > 0) {
+        output.push(`Your branch and '${status.tracking}' have diverged,`);
+        output.push(`and have ${status.ahead} and ${status.behind} different commits each, respectively.`);
+      } else if (status.ahead > 0) {
+        output.push(`Your branch is ahead of '${status.tracking}' by ${status.ahead} commit(s).`);
+      } else if (status.behind > 0) {
+        output.push(`Your branch is behind '${status.tracking}' by ${status.behind} commit(s).`);
+      } else {
+        output.push(`Your branch is up to date with '${status.tracking}'.`);
+      }
+    }
+
+    if (status.staged.length > 0) {
+      output.push("\nChanges to be committed:");
+      status.staged.forEach((file) => output.push(`\tmodified:   ${file}`));
+    }
+
+    if (status.conflicted.length > 0) {
+      output.push("\nUnmerged paths:");
+      status.conflicted.forEach((file) => output.push(`\tboth modified:   ${file}`));
+    }
+
+    const notStagedFiles = status.modified.filter((file) => !status.staged.includes(file));
+    if (notStagedFiles.length > 0) {
+      output.push("\nChanges not staged for commit:");
+      notStagedFiles.forEach((file) => output.push(`\tmodified:   ${file}`));
+    }
+    if (status.deleted.length > 0) {
+      if (!output.some((line) => line.includes("Changes not staged for commit"))) {
+        output.push("\nChanges not staged for commit:");
+      }
+      status.deleted.forEach((file) => output.push(`\tdeleted:    ${file}`));
+    }
+
+    if (status.not_added.length > 0) {
+      output.push("\nUntracked files:");
+      status.not_added.forEach((file) => output.push(`\t${file}`));
+    }
+
+    if (status.isClean()) {
+      output.push("\nnothing to commit, working tree clean");
+    }
+
+    return output.join("\n").trim();
   }
 
   async diffUnstaged(): Promise<string> {
