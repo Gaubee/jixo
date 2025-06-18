@@ -11,7 +11,8 @@
     "mcp-git": "./dist/index.js"
   },
   "scripts": {
-    "test": "node --test dist/test/*.test.js"
+    "fmt": "prettier --write src",
+    "test": "node --experimental-test-coverage --enable-source-maps --test dist/test/*.test.js"
   },
   "keywords": [
     "git",
