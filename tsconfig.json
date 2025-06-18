@@ -10,6 +10,9 @@
             "path": "./packages/mcp-fs/tsconfig.json"
         },
         {
+            "path": "./packages/mcp-git/tsconfig.json"
+        },
+        {
             "path": "./packages/mcp-pnpm/tsconfig.json"
         }
     ],
