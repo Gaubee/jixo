@@ -195,32 +195,34 @@ export class GitWrapper {
   async worktreeList(): Promise<Omit<Worktree, "isCurrent">[]> {
     return this.withLock("shared", async () => {
       const result = await this.git.raw(["worktree", "list", "--porcelain"]);
-      if (!result) {
-        const mainPath = (await this.git.revparse(["--show-toplevel"])).trim();
-        const mainBranch = (await this.git.revparse(["--abbrev-ref", "HEAD"])).trim();
-        return [{path: mainPath, branch: mainBranch, isMain: true}];
+      if (!result) { 
+        const mainPath = (await this.git.revparse(['--show-toplevel'])).trim();
+        const mainBranch = (await this.git.revparse(['--abbrev-ref', 'HEAD'])).trim();
+        return [{ path: mainPath, branch: mainBranch, isMain: true }];
       }
 
       const worktrees: Partial<Omit<Worktree, "isCurrent">>[] = [];
       let currentWorktree: Partial<Omit<Worktree, "isCurrent">> = {};
 
-      for (const line of result.trim().split("\n")) {
-        if (line.startsWith("worktree ")) {
-          if (currentWorktree.path) {
-            worktrees.push(currentWorktree);
+      const lines = result.trim().split('\n\n');
+      for (const block of lines) {
+        const worktreeData: Partial<Omit<Worktree, "isCurrent">> = {};
+        for(const line of block.split('\n')) {
+          const [key, ...valueParts] = line.split(' ');
+          const value = valueParts.join(' ');
+
+          if (key === 'worktree') {
+            worktreeData.path = value;
+          } else if (key === 'branch') {
+            worktreeData.branch = value.replace('refs/heads/', '');
           }
-          currentWorktree = {path: line.substring(9).trim(), isMain: false};
-        } else if (line.startsWith("HEAD ")) {
-          currentWorktree.head = line.substring(5).trim();
-        } else if (line.startsWith("branch ")) {
-          currentWorktree.branch = line.substring(7).trim().replace("refs/heads/", "");
+        }
+        if(worktreeData.path) {
+          worktrees.push(worktreeData);
         }
       }
-      if (currentWorktree.path) {
-        worktrees.push(currentWorktree);
-      }
 
-      const mainWorktreePath = (await this.git.revparse(["--show-toplevel"])).trim();
+      const mainWorktreePath = (await this.git.revparse(['--show-toplevel'])).trim();
       return worktrees.map((w) => ({
         ...w,
         isMain: w.path === mainWorktreePath,

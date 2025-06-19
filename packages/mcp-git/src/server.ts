@@ -3,7 +3,7 @@ import {McpServer} from "@modelcontextprotocol/sdk/server/mcp.js";
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
 import fs from "node:fs";
 import path from "node:path";
-import {GitResponseError, type MergeSummary} from "simple-git";
+import {GitResponseError, type MergeResult} from "simple-git";
 import pkg from "../package.json" with {type: "json"};
 import {EmptyCommitError, GitCommandError, InvalidRepoError, MergeConflictError, RebaseConflictError} from "./error.js";
 import {formatStatus, getSemanticFiles} from "./format.js";
@@ -478,7 +478,7 @@ const git_merge_tool = safeRegisterTool(
       });
     } catch (error: any) {
       if (error instanceof GitResponseError && error.git) {
-        const gitError = error.git as MergeSummary;
+        const gitError = error.git as MergeResult;
         if (gitError.conflicts && gitError.conflicts.length > 0) {
           const conflictFiles = gitError.conflicts.map((c) => c.file).filter(Boolean) as string[];
           return handleToolError(

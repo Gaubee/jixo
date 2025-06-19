@@ -133,7 +133,7 @@ export const GitAddArgsSchema = {
 export const GitResetArgsSchema = RepoPathArgSchema;
 export const GitLogArgsSchema = {
   ...RepoPathArgSchema,
-  maxCount: z.number().int().min(1).optional().default(10).describe("Maximum number of commits to show."),
+  maxCount: z.number().int().min(1).default(10).optional().describe("Maximum number of commits to show."),
 };
 export const GitCreateBranchArgsSchema = {
   ...RepoPathArgSchema,

@@ -36,45 +36,38 @@ describe("MCP Git Tools - Worktree Scenarios", () => {
 
     const featureWorktreePath = path.join(sandboxPath, "feature-branch-worktree");
 
-    // 1. Create a new worktree for a new feature branch
     const addResult = await worktreeAdd({
       repoPath: mainRepoPath,
       path: featureWorktreePath,
       branch: "feature/new-feature",
       createBranch: true,
     });
-    assert.ok(!addResult.isError, "Worktree add should be successful");
+    assert.ok(!addResult.isError, `Worktree add failed: ${addResult.isError && JSON.stringify(addResult.structuredContent)}`);
     assert.ok(fs.existsSync(featureWorktreePath), "Worktree directory should be created");
 
-    // 2. List worktrees and verify the new one exists
     const listResult = await worktreeList({repoPath: mainRepoPath});
     const worktrees = listResult.structuredContent.worktrees;
-    assert.ok(worktrees);
+    assert.ok(worktrees, "Worktrees should be listed");
     assert.strictEqual(worktrees.length, 2, "Should be two worktrees (main and feature)");
-    const featureWorktreeInfo = worktrees.find((w: any) => path.resolve(w.path) === path.resolve(featureWorktreePath));
+    const featureWorktreeInfo = worktrees.find((w: any) => fs.realpathSync(w.path) === fs.realpathSync(featureWorktreePath));
     assert.ok(featureWorktreeInfo, "Feature worktree should be in the list");
     assert.strictEqual(featureWorktreeInfo.branch, "feature/new-feature");
 
-    // 3. Perform work in the new worktree (add, commit)
     fs.writeFileSync(path.join(featureWorktreePath, "feature.txt"), "feature content");
     await add({repoPath: featureWorktreePath, files: ["feature.txt"]});
     await commit({repoPath: featureWorktreePath, message: "Implement new feature"});
 
-    // 4. Switch back to main worktree and merge the feature branch
     await git.checkout("main");
     const mergeResult = await merge({repoPath: mainRepoPath, branch: "feature/new-feature"});
     assert.strictEqual(mergeResult.structuredContent.success, true, "Merge should be successful");
 
-    // 5. Verify the merge commit
     const log = await git.log();
     assert.match(log.latest!.message, /Implement new feature/);
 
-    // 6. Remove the worktree
     await worktreeRemove({repoPath: mainRepoPath, path: featureWorktreePath});
 
-    // 7. Verify it's gone from the list
     const finalListResult = await worktreeList({repoPath: mainRepoPath});
-    assert.ok(finalListResult.structuredContent.worktrees);
+    assert.ok(finalListResult.structuredContent.worktrees, "Final worktree list should exist");
     assert.strictEqual(finalListResult.structuredContent.worktrees.length, 1, "Worktree list should have 1 entry after removal");
   });
 
