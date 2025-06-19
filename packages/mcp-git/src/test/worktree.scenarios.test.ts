@@ -42,14 +42,14 @@ describe("MCP Git Tools - Worktree Scenarios", () => {
       branch: "feature/new-feature",
       createBranch: true,
     });
-    assert.ok(!addResult.isError, `Worktree add failed: ${addResult.isError && JSON.stringify(addResult.structuredContent)}`);
+    assert.ok(addResult.structuredContent.success, `Worktree add failed: ${!addResult.structuredContent.success && JSON.stringify(addResult.structuredContent.error)}`);
     assert.ok(fs.existsSync(featureWorktreePath), "Worktree directory should be created");
 
     const listResult = await worktreeList({repoPath: mainRepoPath});
-    const worktrees = listResult.structuredContent.worktrees;
-    assert.ok(worktrees, "Worktrees should be listed");
+    assert.ok(listResult.structuredContent.success);
+    const worktrees = listResult.structuredContent.result.worktrees;
     assert.strictEqual(worktrees.length, 2, "Should be two worktrees (main and feature)");
-    const featureWorktreeInfo = worktrees.find((w: any) => fs.realpathSync(w.path) === fs.realpathSync(featureWorktreePath));
+    const featureWorktreeInfo = worktrees.find((w) => w.path === fs.realpathSync(featureWorktreePath));
     assert.ok(featureWorktreeInfo, "Feature worktree should be in the list");
     assert.strictEqual(featureWorktreeInfo.branch, "feature/new-feature");
 
@@ -59,7 +59,7 @@ describe("MCP Git Tools - Worktree Scenarios", () => {
 
     await git.checkout("main");
     const mergeResult = await merge({repoPath: mainRepoPath, branch: "feature/new-feature"});
-    assert.strictEqual(mergeResult.structuredContent.success, true, "Merge should be successful");
+    assert.ok(mergeResult.structuredContent.success, "Merge should be successful");
 
     const log = await git.log();
     assert.match(log.latest!.message, /Implement new feature/);
@@ -67,8 +67,8 @@ describe("MCP Git Tools - Worktree Scenarios", () => {
     await worktreeRemove({repoPath: mainRepoPath, path: featureWorktreePath});
 
     const finalListResult = await worktreeList({repoPath: mainRepoPath});
-    assert.ok(finalListResult.structuredContent.worktrees, "Final worktree list should exist");
-    assert.strictEqual(finalListResult.structuredContent.worktrees.length, 1, "Worktree list should have 1 entry after removal");
+    assert.ok(finalListResult.structuredContent.success);
+    assert.strictEqual(finalListResult.structuredContent.result.worktrees.length, 1, "Worktree list should have 1 entry after removal");
   });
 
   test("should handle merge conflicts gracefully", async () => {
@@ -98,13 +98,10 @@ describe("MCP Git Tools - Worktree Scenarios", () => {
     await git.checkout("main");
     const mergeResult = await merge({repoPath: mainRepoPath, branch: "feature/conflict"});
 
-    assert.strictEqual(mergeResult.isError, true);
-    const structured = mergeResult.structuredContent;
-    assert.strictEqual(structured.success, false);
-    assert.ok(structured.error);
-    assert.strictEqual(structured.error.name, "MergeConflictError");
-    assert.deepStrictEqual(structured.error.conflicts, ["main.txt"]);
-    assert.ok(structured.error.remedy_tool_suggestions);
-    assert.ok(structured.error.remedy_tool_suggestions.length > 0);
+    assert.ok(!mergeResult.structuredContent.success);
+    const error = mergeResult.structuredContent.error;
+    assert.strictEqual(error.name, "MergeConflictError");
+    assert.deepStrictEqual(error.conflicts, ["main.txt"]);
+    assert.ok(error.remedy_tool_suggestions && error.remedy_tool_suggestions.length > 0);
   });
 });

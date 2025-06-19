@@ -190,9 +190,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.13.0
         version: 1.13.0
-      import-meta-ponyfill:
-        specifier: ^3.2.2
-        version: 3.2.2
       zod:
         specifier: ^3.25.67
         version: 3.25.67
@@ -261,6 +258,9 @@ importers:
       commander:
         specifier: ^14.0.0
         version: 14.0.0
+      import-meta-ponyfill:
+        specifier: ^3.2.2
+        version: 3.2.2
       simple-git:
         specifier: ^3.28.0
         version: 3.28.0

@@ -25,6 +25,7 @@
     "@jixo/mcp-core": "workspace:^",
     "@modelcontextprotocol/sdk": "^1.13.0",
     "commander": "^14.0.0",
+    "import-meta-ponyfill": "^3.2.2",
     "simple-git": "^3.28.0",
     "typescript": "^5.8.3",
     "zod": "^3.25.67",

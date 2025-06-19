@@ -40,8 +40,9 @@ describe("MCP Git Tools - Advanced Scenarios", () => {
     assert.strictEqual(statusResult.structuredContent.isClean, true, "Workspace should be clean after stash");
 
     // 3. List stashes
-    const listResult = await stashList({repoPath});
-    const stashes = listResult.structuredContent.stashes;
+    const {structuredContent} = await stashList({repoPath});
+    assert.ok(structuredContent.success);
+    const stashes = structuredContent.result.stashes;
     assert.ok(stashes);
     assert.strictEqual(stashes.length, 1);
     assert.match(stashes[0].message, /wip-feature/);

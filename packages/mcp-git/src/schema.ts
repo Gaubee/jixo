@@ -1,31 +1,5 @@
 import {z} from "zod";
 
-// --- Base Schemas ---
-
-const GenericErrorSchema = {
-  error: z
-    .object({
-      name: z.string().describe("The type of error, e.g., 'InvalidRepoError'."),
-      message: z.string().describe("A detailed description of what went wrong."),
-      remedy_tool_suggestions: z
-        .array(
-          z.object({
-            tool_name: z.string(),
-            description: z.string(),
-          }),
-        )
-        .optional()
-        .describe("Suggested tools to run to fix the error."),
-      conflicts: z.array(z.string()).optional().describe("A list of files with merge conflicts."),
-    })
-    .optional()
-    .describe("Included only when 'success' is false."),
-};
-
-const BaseSuccessSchema = {
-  success: z.boolean().describe("Indicates if the operation was successful."),
-};
-
 // --- Output Schemas for specific tools ---
 
 const FileStatusSchema = z.object({
@@ -35,14 +9,12 @@ const FileStatusSchema = z.object({
 });
 
 export const GitStatusOutputSchema = {
-  ...BaseSuccessSchema,
-  ...GenericErrorSchema,
-  current: z.string().optional().describe("Current branch name."),
-  tracking: z.string().nullable().optional().describe("Tracking branch name."),
-  ahead: z.number().optional().describe("Number of commits ahead of the tracking branch."),
-  behind: z.number().optional().describe("Number of commits behind the tracking branch."),
-  files: z.array(FileStatusSchema).optional().describe("List of files with their semantic status."),
-  isClean: z.boolean().optional().describe("True if the working directory is clean."),
+  current: z.string().describe("Current branch name."),
+  tracking: z.string().nullable().describe("Tracking branch name."),
+  ahead: z.number().describe("Number of commits ahead of the tracking branch."),
+  behind: z.number().describe("Number of commits behind the tracking branch."),
+  files: z.array(FileStatusSchema).describe("List of files with their semantic status."),
+  isClean: z.boolean().describe("True if the working directory is clean."),
 };
 
 const CommitSchema = z.object({
@@ -53,29 +25,21 @@ const CommitSchema = z.object({
   author_email: z.string(),
 });
 
-export const GitLogOutputSchema = {
-  ...BaseSuccessSchema,
-  ...GenericErrorSchema,
-  commits: z.array(CommitSchema).optional().describe("An array of commit objects."),
+export const CommonSuccessMsgSchema = {
+  message: z.string().describe("A message describing the success result of the operation."),
 };
 
-export const GitCommitOutputSchema = {
-  ...BaseSuccessSchema,
-  ...GenericErrorSchema,
-  message: z.string().optional(),
-  commitHash: z.string().optional().describe("The hash of the newly created commit."),
+export const GitLogSuccessSchema = {
+  commits: z.array(CommitSchema).describe("An array of commit objects."),
 };
 
-export const DiffOutputSchema = {
-  ...BaseSuccessSchema,
-  ...GenericErrorSchema,
-  diff: z.string().optional().describe("The git diff output."),
+export const GitCommitSuccessSchema = {
+  message: z.string(),
+  commitHash: z.string().describe("The hash of the newly created commit."),
 };
 
-export const SuccessOutputSchema = {
-  ...BaseSuccessSchema,
-  ...GenericErrorSchema,
-  message: z.string().optional(),
+export const DiffSuccessSchema = {
+  diff: z.string().describe("The git diff output."),
 };
 
 const WorktreeSchema = z.object({
@@ -85,17 +49,13 @@ const WorktreeSchema = z.object({
   isMain: z.boolean(),
 });
 
-export const GitWorktreeListOutputSchema = {
-  ...BaseSuccessSchema,
-  ...GenericErrorSchema,
-  worktrees: z.array(WorktreeSchema).optional().describe("A list of all worktrees for the repository."),
+export const GitWorktreeListSuccessSchema = {
+  worktrees: z.array(WorktreeSchema).describe("A list of all worktrees for the repository."),
 };
 
-export const MergeOutputSchema = {
-  ...BaseSuccessSchema,
-  ...GenericErrorSchema,
-  message: z.string().optional().describe("A summary of the merge result."),
-  mergedBranches: z.array(z.string()).optional().describe("List of branches that were merged."),
+export const GitMergeSuccessSchema = {
+  message: z.string().describe("A summary of the merge result."),
+  mergedBranches: z.array(z.string()).describe("List of branches that were merged."),
 };
 
 const StashEntrySchema = z.object({
@@ -104,10 +64,8 @@ const StashEntrySchema = z.object({
   message: z.string(),
 });
 
-export const GitStashListOutputSchema = {
-  ...BaseSuccessSchema,
-  ...GenericErrorSchema,
-  stashes: z.array(StashEntrySchema).optional().describe("A list of stashed changesets."),
+export const GitStashListSuccessSchema = {
+  stashes: z.array(StashEntrySchema).describe("A list of stashed changesets."),
 };
 
 // --- Tool Input Schemas ---

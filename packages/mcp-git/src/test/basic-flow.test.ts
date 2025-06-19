@@ -30,7 +30,7 @@ describe("MCP Git Tools - Basic Flow", () => {
     const handler = getToolHandler("git_init");
     const newRepoPath = sandboxPath + "/new_repo";
     const result = await handler({repoPath: newRepoPath});
-    assert.strictEqual(result.isError, undefined);
+    assert.ok(result.structuredContent.success);
     assert.ok(fs.existsSync(newRepoPath + "/.git"));
   });
 
@@ -41,15 +41,11 @@ describe("MCP Git Tools - Basic Flow", () => {
     fs.writeFileSync(newFilePath, "some data");
 
     const addResult = await addHandler({repoPath: repoPath, files: ["new-file.txt"]});
-    assert.strictEqual(addResult.isError, undefined);
+    assert.ok(addResult.structuredContent.success);
 
     const commitResult = await commitHandler({repoPath: repoPath, message: "feat: add new feature"});
-    assert.strictEqual(commitResult.isError, undefined);
-
-    const structured = commitResult.structuredContent;
-    assert.strictEqual(structured.success, true);
-    assert.ok(structured.commitHash);
-    assert.ok(structured.commitHash.length > 0);
+    assert.ok(commitResult.structuredContent.success);
+    assert.ok(commitResult.structuredContent.result.commitHash.length > 0);
   });
 
   test("`git_create_branch` and `git_checkout` should manage branches", async () => {
@@ -65,21 +61,18 @@ describe("MCP Git Tools - Basic Flow", () => {
 
   test("`git_log` should retrieve commit history", async () => {
     const handler = getToolHandler("git_log");
-    const result = await handler({repoPath: repoPath});
+    const result = await handler({repoPath: repoPath, maxCount: 1});
 
-    assert.strictEqual(result.isError, undefined);
-    const structured = result.structuredContent;
-    assert.strictEqual(structured.success, true);
-    assert.ok(structured.commits);
-    assert.strictEqual(structured.commits.length, 1);
-    assert.strictEqual(structured.commits[0].message.trim(), "initial commit");
+    assert.ok(result.structuredContent.success);
+    const commits = result.structuredContent.result.commits;
+    assert.strictEqual(commits.length, 1);
+    assert.strictEqual(commits[0].message.trim(), "initial commit");
   });
 
   test("`git_status` should report a clean state", async () => {
     const handler = getToolHandler("git_status");
     const result = await handler({repoPath: repoPath});
-    assert.strictEqual(result.isError, undefined);
-    const structured = result.structuredContent;
-    assert.strictEqual(structured.isClean, true);
+    assert.ok(result.structuredContent.success);
+    assert.strictEqual(result.structuredContent.result.isClean, true);
   });
 });
