@@ -18,8 +18,8 @@ const logger = {
   file: (filePath: string) => magenta(filePath),
   mode: (mode: DiffFileMode) =>
     match(mode)
-      .with("add", () => green("🟢"))
-      .with("modify", () => yellow("✏️"))
+      .with("add", () => green("❇️"))
+      .with("modify", () => yellow("♻️"))
       .with("delete", () => red("❌"))
       .exhaustive(),
 };
@@ -116,7 +116,7 @@ async function confirmAction(filesToUpdate: DiffFiles): Promise<DiffFiles> {
   const selectedFiles = await prompts.checkbox({
     message: "The following files will be overwritten:",
     choices: filesToUpdate.map((file) => ({
-      title: logger.mode(file.mode) + " " + logger.file(file.filePath),
+      name: logger.mode(file.mode) + "  " + logger.file(file.filePath),
       value: file.filePath,
       checked: file.safe,
     })),
