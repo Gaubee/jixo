@@ -363,7 +363,7 @@ const git_log_tool = safeRegisterTool(
     inputSchema: GitLogArgsSchema,
     outputSchema: GitLogOutputSchema,
   },
-  async ({repoPath, maxCount = 10}) => {
+  async ({repoPath, maxCount}) => {
     try {
       return await withGit(repoPath, async (git) => {
         const commits = await git.log(maxCount);
@@ -652,7 +652,7 @@ const git_worktree_list_tool = safeRegisterTool(
     try {
       return await withGit(repoPath, async (git) => {
         const worktrees = await git.worktreeList();
-        const allWorktrees = worktrees.map((w) => ({...w, isCurrent: path.resolve(w.path) === path.resolve(git.repoPath)}));
+        const allWorktrees = worktrees.map((w) => ({...w, isCurrent: fs.realpathSync(w.path) === fs.realpathSync(git.repoPath)}));
         return {
           structuredContent: {success: true, worktrees: allWorktrees},
           content: [{type: "text", text: allWorktrees.map((w) => `${w.path}\t${w.branch}`).join("\n")}],
