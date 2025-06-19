@@ -8,6 +8,7 @@
     ".": "./dist/index.js"
   },
   "scripts": {
+    "fmt": "prettier --write src",
     "test": "node --test dist/test/*.test.js"
   },
   "keywords": [
@@ -17,7 +18,6 @@
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.13.0",
-    "import-meta-ponyfill": "^3.2.2",
     "zod": "^3.25.67"
   },
   "devDependencies": {
