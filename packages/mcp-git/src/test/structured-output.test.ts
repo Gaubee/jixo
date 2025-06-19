@@ -42,11 +42,11 @@ describe("MCP Git Tools - Structured Output", () => {
 
     const handler = getToolHandler("git_status");
     const result = await handler({repoPath});
-    
+
     assert.ok(result.structuredContent.success);
     const structuredResult = result.structuredContent.result;
     const textOutput = getResultText(result);
-    
+
     assert.ok(structuredResult.files);
     assert.deepStrictEqual(structuredResult.files.find((f: any) => f.path === "a.txt")?.workingDirStatus, "Modified");
     assert.deepStrictEqual(structuredResult.files.find((f: any) => f.path.includes("b_renamed.txt"))?.indexStatus, "Renamed");
@@ -63,7 +63,7 @@ describe("MCP Git Tools - Structured Output", () => {
     await git.add("commit_test.txt");
     const handler = getToolHandler("git_commit");
     const result = await handler({repoPath, message: "commit test"});
-    
+
     assert.ok(result.structuredContent.success);
     assert.match(result.structuredContent.result.commitHash, /^[0-9a-f]{7,40}$/);
   });
@@ -74,7 +74,7 @@ describe("MCP Git Tools - Structured Output", () => {
     await git.commit("second commit");
     const handler = getToolHandler("git_log");
     const result = await handler({repoPath, maxCount: 2});
-    
+
     assert.ok(result.structuredContent.success);
     const commits = result.structuredContent.result.commits;
     assert.strictEqual(commits.length, 2);

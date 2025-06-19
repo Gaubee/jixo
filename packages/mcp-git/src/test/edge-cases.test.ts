@@ -49,7 +49,7 @@ describe("MCP Git Tools - Edge Cases", () => {
     const {repoPath} = await setupSandbox().initRepo();
     const handler = getToolHandler("git_commit");
     const result = await handler({repoPath, message: "Empty commit"});
-    
+
     assert.ok(!result.structuredContent.success);
     const error = result.structuredContent.error;
     assert.strictEqual(error.name, "EmptyCommitError");

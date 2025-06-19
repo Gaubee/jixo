@@ -10,20 +10,20 @@ function serializeRoadmap(tasks: RoadmapTaskNodeData[], level = 0): string {
 
     if (task.details.length > 0) {
       mdLines.push(
-        `${indent}  - **Details**:`,
+        `${indent}- **Details**:`,
         ...task.details
           //
-          .map((line) => `${indent}    > ${line}`),
+          .map((line) => `${indent}  - ${line}`),
         "",
       );
     }
 
     if (task.checklist.length > 0) {
       mdLines.push(
-        `${indent}  - **Checklist**:`,
+        `${indent}- **Checklist**:`,
         ...task.checklist
           //
-          .map((line) => `${indent}    > ${line}`),
+          .map((line) => `${indent}  - ${line}`),
         "",
       );
     }

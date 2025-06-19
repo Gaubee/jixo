@@ -35,7 +35,7 @@ describe("MCP Git Tools - Scenarios", () => {
       assert.ok(structuredContent.success);
       assert.strictEqual(structuredContent.result.files.find((f: any) => f.path === "README.md")?.workingDirStatus, "Untracked");
     }
-    
+
     await addHandler({repoPath, files: ["README.md"]});
 
     {
@@ -82,7 +82,7 @@ describe("MCP Git Tools - Scenarios", () => {
       assert.match(structuredContent.result.diff, /\+\/\/ new feature/);
       assert.match(structuredContent.result.diff, /\+console.log\('feature'\)/);
     }
-    
+
     await addHandler({repoPath, files: ["main.js"]});
 
     {
@@ -95,21 +95,21 @@ describe("MCP Git Tools - Scenarios", () => {
     await resetHandler({repoPath});
 
     {
-        const {structuredContent} = await diffStagedHandler({repoPath});
-        assert.ok(structuredContent.success);
-        assert.strictEqual(structuredContent.result.diff, "", "Staged diff should be empty after reset");
+      const {structuredContent} = await diffStagedHandler({repoPath});
+      assert.ok(structuredContent.success);
+      assert.strictEqual(structuredContent.result.diff, "", "Staged diff should be empty after reset");
     }
 
     {
-        const {structuredContent} = await diffUnstagedHandler({repoPath});
-        assert.ok(structuredContent.success);
-        assert.match(structuredContent.result.diff, /\+\/\/ new feature/);
-        assert.match(structuredContent.result.diff, /feature.js/);
+      const {structuredContent} = await diffUnstagedHandler({repoPath});
+      assert.ok(structuredContent.success);
+      assert.match(structuredContent.result.diff, /\+\/\/ new feature/);
+      assert.match(structuredContent.result.diff, /feature.js/);
     }
 
     await addHandler({repoPath, files: ["main.js", "feature.js"]});
     await getToolHandler("git_commit")({repoPath, message: "feat: Implement new logic"});
-    
+
     const finalDiffResult = await diffHandler({repoPath, target: "main"});
     assert.ok(finalDiffResult.structuredContent.success);
     assert.match(finalDiffResult.structuredContent.result.diff, /feature.js/);
