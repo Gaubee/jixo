@@ -44,10 +44,11 @@ describe("MCP Git Tools - Structured Output", () => {
     const result = await handler({repoPath});
 
     assert.strictEqual(result.isError, undefined);
-    const structured = result.structuredContent as any;
+    const structured = result.structuredContent;
     const textOutput = getResultText(result);
 
     assert.strictEqual(structured.success, true);
+    assert.ok(structured.files);
     assert.deepStrictEqual(structured.files.find((f: any) => f.path === "a.txt")?.workingDirStatus, "Modified");
     assert.deepStrictEqual(structured.files.find((f: any) => f.path.includes("b_renamed.txt"))?.indexStatus, "Renamed");
 
@@ -64,8 +65,9 @@ describe("MCP Git Tools - Structured Output", () => {
     const handler = getToolHandler("git_commit");
     const result = await handler({repoPath, message: "commit test"});
     assert.strictEqual(result.isError, undefined);
-    const structured = result.structuredContent as any;
+    const structured = result.structuredContent;
     assert.strictEqual(structured.success, true);
+    assert.ok(structured.commitHash);
     assert.match(structured.commitHash, /^[0-9a-f]{7,40}$/);
   });
 
@@ -76,8 +78,9 @@ describe("MCP Git Tools - Structured Output", () => {
     const handler = getToolHandler("git_log");
     const result = await handler({repoPath, maxCount: 2});
     assert.strictEqual(result.isError, undefined);
-    const structured = result.structuredContent as any;
+    const structured = result.structuredContent;
     assert.strictEqual(structured.success, true);
+    assert.ok(structured.commits);
     assert.strictEqual(structured.commits.length, 2);
     assert.strictEqual(structured.commits[0].message.trim(), "second commit");
     assert.strictEqual(structured.commits[1].message.trim(), "initial commit");
@@ -89,8 +92,9 @@ describe("MCP Git Tools - Structured Output", () => {
     const handler = getToolHandler("git_diff_staged");
     const result = await handler({repoPath});
     assert.strictEqual(result.isError, undefined);
-    const structured = result.structuredContent as any;
+    const structured = result.structuredContent;
     assert.strictEqual(structured.success, true);
+    assert.ok(structured.diff);
     assert.match(structured.diff, /diff --git a\/a.txt b\/a.txt/);
     assert.match(structured.diff, /\+new line/);
   });
@@ -102,8 +106,9 @@ describe("MCP Git Tools - Structured Output", () => {
     const handler = getToolHandler("git_show");
     const result = await handler({repoPath, revision: commitHash});
     assert.strictEqual(result.isError, undefined);
-    const structured = result.structuredContent as any;
+    const structured = result.structuredContent;
     assert.strictEqual(structured.success, true);
+    assert.ok(structured.diff);
     assert.match(structured.diff, new RegExp(`commit ${commitHash}`));
     assert.match(structured.diff, /diff --git a\/a.txt b\/a.txt/);
   });

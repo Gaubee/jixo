@@ -46,8 +46,9 @@ describe("MCP Git Tools - Basic Flow", () => {
     const commitResult = await commitHandler({repoPath: repoPath, message: "feat: add new feature"});
     assert.strictEqual(commitResult.isError, undefined);
 
-    const structured = commitResult.structuredContent as any;
+    const structured = commitResult.structuredContent;
     assert.strictEqual(structured.success, true);
+    assert.ok(structured.commitHash);
     assert.ok(structured.commitHash.length > 0);
   });
 
@@ -67,8 +68,9 @@ describe("MCP Git Tools - Basic Flow", () => {
     const result = await handler({repoPath: repoPath});
 
     assert.strictEqual(result.isError, undefined);
-    const structured = result.structuredContent as any;
+    const structured = result.structuredContent;
     assert.strictEqual(structured.success, true);
+    assert.ok(structured.commits);
     assert.strictEqual(structured.commits.length, 1);
     assert.strictEqual(structured.commits[0].message.trim(), "initial commit");
   });
@@ -77,7 +79,7 @@ describe("MCP Git Tools - Basic Flow", () => {
     const handler = getToolHandler("git_status");
     const result = await handler({repoPath: repoPath});
     assert.strictEqual(result.isError, undefined);
-    const structured = result.structuredContent as any;
+    const structured = result.structuredContent;
     assert.strictEqual(structured.isClean, true);
   });
 });

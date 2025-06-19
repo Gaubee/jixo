@@ -12,7 +12,7 @@
   },
   "scripts": {
     "fmt": "prettier --write src",
-    "test": "node --experimental-test-coverage --enable-source-maps --test dist/test/*.test.js"
+    "test": "node --experimental-test-coverage --enable-source-maps --test --test-concurrency dist/test/*.test.js"
   },
   "keywords": [
     "git",
@@ -21,15 +21,17 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@gaubee/util": "^0.33.0",
     "@jixo/mcp-core": "workspace:^",
-    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@modelcontextprotocol/sdk": "^1.13.0",
     "commander": "^14.0.0",
     "simple-git": "^3.28.0",
     "typescript": "^5.8.3",
-    "zod": "^3.25.63",
+    "zod": "^3.25.67",
     "zod-to-json-schema": "^3.24.5"
   },
   "devDependencies": {
-    "@types/node": "^22.15.30"
+    "@types/node": "^22",
+    "vitest": "^3.2.4"
   }
 }

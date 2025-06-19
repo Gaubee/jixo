@@ -84,7 +84,7 @@ async function applyChanges(files: DiffFiles): Promise<void> {
   for (const file of files) {
     try {
       if (file.mode === "delete") {
-        fsp.rmSync(file.fullFilepath);
+        await fsp.rm(file.fullFilepath, {recursive: this});
       } else {
         // 确保目标目录存在
         const dirName = path.dirname(file.fullFilepath);
@@ -120,6 +120,7 @@ async function confirmAction(filesToUpdate: DiffFiles): Promise<DiffFiles> {
       value: file.filePath,
       checked: file.safe,
     })),
+    pageSize: process.stdout.rows || filesToUpdate.length,
   });
   console.log("-----------------------------------------");
   return filesToUpdate.filter((file) => selectedFiles.includes(file.filePath));

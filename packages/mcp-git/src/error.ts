@@ -17,3 +17,36 @@ export class GitCommandError extends Error {
     this.name = "GitCommandError";
   }
 }
+
+/**
+ * Thrown when a commit operation is attempted with no staged changes.
+ */
+export class EmptyCommitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EmptyCommitError";
+  }
+}
+
+/**
+ * Thrown when a merge operation results in conflicts.
+ */
+export class MergeConflictError extends Error {
+  public readonly conflicts: string[];
+
+  constructor(message: string, conflicts: string[] = []) {
+    super(message);
+    this.name = "MergeConflictError";
+    this.conflicts = conflicts;
+  }
+}
+
+/**
+ * Thrown when a rebase operation results in conflicts.
+ */
+export class RebaseConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RebaseConflictError";
+  }
+}

@@ -1,8 +1,8 @@
 {
     "references": [
-        {
-            "path": "./packages/cli/tsconfig.json"
-        },
+        // {
+        //     "path": "./packages/cli/tsconfig.json"
+        // },
         {
             "path": "./packages/mcp-core/tsconfig.json"
         },

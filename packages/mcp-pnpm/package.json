@@ -11,7 +11,8 @@
     "mcp-pnpm": "./dist/index.js"
   },
   "scripts": {
-    "test": "node --test dist/test/*.test.js"
+    "fmt": "prettier --write src",
+    "test": "node --experimental-test-coverage --enable-source-maps --test dist/test/*.test.js"
   },
   "keywords": [
     "pnpm",
@@ -20,10 +21,10 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@modelcontextprotocol/sdk": "^1.13.0",
     "import-meta-ponyfill": "^3.2.2",
     "react": "^19.1.0",
     "typescript": "^5.8.3",
-    "zod": "^3.25.63"
+    "zod": "^3.25.67"
   }
 }

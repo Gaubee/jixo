@@ -1,8 +1,8 @@
 {
     "compilerOptions": {
         "composite": true,
-        "target": "es2022",
-        "module": "node18",
+        "target": "es2023",
+        "module": "nodenext",
         "lib": [
             "ESNext",
             "DOM",
@@ -23,7 +23,7 @@
         "noImplicitAny": true,
         "noImplicitThis": true,
         "verbatimModuleSyntax": true,
-        "moduleResolution": "node16",
+        "moduleResolution": "nodenext",
         "resolveJsonModule": true,
         "allowSyntheticDefaultImports": true,
         "experimentalDecorators": false,
@@ -31,6 +31,6 @@
         "forceConsistentCasingInFileNames": true,
         "noImplicitOverride": true,
         "plugins": [],
-        "types": []
+        "types": ["node"]
     }
 }

@@ -16,13 +16,13 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
+    "@modelcontextprotocol/sdk": "^1.13.0",
     "import-meta-ponyfill": "^3.2.2",
-    "zod": "^3.25.63"
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@types/diff": "^8.0.0",
     "@types/minimatch": "^5.1.2",
-    "@types/node": "^22.15.30"
+    "@types/node": "^22"
   }
 }

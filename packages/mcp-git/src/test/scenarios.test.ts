@@ -33,7 +33,8 @@ describe("MCP Git Tools - Scenarios", () => {
 
     // 2. Check status, should show untracked file
     let statusResult = await statusHandler({repoPath});
-    let structuredStatus = statusResult.structuredContent as any;
+    let structuredStatus = statusResult.structuredContent;
+    assert.ok(structuredStatus.files);
     assert.strictEqual(structuredStatus.files.find((f: any) => f.path === "README.md")?.workingDirStatus, "Untracked");
 
     // 3. Add the file to staging
@@ -41,22 +42,24 @@ describe("MCP Git Tools - Scenarios", () => {
 
     // 4. Check status, should show file as staged
     statusResult = await statusHandler({repoPath});
-    structuredStatus = statusResult.structuredContent as any;
+    structuredStatus = statusResult.structuredContent;
+    assert.ok(structuredStatus.files);
     assert.strictEqual(structuredStatus.files.find((f: any) => f.path === "README.md")?.indexStatus, "Added");
 
     // 5. Commit the file
     const commitResult = await commitHandler({repoPath, message: "feat: Add README"});
-    assert.strictEqual((commitResult.structuredContent as any).success, true);
+    assert.strictEqual(commitResult.structuredContent.success, true);
 
     // 6. Check log, new commit should be on top
     const logResult = await logHandler({repoPath, maxCount: 1});
-    const structuredLog = logResult.structuredContent as any;
+    const structuredLog = logResult.structuredContent;
+    assert.ok(structuredLog.commits);
     assert.strictEqual(structuredLog.commits.length, 1);
     assert.match(structuredLog.commits[0].message, /feat: Add README/);
 
     // 7. Check status, repo should be clean
     statusResult = await statusHandler({repoPath});
-    structuredStatus = statusResult.structuredContent as any;
+    structuredStatus = statusResult.structuredContent;
     assert.strictEqual(structuredStatus.isClean, true);
   });
 
@@ -86,7 +89,8 @@ describe("MCP Git Tools - Scenarios", () => {
 
     // Step 4: Verify unstaged diff shows all working directory changes
     let diffResult = await diffUnstagedHandler({repoPath});
-    let structuredDiff = diffResult.structuredContent as any;
+    let structuredDiff = diffResult.structuredContent;
+    assert.ok(structuredDiff.diff);
     assert.match(structuredDiff.diff, /\+\/\/ new feature/);
     assert.match(structuredDiff.diff, /\+console.log\('feature'\)/);
 
@@ -96,7 +100,8 @@ describe("MCP Git Tools - Scenarios", () => {
 
     // Step 6: Verify staged diff contains only the staged changes
     diffResult = await diffStagedHandler({repoPath});
-    structuredDiff = diffResult.structuredContent as any;
+    structuredDiff = diffResult.structuredContent;
+    assert.ok(structuredDiff.diff);
     assert.match(structuredDiff.diff, /\+\/\/ new feature/);
     assert.doesNotMatch(structuredDiff.diff, /feature.js/);
 
@@ -106,18 +111,20 @@ describe("MCP Git Tools - Scenarios", () => {
 
     // Step 8: Verify the staging area is now empty
     const stagedDiffAfterReset = await diffStagedHandler({repoPath});
-    assert.strictEqual((stagedDiffAfterReset.structuredContent as any).diff, "", "Staged diff should be empty after reset");
+    assert.strictEqual(stagedDiffAfterReset.structuredContent.diff, "", "Staged diff should be empty after reset");
 
     // Step 9: Verify the working directory now contains all changes again
     const unstagedDiffAfterReset = await diffUnstagedHandler({repoPath});
-    assert.match((unstagedDiffAfterReset.structuredContent as any).diff, /\+\/\/ new feature/);
-    assert.match((unstagedDiffAfterReset.structuredContent as any).diff, /feature.js/);
+    assert.ok(unstagedDiffAfterReset.structuredContent.diff);
+    assert.match(unstagedDiffAfterReset.structuredContent.diff, /\+\/\/ new feature/);
+    assert.match(unstagedDiffAfterReset.structuredContent.diff, /feature.js/);
 
     // Step 10: Final commit and comparison
     await addHandler({repoPath, files: ["main.js", "feature.js"]});
     await getToolHandler("git_commit")({repoPath, message: "feat: Implement new logic"});
     diffResult = await diffHandler({repoPath, target: "main"});
-    structuredDiff = diffResult.structuredContent as any;
+    structuredDiff = diffResult.structuredContent;
+    assert.ok(structuredDiff.diff);
     assert.match(structuredDiff.diff, /feature.js/);
   });
 });
