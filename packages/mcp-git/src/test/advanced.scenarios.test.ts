@@ -37,7 +37,8 @@ describe("MCP Git Tools - Advanced Scenarios", () => {
     // 2. Stash the WIP changes
     await stashPush({repoPath, message: "wip-feature"});
     let statusResult = await status({repoPath});
-    assert.strictEqual(statusResult.structuredContent.isClean, true, "Workspace should be clean after stash");
+    assert.ok(statusResult.structuredContent.success);
+    assert.strictEqual(statusResult.structuredContent.result.isClean, true, "Workspace should be clean after stash");
 
     // 3. List stashes
     const {structuredContent} = await stashList({repoPath});
@@ -50,7 +51,8 @@ describe("MCP Git Tools - Advanced Scenarios", () => {
     // 4. Pop the stash
     await stashPop({repoPath});
     statusResult = await status({repoPath});
-    assert.strictEqual(statusResult.structuredContent.isClean, false, "Workspace should be dirty after pop");
+    assert.ok(statusResult.structuredContent.success);
+    assert.strictEqual(statusResult.structuredContent.result.isClean, false, "Workspace should be dirty after pop");
     const content = fs.readFileSync(path.join(repoPath, "index.js"), "utf-8");
     assert.ok(content.includes("WIP feature"));
   });

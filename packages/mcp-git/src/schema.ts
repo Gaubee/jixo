@@ -9,7 +9,7 @@ const FileStatusSchema = z.object({
 });
 
 export const GitStatusOutputSchema = {
-  current: z.string().describe("Current branch name."),
+  current: z.string().nullable().describe("Current branch name."),
   tracking: z.string().nullable().describe("Tracking branch name."),
   ahead: z.number().describe("Number of commits ahead of the tracking branch."),
   behind: z.number().describe("Number of commits behind the tracking branch."),
@@ -60,7 +60,7 @@ export const GitMergeSuccessSchema = {
 
 const StashEntrySchema = z.object({
   hash: z.string(),
-  refs: z.array(z.string()),
+  refs: z.string(),
   message: z.string(),
 });
 

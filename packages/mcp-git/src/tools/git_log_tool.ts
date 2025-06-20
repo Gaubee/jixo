@@ -21,7 +21,7 @@ export const git_log_tool = safeRegisterTool2(
           commits
             .map((commit) => `Commit: ${commit.hash}\n` + `Author: ${commit.author_name} <${commit.author_email}>\n` + `Date: ${commit.date}\n` + `Message: ${commit.message}\n`)
             .join("\n");
-        return returnSuccess(humanReadableLog, {commits});
+        return returnSuccess(humanReadableLog, {commits: commits.slice()});
       });
     } catch (error) {
       return handleToolError("git_log", error);

@@ -67,7 +67,7 @@ export type SafeOutputData<TSuccess extends ZodRawShape, TError extends ZodRawSh
  * The return type leverages a ZodUnion to enable discriminated union type inference
  * based on the `success` literal flag.
  */
-export type SafeToolCallback2<TInput extends ZodRawShape, TSuccess extends ZodRawShape, TError extends ZodRawShape = typeof genericErrorRawShape> = (
+export type SafeToolCallback2<TInput extends ZodRawShape, TSuccess extends ZodRawShape, TError extends ZodRawShape> = (
   args: z.objectOutputType<TInput, ZodTypeAny>,
   extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
 ) => PromiseMaybe<
@@ -126,21 +126,21 @@ function safeRegisterTool<TInput extends ZodRawShape, TSuccess extends ZodRawSha
   };
 }
 
-export const returnSuccess = <T>(message: string, structuredContent: T) => {
+export const returnSuccess = <T>(message: string, successContent: T) => {
   return {
-    structuredContent: {success: true as const, result: structuredContent},
+    structuredContent: {success: true as const, result: successContent},
     content: [{type: "text" as const, text: message}],
   };
 };
 
-export const returnError = <T>(message: string, structuredContent: T) => {
+export const returnError = <T>(message: string, errorContent: T) => {
   return Object.assign(
     {
       isError: true as const,
       content: [{type: "text" as const, text: message}],
     } as CallToolResult,
     {
-      structuredContent: {success: false as const, error: structuredContent},
+      structuredContent: {success: false as const, error: errorContent},
     },
   );
 };

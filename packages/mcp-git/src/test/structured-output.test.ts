@@ -5,7 +5,7 @@ import {afterEach, beforeEach, describe, mock, test} from "node:test";
 import {type SimpleGit} from "simple-git";
 import {cleanupSandbox, getToolHandler, setupSandbox} from "./test-helper.js";
 
-function getResultText(result: CallToolResult): string {
+function getResultText(result: Pick<CallToolResult, "content">): string {
   const textContent = result.content?.find((c) => c.type === "text") as TextContent;
   return textContent?.text || "";
 }
