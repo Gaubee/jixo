@@ -25,8 +25,6 @@ export const SubTaskSchema = z.object({
   reworkReason: z.string().optional().describe("The ID of the task that caused this task to be reworked."),
   dependsOn: z.array(z.string()).optional().describe("A list of task IDs that must be completed before this task can start."),
   tags: z.array(z.string()).optional().describe("Keywords for categorizing the task (e.g., 'backend', 'refactor')."),
-  /**<!--[[gitCommit不该出现在这里，gitCommit应该是 jixoJobWorkflow 的一个输入字段，有的情况下，然后通过提示词告知 excutor或者reviewer来做git-commit]]--> */
-  gitCommit: z.boolean().optional().describe("Whether to perform a git commit after completion."),
 });
 
 // A root-level task can have children, but only of the SubTask type.

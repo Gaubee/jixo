@@ -1,6 +1,7 @@
 packages:
   - './'
   - 'packages/*'
+  - '!packages/cli'
   - 'docs'
 onlyBuiltDependencies:
   - '@parcel/watcher'

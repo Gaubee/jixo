@@ -8,7 +8,6 @@ const NewSubTaskSchema = SubTaskSchema.omit({
   executor: true,
   reviewer: true,
   reworkReason: true,
-  gitCommit: true,
 });
 
 export type NewSubTaskData = z.infer<typeof NewSubTaskSchema>;

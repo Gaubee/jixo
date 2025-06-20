@@ -12,8 +12,8 @@ class LogManagerFactory {
   private instances = new Map<string, LogManager>();
 
   private async _createManagerInstance(jobName: string, info: JobInfoData): Promise<LogManager> {
-    await ensureJixoDirsExist();
-    const logFilePath = getLogFilePath(jobName);
+    await ensureJixoDirsExist(info.workDir);
+    const logFilePath = getLogFilePath(info.workDir, jobName);
     let initialData: LogFileData;
 
     if (!fs.existsSync(logFilePath)) {
@@ -25,11 +25,11 @@ class LogManagerFactory {
       const content = serializeLogFile(initialData);
       await fsp.writeFile(logFilePath, content, "utf-8");
       const hash = calcContentHash(content);
-      await fsp.writeFile(getCacheFilePath(hash), JSON.stringify(initialData, null, 2), "utf-8");
+      await fsp.writeFile(getCacheFilePath(info.workDir, hash), JSON.stringify(initialData, null, 2), "utf-8");
     } else {
       const content = await fsp.readFile(logFilePath, "utf-8");
       const hash = calcContentHash(content);
-      const cachePath = getCacheFilePath(hash);
+      const cachePath = getCacheFilePath(info.workDir, hash);
 
       try {
         const cachedData = await fsp.readFile(cachePath, "utf-8");

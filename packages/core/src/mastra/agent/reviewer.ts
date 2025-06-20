@@ -6,9 +6,10 @@ import {tools} from "../tools/index.js";
 import type {ReviewerRuntimeContextData} from "../workflows/schemas.js";
 import {ReviewResultSchema} from "./schemas.js";
 
-export const reviewerAgent = new Agent({
-  name: "ReviewerAgent",
-  instructions: `You are a meticulous code reviewer and QA engineer. You will be provided with all the context for a task that was just completed.
+export const createReviewerAgent = async (dir: string) => {
+  const reviewerAgent = new Agent({
+    name: "ReviewerAgent",
+    instructions: `You are a meticulous code reviewer and QA engineer. You will be provided with all the context for a task that was just completed.
 
 ### Your Tasks:
 1.  **Verify Checklist**: Carefully review the task's checklist against the executor's summary and work logs. **For any criteria involving files, you MUST use the \`read_file\` tool to inspect the file's content directly.** Do not trust the summary alone.
@@ -18,10 +19,15 @@ export const reviewerAgent = new Agent({
     - If ANY checklist item is not met, your decision is "rejected". Provide concise, actionable feedback.
 
 Your final output MUST be a JSON object.`,
-  model: thinkModel,
-});
-
-export const useReviewerAgent = async (mastra: Mastra, args: {runtimeContext: RuntimeContext<ReviewerRuntimeContextData>}) => {
+    model: thinkModel,
+    tools: {
+      ...(await tools.fileSystem(dir)),
+      ...(await tools.git()),
+    },
+  });
+  return reviewerAgent;
+};
+export const useReviewerAgent = async (app: Mastra, args: {runtimeContext: RuntimeContext<ReviewerRuntimeContextData>}) => {
   const {runtimeContext} = args;
   const task = runtimeContext.get("task");
   const executionSummary = runtimeContext.get("executionSummary");
@@ -54,13 +60,17 @@ Please provide your review based on the information above. Use your file system 
 `;
 
   // Dynamically create the toolset for this specific call, scoped to the correct directory.
-  const fileSystemToolset = await tools.fileSystem(jobInfo.workDir);
+  // const fileSystemToolset = await tools.fileSystem(jobInfo.workDir);
 
-  return mastra.getAgent("reviewerAgent").generate(prompt, {
+  return app.getAgent("reviewerAgent").generate(prompt, {
     output: ReviewResultSchema,
-    toolsets: {
-      fs: fileSystemToolset, // Correctly pass tools via the toolsets option
-    },
+    // tools: [
+    //   tools.logTools(logManager),
+    //   fileSystemToolset,
+    // ],
+    // toolsets: {
+    //   fs: fileSystemToolset, // Correctly pass tools via the toolsets option
+    // },
     runtimeContext,
   });
 };

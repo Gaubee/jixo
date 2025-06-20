@@ -1,3 +1,4 @@
+import {obj_props} from "@gaubee/util";
 import {type Agent} from "@mastra/core/agent";
 import fsp from "node:fs/promises";
 import type {NewSubTaskData, NewTaskData} from "../agent/schemas.js";
@@ -43,21 +44,25 @@ export class LogManager {
     this._locks.set(this.jobName, false);
   }
 
+  get workDir(): string {
+    return this.logData.info.workDir;
+  }
+
   private async _persist() {
     const validatedData = LogFileSchema.parse(this.logData);
     const markdownContent = serializeLogFile(validatedData);
     const hash = calcContentHash(markdownContent);
-    const logFilePath = getLogFilePath(this.jobName);
-    const cachePath = getCacheFilePath(hash);
+    const logFilePath = getLogFilePath(this.workDir, this.jobName);
+    const cachePath = getCacheFilePath(this.workDir, hash);
     await fsp.writeFile(logFilePath, markdownContent, "utf-8");
     await fsp.writeFile(cachePath, JSON.stringify(validatedData, null, 2), "utf-8");
   }
 
   public async reload(): Promise<void> {
-    const logFilePath = getLogFilePath(this.jobName);
+    const logFilePath = getLogFilePath(this.workDir, this.jobName);
     const content = await fsp.readFile(logFilePath, "utf-8");
     const hash = calcContentHash(content);
-    const cachePath = getCacheFilePath(hash);
+    const cachePath = getCacheFilePath(this.workDir, hash);
 
     try {
       const cachedData = await fsp.readFile(cachePath, "utf-8");
@@ -153,14 +158,12 @@ export class LogManager {
       const {task} = findTaskByPath(this.logData.roadmap, path);
       if (!task) throw new Error(`Task with path '${path}' not found.`);
 
-      for (const key in updates) {
-        if (Object.prototype.hasOwnProperty.call(updates, key)) {
-          const value = updates[key as keyof typeof updates];
-          if (value === DELETE_FIELD_MARKER) {
-            delete task[key as keyof typeof task];
-          } else {
-            (task as any)[key] = value;
-          }
+      for (const key of obj_props(updates)) {
+        const value = updates[key];
+        if (value === DELETE_FIELD_MARKER) {
+          delete task[key as keyof typeof task];
+        } else {
+          (task as any)[key] = value;
         }
       }
 

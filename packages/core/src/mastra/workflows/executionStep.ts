@@ -1,6 +1,8 @@
 import {RuntimeContext} from "@mastra/core/runtime-context";
 import {createStep} from "@mastra/core/workflows";
+import assert from "node:assert";
 import {useExecutorAgent} from "../agent/executor.js";
+import {isJixoApp} from "../app.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageExecuteSchema, type ExecutorRuntimeContextData} from "./schemas.js";
@@ -10,6 +12,8 @@ export const executionStep = createStep({
   inputSchema: TriageExecuteSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
   async execute({inputData, mastra, getInitData}) {
+    assert.ok(isJixoApp(mastra));
+
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const task = inputData.task!;
     const logManager = await logManagerFactory.getOrCreate(init.jobName, init);
@@ -19,6 +23,7 @@ export const executionStep = createStep({
       ["logManager", logManager],
       ["task", task],
       ["recentWorkLog", currentLog.workLog.slice(0, 3)],
+      ["gitCommit", init.gitCommit],
     ]);
 
     try {
@@ -31,12 +36,7 @@ export const executionStep = createStep({
         throw new Error(executionResult.errorMessage ?? "Executor reported a failure without an error message.");
       }
 
-      if (task.gitCommit) {
-        const commitMessage = `feat(task-${task.id}): ${task.title}\n\n${executionResult.summary}`;
-        console.log(`[Executor] Simulating: git commit -m "${commitMessage}"`);
-      }
-
-      await logManager.updateTask(task.id, {status: "PendingReview", executor: DELETE_FIELD_MARKER as any});
+      await logManager.updateTask(task.id, {status: "PendingReview", executor: DELETE_FIELD_MARKER});
       await logManager.addWorkLog({
         timestamp: new Date().toISOString(),
         runnerId: init.runnerId,

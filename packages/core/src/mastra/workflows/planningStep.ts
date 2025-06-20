@@ -1,6 +1,8 @@
 import {createStep} from "@mastra/core/workflows";
+import assert from "node:assert";
 import {match} from "ts-pattern";
 import {usePlannerAgent} from "../agent/planner.js";
+import {isJixoApp} from "../app.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriagePlanSchema} from "./schemas.js";
@@ -9,6 +11,7 @@ export const planningStep = createStep({
   inputSchema: TriagePlanSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
   async execute({inputData, mastra, getInitData}) {
+    assert.ok(isJixoApp(mastra));
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const {planningContext} = inputData;
     const {jobName, runnerId, jobGoal, workDir} = init;

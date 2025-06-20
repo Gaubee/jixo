@@ -7,4 +7,5 @@ if (process.argv.includes("--init")) {
 }
 fs.mkdirSync(demoDir, {recursive: true});
 $.cd(rootResolver("demo"));
-await $`node ../dist/mastra/index.demo.js`;
+
+await $`node ../dist/demo.js`;

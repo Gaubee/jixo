@@ -34,7 +34,6 @@ export const tools = {
       },
     });
     return client.getTools().then((t) => {
-      console.log("QAQ pnpm", t);
       return t;
     });
   }),
@@ -49,7 +48,6 @@ export const tools = {
       },
     });
     return client.getTools().then((t) => {
-      console.log("QAQ git", t);
       return t;
     });
   }),

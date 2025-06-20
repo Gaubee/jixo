@@ -3,13 +3,7 @@ import {createStep, createWorkflow} from "@mastra/core/workflows";
 import {z} from "zod";
 import {logManagerFactory} from "../services/logManagerFactory.js";
 import {jixoJobWorkflow} from "./jixoJobWorkflow.js";
-
-const JixoMasterWorkflowInputSchema = z.object({
-  jobName: z.string(),
-  jobGoal: z.string(),
-  workDir: z.string().optional(),
-  maxLoops: z.number().default(20),
-});
+import {JixoMasterWorkflowInputSchema} from "./schemas.js";
 
 const masterLoopStep = createStep({
   id: "masterLoop",

@@ -2,18 +2,26 @@ import {z} from "zod";
 import {AnyTaskSchema, WorkLogEntrySchema} from "../entities.js";
 import {LogManager} from "../services/logManager.js";
 
+export const JixoBaseWorkflowInputSchema = z.object({
+  jobName: z.string().describe("The name of the job."),
+  jobGoal: z.string().describe("The goal of the job."),
+  workDir: z.string().describe("The working directory for the job."),
+  gitCommit: z.boolean().optional().describe("If true, a git commit will be performed after each successful execution step."),
+});
+
+export const JixoMasterWorkflowInputSchema = JixoBaseWorkflowInputSchema.extend({
+  maxLoops: z.number().default(20).describe("The maximum number of loops to execute before exiting."),
+});
+
 // --- Schema Definitions for the Inner Loop ---
-export const JixoJobWorkflowInputSchema = z.object({
-  jobName: z.string(),
-  jobGoal: z.string(),
-  runnerId: z.string(),
-  otherRunners: z.array(z.string()),
-  workDir: z.string(),
+export const JixoJobWorkflowInputSchema = JixoBaseWorkflowInputSchema.extend({
+  runnerId: z.string().describe("The ID of the runner responsible for this job."),
+  otherRunners: z.array(z.string()).describe("The IDs of other runners in the team."),
 });
 
 export const JixoJobWorkflowExitInfoSchema = z.object({
-  exitCode: z.number(), // 0: Complete, 1: Error, 2: Standby/Continue
-  reason: z.string(),
+  exitCode: z.number().describe("0: Complete, 1: Error, 2: Standby/Continue"),
+  reason: z.string().optional().describe("The reason for exiting the job."),
 });
 export type JixoJobWorkflowExitInfoData = z.infer<typeof JixoJobWorkflowExitInfoSchema>;
 
@@ -33,7 +41,7 @@ export type PlannerRuntimeContextData = z.infer<typeof PlannerRuntimeContextSche
 export const ExecutorRuntimeContextSchema = JobBaseRuntimeContextSchema.extend({
   task: AnyTaskSchema,
   recentWorkLog: z.array(WorkLogEntrySchema),
-});
+}).extend(JixoBaseWorkflowInputSchema.pick({gitCommit: true}).shape);
 export type ExecutorRuntimeContextData = z.infer<typeof ExecutorRuntimeContextSchema>;
 
 // Context for the ReviewerAgent's encapsulated hook.

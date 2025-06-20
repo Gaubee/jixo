@@ -1,13 +1,15 @@
 import path from "node:path";
-import {mastra} from "./index.js";
+import {createJixoApp} from "./mastra/app.js";
 // --- Main Execution Block ---
-async function main() {
+async function main(workDir: string) {
   console.log("JIXO V3 Core Services Initialized. Starting Master Workflow...");
-  const masterRun = mastra.getWorkflow("jixoMasterWorkflow").createRun();
+  const demoApp = await createJixoApp(workDir);
+  const masterRun = demoApp.getWorkflow("jixoMasterWorkflow").createRun();
   const result = await masterRun.start({
     inputData: {
       jobName: "jixo-v3-demo",
       jobGoal: "Create a simple 'hello world' nodejs project and run it.",
+      workDir,
       maxLoops: 20,
     },
   });
@@ -20,9 +22,10 @@ async function main() {
     console.error(`\n⏳ [JIXO] Master workflow suspended.`);
   }
 }
+const rootDir = path.resolve(import.meta.dirname, "../");
+process.loadEnvFile(path.join(rootDir, ".env"));
 
-process.loadEnvFile(path.resolve(import.meta.dirname, "../../.env"));
-main();
+main(process.cwd());
 
 // import {describe, it} from "vitest";
 // describe("jixoMasterWorkflow", () => {

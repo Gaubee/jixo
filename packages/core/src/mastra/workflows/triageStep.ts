@@ -38,7 +38,7 @@ export const triageStep = createStep({
     // Check for tasks locked by non-active runners and reset them.
     for (const task of walkJobRoadmap(logManager.getLogFile().roadmap)) {
       if (task.status === "Locked" && task.executor && !otherRunnersIds.has(task.executor)) {
-        await logManager.updateTask(task.id, {status: "Pending", executor: DELETE_FIELD_MARKER as any});
+        await logManager.updateTask(task.id, {status: "Pending", executor: DELETE_FIELD_MARKER});
         staleLocksFound = true;
       }
     }

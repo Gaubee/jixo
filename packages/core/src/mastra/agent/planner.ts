@@ -1,14 +1,14 @@
 import {YAML} from "@gaubee/nodekit";
-import type {Mastra} from "@mastra/core";
 import {Agent} from "@mastra/core/agent";
+import type {JixoApp} from "../app.js";
 import {thinkModel} from "../llm/index.js";
 import {type LogManager} from "../services/logManager.js";
 import {tools} from "../tools/index.js";
 import {PlannerOutputSchema} from "./schemas.js";
-
-export const plannerAgent = new Agent({
-  name: "PlannerAgent",
-  instructions: `You are an expert project planner AI. Your job is to analyze the provided context (job goal, current roadmap, and specific planning scenario) and generate a set of instructions to modify the project roadmap.
+export const createPlannerAgent = async (workDir: string) => {
+  const plannerAgent = new Agent({
+    name: "PlannerAgent",
+    instructions: `You are an expert project planner AI. Your job is to analyze the provided context (job goal, current roadmap, and specific planning scenario) and generate a set of instructions to modify the project roadmap.
 
 Your output MUST be a valid JSON object that strictly adheres to the provided schema.
 
@@ -29,10 +29,12 @@ For every new task or sub-task you create, you MUST provide:
 2.  **checklist**: A machine-readable list of 1-3 concrete success criteria for the Reviewer Agent.
 
 Analyze the user's request carefully and provide a precise and actionable plan.`,
-  model: thinkModel,
-});
+    model: thinkModel,
+  });
+  return plannerAgent;
+};
 const split = "```";
-export const usePlannerAgent = (mastra: Mastra, planningPrompt: string, args: {logManager: LogManager}) => {
+export const usePlannerAgent = (mastra: JixoApp, planningPrompt: string, args: {logManager: LogManager}) => {
   const {logManager} = args;
   const {
     roadmap,

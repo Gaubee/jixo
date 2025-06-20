@@ -1,4 +1,6 @@
 import fsp from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import {beforeEach, describe, expect, it} from "vitest";
 import type {NewSubTaskData, NewTaskData} from "../agent/schemas.js";
 import type {RoadmapTaskNodeData, SubTaskData, WorkLogEntryData} from "../entities.js";
@@ -6,16 +8,17 @@ import type {LogManager} from "./logManager.js";
 import {logManagerFactory} from "./logManagerFactory.js";
 
 const TEST_JOB_NAME = "test-job-for-logmanager";
+const workDir = path.join(os.tmpdir(), "jixo-test");
 let logManager: LogManager;
 
 beforeEach(async () => {
   const {getLogFilePath, ensureJixoDirsExist} = await import("./internal.js");
-  await ensureJixoDirsExist();
-  const logFilePath = getLogFilePath(TEST_JOB_NAME);
+  await ensureJixoDirsExist(workDir);
+  const logFilePath = getLogFilePath(workDir, TEST_JOB_NAME);
   await fsp.unlink(logFilePath).catch(() => {});
 
   // Corrected: Pass a valid JobInfoData object
-  logManager = await logManagerFactory.createIsolated(TEST_JOB_NAME, {jobGoal: "testonly", workDir: "/tmp/jixo-test"});
+  logManager = await logManagerFactory.createIsolated(TEST_JOB_NAME, {jobGoal: "testonly", workDir: workDir});
 });
 
 const newTask = (title: string, args?: Partial<NewTaskData>): NewTaskData => ({title, description: "", details: [], checklist: [], ...args});
@@ -27,7 +30,7 @@ describe("LogManager Basic CRUD & Info", () => {
     // Corrected: `title` is no longer a top-level property
     expect(logData.roadmap).toEqual([]);
     expect(logData.workLog).toEqual([]);
-    expect(jobInfo?.workDir).toBe("/tmp/jixo-test");
+    expect(jobInfo?.workDir).toBe(workDir);
     // Corrected: The initial goal is passed during creation now
     expect(jobInfo?.jobGoal).toBe("testonly");
   });

@@ -36,8 +36,8 @@
   },
   "license": "MIT",
   "packageManager": "pnpm@10.12.1",
+  "@jixo/cli": "workspace:^",
   "dependencies": {
-    "@jixo/cli": "workspace:^",
     "@jixo/mcp-fs": "workspace:^",
     "@jixo/mcp-git": "workspace:^",
     "@jixo/mcp-pnpm": "workspace:^"
