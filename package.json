@@ -7,6 +7,7 @@
   "scripts": {
     "ci": "echo \"NO CI\"",
     "test": "pnpm jixo --help",
+    "fmt": "prettier --write \"**/scripts/**/*.ts\" \"**/src/**/*.ts\"",
     "pub": "pnpm publish --access public --no-git-checks -r",
     "bundle:docs": "cd docs && pnpm build",
     "build": "tsc --build",
@@ -15,6 +16,7 @@
     "files-to-prompt": "node ./scripts/files-to-prompt.ts",
     "gen-prompt": "node ./scripts/gen-prompt.ts",
     "apply-ai-response": "node ./scripts/apply-ai-response.ts",
+    "core:dev": "mastra dev -d packages/core/src/mastra -r packages/core",
     "jixo": "node bundle/index.cjs"
   },
   "bin": "./bundle/index.cjs",
@@ -38,6 +40,7 @@
   "dependencies": {
     "@jixo/cli": "workspace:^",
     "@jixo/mcp-fs": "workspace:^",
+    "@jixo/mcp-git": "workspace:^",
     "@jixo/mcp-pnpm": "workspace:^"
   },
   "devDependencies": {
@@ -51,6 +54,7 @@
     "esbuild": "^0.25.5",
     "globby": "^14.1.0",
     "import-meta-ponyfill": "^3.2.2",
+    "mastra": "^0.10.6",
     "prettier": "^3.5.3",
     "prettier-plugin-organize-imports": "^4.1.0",
     "rolldown": "1.0.0-beta.18",

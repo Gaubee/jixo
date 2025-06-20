@@ -21,7 +21,7 @@ Your final output MUST be a JSON object.`,
     tools: {
       ...(await tools.fileSystem(dir)),
       ...(await tools.pnpm()),
-      // ...(await tools.git(dir)),
+      ...(await tools.git()),
     },
   });
 

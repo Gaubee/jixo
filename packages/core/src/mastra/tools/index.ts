@@ -33,22 +33,16 @@ export const tools = {
     });
     return client.getTools();
   }),
-  git: func_lazy(() => {
-    const caches = new Map<string, ToolsInput>();
-    return (repo: string) => {
-      return map_get_or_put_async(caches, repo, async () => {
-        const client = new MCPClient({
-          servers: {
-            git: {
-              command: "uvx",
-              args: ["mcp-server-git", "--repository", repo],
-            },
-          },
-        });
-        const tools = await client.getTools();
-        return tools;
-      });
-    };
+  git: func_remember(() => {
+    const client = new MCPClient({
+      servers: {
+        git: {
+          command: "pnpm",
+          args: ["mcp-git"],
+        },
+      },
+    });
+    return client.getTools();
   }),
   /**
    * Creates a set of tools that allow an agent to inspect the job's log file.

@@ -1,4 +1,3 @@
-
 // types.ts (or directly in your doctor.ts)
 
 export interface ToolCheckConfig {
