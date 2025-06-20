@@ -5,6 +5,7 @@ node_modules/
 !.jixo/
 !.github/
 *.bak
+.env
 .jixo.env
 dist/
 bundle/
