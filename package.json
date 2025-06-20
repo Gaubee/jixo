@@ -7,15 +7,14 @@
   "scripts": {
     "ci": "echo \"NO CI\"",
     "test": "pnpm jixo --help",
-    "fmt": "prettier --write \"**/scripts/**/*.ts\" \"**/src/**/*.ts\"",
     "pub": "pnpm publish --access public --no-git-checks -r",
     "bundle:docs": "cd docs && pnpm build",
     "build": "tsc --build",
     "bundle:json": "cd packages/cli && pnpm gen-prompts",
     "bundle:js": "esbuild ./index.ts --format=cjs --outfile=./bundle/index.cjs --platform=node",
-    "files-to-prompt": "node --no-warnings ./scripts/files-to-prompt.ts",
-    "gen-prompt": "node --no-warnings ./scripts/gen-prompt.ts",
-    "apply-ai-response": "node --no-warnings ./scripts/apply-ai-response.ts",
+    "G": "node --no-warnings ./scripts/gen-prompt.ts",
+    "A": "node --no-warnings ./scripts/apply-ai-response.ts",
+    "F": "prettier --write \"**/scripts/**/*.ts\" \"**/src/**/*.ts\"",
     "core:dev": "mastra dev -d packages/core/src/mastra -r packages/core",
     "jixo": "node bundle/index.cjs"
   },
