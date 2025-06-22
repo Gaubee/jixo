@@ -85,5 +85,30 @@ describe("MCP Filesystem Tools - Structured Output", () => {
     assert.ok(result.structuredContent.success);
     assert.strictEqual(result.structuredContent.result.source, sourcePath);
     assert.strictEqual(result.structuredContent.result.destination, destPath);
+    assert.ok(result.structuredContent.result.message);
+  });
+
+  test("move_file returns correct structured output", async () => {
+    const handler = getToolHandler("move_file");
+    const sourcePath = path.join(SANDBOX, "source.txt");
+    const destPath = path.join(SANDBOX, "dest.txt");
+    fs.writeFileSync(sourcePath, "content");
+
+    const result = await handler({source: sourcePath, destination: destPath});
+    assert.ok(result.structuredContent.success);
+    assert.strictEqual(result.structuredContent.result.source, sourcePath);
+    assert.strictEqual(result.structuredContent.result.destination, destPath);
+    assert.ok(result.structuredContent.result.message);
+  });
+
+  test("delete_path returns correct structured output", async () => {
+    const handler = getToolHandler("delete_path");
+    const filePath = path.join(SANDBOX, "delete.txt");
+    fs.writeFileSync(filePath, "content");
+
+    const result = await handler({path: filePath});
+    assert.ok(result.structuredContent.success);
+    assert.strictEqual(result.structuredContent.result.path, filePath);
+    assert.ok(result.structuredContent.result.message);
   });
 });

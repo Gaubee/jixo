@@ -1,11 +1,13 @@
 import {z} from "zod";
 
-// --- Reusable Schemas ---
-export const CommonSuccessMsgSchema = {
-  path: z.string().optional().describe("The path that was operated on."),
-  source: z.string().optional().describe("The source path for a move or copy operation."),
-  destination: z.string().optional().describe("The destination path for a move or copy operation."),
+// --- Base Schemas for Composition ---
+const BaseSuccessPayloadSchema = {
   message: z.string().optional().describe("A summary of the successful operation."),
+};
+
+const SinglePathSuccessSchema = {
+  ...BaseSuccessPayloadSchema,
+  path: z.string().describe("The absolute path that was operated on."),
 };
 
 // --- Input Schemas ---
@@ -55,49 +57,77 @@ export const ListAllowedDirectoriesArgsSchema = {};
 
 // --- Output Schemas (for Success states) ---
 export const ReadFileOutputSuccessSchema = {
-  path: z.string(),
-  content: z.string(),
+  path: z.string().describe("The absolute path of the file that was read."),
+  content: z.string().describe("The full content of the file."),
+};
+
+export const WriteFileSuccessSchema = {
+  ...SinglePathSuccessSchema,
+  path: z.string().describe("The absolute path of the file that was written to."),
 };
 
 export const EditFileOutputSuccessSchema = {
-  path: z.string(),
-  changesApplied: z.boolean(),
-  diff: z.string().nullable(),
-  newContent: z.string().optional().nullable(),
-  message: z.string(),
+  path: z.string().describe("The absolute path of the file that was edited."),
+  changesApplied: z.boolean().describe("Whether any changes were made to the file."),
+  diff: z.string().nullable().describe("A git-style diff of the changes, or null if no changes were made."),
+  newContent: z.string().optional().nullable().describe("The full new content of the file, if 'returnStyle' was 'full'."),
+  message: z.string().describe("A summary of the edit operation."),
 };
 
-const DirectoryEntrySchema: z.ZodType<{
+export type DirectoryEntryData = {
   name: string;
   type: "file" | "directory";
-  children?: any[];
-}> = z.lazy(() =>
-  z.object({
-    name: z.string(),
-    type: z.enum(["file", "directory"]),
-    children: z.array(DirectoryEntrySchema).optional(),
-  }),
-);
+  children?: DirectoryEntryData[];
+};
+
+const DirectoryEntrySchema: z.ZodType<DirectoryEntryData> = z.object({
+  name: z.string(),
+  type: z.enum(["file", "directory"]),
+  children: z.array(z.lazy(() => DirectoryEntrySchema)).optional(),
+});
+
 export const ListDirectoryOutputSuccessSchema = {
-  path: z.string(),
+  path: z.string().describe("The absolute path of the directory that was listed."),
   entries: z.array(DirectoryEntrySchema).describe("A list of files and directories. If maxDepth > 1, directories will contain a nested 'children' list."),
 };
 
+export const CreateDirectorySuccessSchema = {
+  ...SinglePathSuccessSchema,
+  path: z.string().describe("The absolute path of the directory that was created."),
+};
+
+export const MoveFileSuccessSchema = {
+  ...BaseSuccessPayloadSchema,
+  source: z.string().describe("The absolute source path of the item that was moved."),
+  destination: z.string().describe("The absolute destination path."),
+};
+
+export const CopyPathSuccessSchema = {
+  ...BaseSuccessPayloadSchema,
+  source: z.string().describe("The absolute source path of the item that was copied."),
+  destination: z.string().describe("The absolute destination path of the new copy."),
+};
+
+export const DeletePathSuccessSchema = {
+  ...SinglePathSuccessSchema,
+  path: z.string().describe("The absolute path of the item that was deleted."),
+};
+
 export const SearchFilesOutputSuccessSchema = {
-  path: z.string(),
-  pattern: z.string(),
-  matches: z.array(z.string()),
+  path: z.string().describe("The absolute path of the directory that was searched."),
+  pattern: z.string().describe("The search pattern that was used."),
+  matches: z.array(z.string()).describe("A list of absolute paths matching the pattern."),
 };
 
 export const FileInfoOutputSuccessSchema = {
-  path: z.string(),
-  type: z.enum(["file", "directory", "other"]),
-  size: z.number(),
-  permissions: z.string(),
-  created: z.string().datetime(),
-  modified: z.string().datetime(),
+  path: z.string().describe("The absolute path of the file or directory."),
+  type: z.enum(["file", "directory", "other"]).describe("The type of the item."),
+  size: z.number().describe("The size of the item in bytes."),
+  permissions: z.string().describe("The octal permission string for the item."),
+  created: z.string().datetime().describe("The creation timestamp in ISO 8601 format."),
+  modified: z.string().datetime().describe("The last modification timestamp in ISO 8601 format."),
 };
 
 export const ListAllowedDirectoriesOutputSuccessSchema = {
-  directories: z.array(z.string()),
+  directories: z.array(z.string()).describe("A list of absolute paths the server is allowed to access."),
 };

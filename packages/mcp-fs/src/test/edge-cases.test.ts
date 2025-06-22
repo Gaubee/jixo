@@ -28,8 +28,7 @@ describe("MCP Filesystem Tools - Edge Cases", () => {
     const handler = getToolHandler("write_file");
     const result = await handler({path: SANDBOX, content: "test"});
     assert.ok(result.structuredContent.success === false);
-    assert.strictEqual(result.structuredContent.error.name, "Error"); // Node.js throws a generic Error for EISDIR
-    assert.ok(result.structuredContent.error.message.includes("EISDIR"));
+    assert.strictEqual(result.structuredContent.error.name, "InvalidOperationError");
   });
 
   test("list_directory on a file should fail", async () => {
@@ -37,9 +36,9 @@ describe("MCP Filesystem Tools - Edge Cases", () => {
     fs.writeFileSync(filePath, "content");
     const handler = getToolHandler("list_directory");
     const result = await handler({path: filePath});
-    assert.ok(result.structuredContent.success === false);
+    assert.ok(result.structuredContent.success === false, "Expected operation to fail");
     assert.strictEqual(result.structuredContent.error.name, "Error"); // Node.js throws ENOTDIR
-    assert.ok(result.structuredContent.error.message.includes("ENOTDIR"));
+    assert.ok(result.structuredContent.error.message.includes("ENOTDIR"), `Expected ENOTDIR error, but got: ${result.structuredContent.error.message}`);
   });
 
   test("delete_path on a non-existent file should succeed (idempotency)", async () => {
@@ -62,6 +61,6 @@ describe("MCP Filesystem Tools - Edge Cases", () => {
     const handler = getToolHandler("copy_path");
     const result = await handler({source: filePath, destination: filePath});
     assert.ok(result.structuredContent.success === false);
-    assert.ok(result.structuredContent.error.message.includes("Source and destination cannot be the same"));
+    assert.strictEqual(result.structuredContent.error.name, "InvalidOperationError", "Expected an InvalidOperationError for same source and destination");
   });
 });

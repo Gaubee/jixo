@@ -24,6 +24,11 @@ export const list_directory_tool = safeRegisterTool2(
     try {
       const validPath = validatePath(rootPath);
 
+      // Precondition check: ensure the path is a directory.
+      if (!fs.statSync(validPath).isDirectory()) {
+        throw new Error(`ENOTDIR: not a directory, scandir '${rootPath}'`);
+      }
+
       const listRecursively = (dir: string, currentDepth: number): DirectoryEntry[] => {
         if (currentDepth >= maxDepth) return [];
         try {

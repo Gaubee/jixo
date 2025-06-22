@@ -29,3 +29,13 @@ export class DeleteNonEmptyDirectoryError extends McpToolError {
     super(message, [{tool_name: "delete_path", description: "To delete a non-empty directory, set the 'recursive' parameter to true."}]);
   }
 }
+
+/**
+ * Thrown for various invalid filesystem operations, such as writing to a directory.
+ */
+export class InvalidOperationError extends McpToolError {
+  override readonly name = "InvalidOperationError";
+  constructor(message: string) {
+    super(message);
+  }
+}

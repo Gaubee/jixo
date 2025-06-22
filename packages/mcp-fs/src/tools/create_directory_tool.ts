@@ -11,7 +11,7 @@ export const create_directory_tool = safeRegisterTool2(
   {
     description: "Create a new directory, including any necessary parent directories.",
     inputSchema: s.CreateDirectoryArgsSchema,
-    outputSuccessSchema: s.CommonSuccessMsgSchema,
+    outputSuccessSchema: s.CreateDirectorySuccessSchema,
   },
   async ({path}) => {
     try {

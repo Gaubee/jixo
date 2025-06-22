@@ -11,7 +11,7 @@ export const move_file_tool = safeRegisterTool2(
   {
     description: "Move or rename a file or directory.",
     inputSchema: s.MoveFileArgsSchema,
-    outputSuccessSchema: s.CommonSuccessMsgSchema,
+    outputSuccessSchema: s.MoveFileSuccessSchema,
   },
   async ({source, destination}) => {
     try {

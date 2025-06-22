@@ -14,7 +14,7 @@ export const delete_path_tool = safeRegisterTool2(
   {
     description: "Deletes a file or directory. Requires `recursive: true` to delete non-empty directories. Is idempotent (succeeds if path already does not exist).",
     inputSchema: s.DeletePathArgsSchema,
-    outputSuccessSchema: s.CommonSuccessMsgSchema,
+    outputSuccessSchema: s.DeletePathSuccessSchema,
   },
   async ({path: targetPath, recursive = false}) => {
     try {
