@@ -20,8 +20,7 @@ describe("MCP Filesystem Tools - Edge Cases", () => {
     const handler = getToolHandler("read_file");
     const result = await handler({path: path.join(SANDBOX, "nonexistent.txt")});
     assert.ok(result.structuredContent.success === false);
-    assert.strictEqual(result.structuredContent.error.name, "Error"); // Node.js throws a generic Error for ENOENT
-    assert.ok(result.structuredContent.error.message.includes("ENOENT"));
+    assert.strictEqual(result.structuredContent.error.name, "FileNotFoundError");
   });
 
   test("write_file to a directory should fail", async () => {
@@ -37,8 +36,7 @@ describe("MCP Filesystem Tools - Edge Cases", () => {
     const handler = getToolHandler("list_directory");
     const result = await handler({path: filePath});
     assert.ok(result.structuredContent.success === false, "Expected operation to fail");
-    assert.strictEqual(result.structuredContent.error.name, "Error"); // Node.js throws ENOTDIR
-    assert.ok(result.structuredContent.error.message.includes("ENOTDIR"), `Expected ENOTDIR error, but got: ${result.structuredContent.error.message}`);
+    assert.strictEqual(result.structuredContent.error.name, "NotADirectoryError", `Expected NotADirectoryError, but got: ${result.structuredContent.error.name}`);
   });
 
   test("delete_path on a non-existent file should succeed (idempotency)", async () => {

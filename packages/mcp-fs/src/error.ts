@@ -39,3 +39,23 @@ export class InvalidOperationError extends McpToolError {
     super(message);
   }
 }
+
+/**
+ * Thrown when a file or directory is not found at the specified path.
+ */
+export class FileNotFoundError extends McpToolError {
+  override readonly name = "FileNotFoundError";
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+/**
+ * Thrown when a directory operation is attempted on a file.
+ */
+export class NotADirectoryError extends McpToolError {
+  override readonly name = "NotADirectoryError";
+  constructor(message: string) {
+    super(message);
+  }
+}

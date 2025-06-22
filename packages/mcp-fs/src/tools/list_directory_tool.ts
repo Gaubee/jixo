@@ -1,6 +1,7 @@
 import {returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
 import fs from "node:fs";
 import path from "node:path";
+import {NotADirectoryError} from "../error.js";
 import {validatePath} from "../fs-utils/path-validation.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
@@ -26,7 +27,8 @@ export const list_directory_tool = safeRegisterTool2(
 
       // Precondition check: ensure the path is a directory.
       if (!fs.statSync(validPath).isDirectory()) {
-        throw new Error(`ENOTDIR: not a directory, scandir '${rootPath}'`);
+        // This line is defensive; the readdirSync below should also throw ENOTDIR.
+        throw new NotADirectoryError(`Path is not a directory: ${rootPath}`);
       }
 
       const listRecursively = (dir: string, currentDepth: number): DirectoryEntry[] => {
@@ -80,7 +82,10 @@ export const list_directory_tool = safeRegisterTool2(
         ...returnSuccess(formattedText, {path: validPath, entries: structuredEntries}),
         content: [{type: "text", text: formattedText}],
       };
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === "ENOTDIR") {
+        return handleToolError("list_directory", new NotADirectoryError(`Path is not a directory: ${rootPath}`));
+      }
       return handleToolError("list_directory", error);
     }
   },
