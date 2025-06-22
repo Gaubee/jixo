@@ -1,13 +1,11 @@
-import {createResolverByRootFile, cyan, green, magenta, normalizeFilePath, prompts, red, yellow} from "@gaubee/nodekit";
+import {$, createResolverByRootFile, cyan, green, magenta, normalizeFilePath, prompts, red, yellow} from "@gaubee/nodekit";
+import {iter_map_not_null} from "@gaubee/util";
 import fs from "node:fs";
 import path from "node:path";
 import {match} from "ts-pattern";
 const fsp = fs.promises;
 const rootResolver = createResolverByRootFile(import.meta.url);
 const rootDirname = normalizeFilePath(rootResolver.dirname) + "/";
-
-// --- 配置项 ---
-const ALLOW_OVERWRITE = true; // 设置为 true 以允许覆盖现有文件
 
 // --- 日志记录器 ---
 const logger = {
@@ -84,19 +82,16 @@ async function applyChanges(files: DiffFiles): Promise<void> {
   for (const file of files) {
     try {
       if (file.mode === "delete") {
-        await fsp.rm(file.fullFilepath, {recursive: this});
+        await fsp.rm(file.fullFilepath, {recursive: true, force: true});
+        logger.success(`Successfully deleted file: ${logger.file(file.filePath)}`);
       } else {
         // 确保目标目录存在
         const dirName = path.dirname(file.fullFilepath);
         await fsp.mkdir(dirName, {recursive: true});
 
         // 写入文件
-        if (ALLOW_OVERWRITE) {
-          await fsp.writeFile(file.fullFilepath, file.code + "\n", "utf-8"); // 添加一个换行符以符合惯例
-          logger.success(`Successfully updated file: ${logger.file(file.filePath)}`);
-        } else {
-          logger.warn(`Skipping file (overwrite disabled): ${logger.file(file.filePath)}`);
-        }
+        await fsp.writeFile(file.fullFilepath, file.code + "\n", "utf-8"); // 添加一个换行符以符合惯例
+        logger.success(`Successfully ${file.mode === "add" ? "writed" : "updated"} file: ${logger.file(file.filePath)}`);
       }
     } catch (error) {
       logger.error(`Failed to ${file.mode} file ${logger.file(file.filePath)}: ${error instanceof Error ? error.message : String(error)}`);
@@ -153,6 +148,7 @@ async function main() {
         logger.info("Operation cancelled by user.");
       }
     }
+    return filesToUpdate;
   } catch (error) {
     logger.error(`An error occurred: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
@@ -160,4 +156,12 @@ async function main() {
 }
 
 // 运行主函数
-main();
+const filesToUpdate = await main();
+
+console.log(cyan("----Format----"));
+await $`pnpm prettier --write ${iter_map_not_null(filesToUpdate, (f) => {
+  if (f.mode === "delete") {
+    return;
+  }
+  return f.fullFilepath;
+})}`;
