@@ -12,7 +12,7 @@
   },
   "scripts": {
     "fmt": "prettier --write src",
-    "test": "node --experimental-test-coverage --enable-source-maps --test dist/test/*.test.js"
+    "test": "run-test"
   },
   "keywords": [
     "pnpm",
@@ -33,6 +33,7 @@
     "zod-to-json-schema": "^3.24.5"
   },
   "devDependencies": {
+    "@jixo/dev": "workspace:^",
     "@types/diff": "^8.0.0",
     "@types/node": "^22"
   }

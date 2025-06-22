@@ -1,0 +1,31 @@
+{
+  "name": "@jixo/dev",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/cli.js",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "bin": {
+    "run-test": "./dist/run-test.js"
+  },
+  "scripts": {
+    "fmt": "prettier --write src"
+  },
+  "keywords": [
+    "dev",
+    "kit"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@gaubee/nodekit": "^0.9.2",
+    "@gaubee/util": "^0.33.0",
+    "@std/cli": "jsr:^1.0.20",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^22"
+  }
+}

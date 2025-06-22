@@ -164,6 +164,25 @@ importers:
         specifier: ^3.2.3
         version: 3.2.4(@types/debug@4.1.12)(@types/node@22.15.30)(msw@2.10.2(@types/node@22.15.30)(typescript@5.8.3))
 
+  packages/dev:
+    dependencies:
+      '@gaubee/nodekit':
+        specifier: ^0.9.2
+        version: 0.9.2(@gaubee/node@0.2.2(@gaubee/util@0.33.0))(@gaubee/util@0.33.0)(@types/node@22.15.30)
+      '@gaubee/util':
+        specifier: ^0.33.0
+        version: 0.33.0
+      '@std/cli':
+        specifier: jsr:^1.0.20
+        version: '@jsr/std__cli@1.0.20'
+      zod:
+        specifier: ^3.25.67
+        version: 3.25.67
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.15.30
+
   packages/mcp-core:
     dependencies:
       '@modelcontextprotocol/sdk':
@@ -191,6 +210,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.13.0
         version: 1.13.0
+      commander:
+        specifier: ^14.0.0
+        version: 14.0.0
       diff:
         specifier: ^8.0.2
         version: 8.0.2
@@ -216,6 +238,9 @@ importers:
         specifier: ^3.24.5
         version: 3.24.5(zod@3.25.67)
     devDependencies:
+      '@jixo/dev':
+        specifier: workspace:^
+        version: link:../dev
       '@types/diff':
         specifier: ^8.0.0
         version: 8.0.0
@@ -243,9 +268,6 @@ importers:
       simple-git:
         specifier: ^3.28.0
         version: 3.28.0
-      typescript:
-        specifier: ^5.8.3
-        version: 5.8.3
       zod:
         specifier: ^3.25.67
         version: 3.25.67
@@ -253,6 +275,9 @@ importers:
         specifier: ^3.24.5
         version: 3.24.5(zod@3.25.67)
     devDependencies:
+      '@jixo/dev':
+        specifier: workspace:^
+        version: link:../dev
       '@types/node':
         specifier: ^22
         version: 22.15.30
@@ -1146,6 +1171,9 @@ packages:
 
   '@jsr/std__cli@1.0.19':
     resolution: {integrity: sha512-Dh5yzpdQVu6TAgzTjnWqD+pLgAquesmpuLHELBW8gsJKgCqy4DbiqfjU8lEk3gtImmfInaACGC1Sljt3YJJIyA==, tarball: https://npm.jsr.io/~/11/@jsr/std__cli/1.0.19.tgz}
+
+  '@jsr/std__cli@1.0.20':
+    resolution: {integrity: sha512-lwO3G7PowHpOPD4U1KHpHnCrTtzyj9jj5SX9xICNXySx0fYNgKab2cdrEDrTEHNoHfGCGBVYKOmpCS4LrX1SxA==, tarball: https://npm.jsr.io/~/11/@jsr/std__cli/1.0.20.tgz}
 
   '@jsr/std__fmt@1.0.8':
     resolution: {integrity: sha512-miZHzj9OgjuajrcMKzpqNVwFb9O71UHZzV/FHVq0E0Uwmv/1JqXgmXAoBNPrn+MP0fHT3mMgaZ6XvQO7dam67Q==, tarball: https://npm.jsr.io/~/11/@jsr/std__fmt/1.0.8.tgz}
@@ -6068,6 +6096,8 @@ snapshots:
 
   '@jsr/std__cli@1.0.19': {}
 
+  '@jsr/std__cli@1.0.20': {}
+
   '@jsr/std__fmt@1.0.8': {}
 
   '@kwsites/file-exists@1.1.1':
@@ -8493,7 +8523,7 @@ snapshots:
 
   estree-walker@3.0.3:
     dependencies:
-      '@types/estree': 1.0.7
+      '@types/estree': 1.0.8
 
   etag@1.8.1: {}
 
