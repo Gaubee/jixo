@@ -24,6 +24,13 @@ export interface Worktree {
   head?: string;
 }
 
+export interface RepoInfo {
+  toplevel: string;
+  prefix: string;
+  gitDir: string;
+  isInsideWorkTree: boolean;
+}
+
 export class GitWrapper {
   private git: SimpleGit;
   public readonly repoPath: string;
@@ -162,6 +169,28 @@ export class GitWrapper {
 
   rebase(args: string[]): Promise<string> {
     return this.withLock("exclusive", () => this.git.rebase(args));
+  }
+
+  revParse(args: string[]): Promise<string> {
+    return this.withLock("shared", () => this.git.revparse(args));
+  }
+
+  async getRepoInfo(): Promise<RepoInfo> {
+    return this.withLock("shared", async () => {
+      const [toplevel, prefix, gitDir, isInsideWorkTreeStr] = await Promise.all([
+        this.git.revparse(["--show-toplevel"]),
+        this.git.revparse(["--show-prefix"]),
+        this.git.revparse(["--git-dir"]),
+        this.git.revparse(["--is-inside-work-tree"]),
+      ]);
+
+      return {
+        toplevel: toplevel.trim(),
+        prefix: prefix.trim(),
+        gitDir: gitDir.trim(),
+        isInsideWorkTree: isInsideWorkTreeStr.trim() === "true",
+      };
+    });
   }
 
   addTag(tagName: string): Promise<{name: string}> {

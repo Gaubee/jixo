@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import fs from "node:fs";
+import path from "node:path";
 import {afterEach, beforeEach, describe, mock, test} from "node:test";
 import {type SimpleGit} from "simple-git";
 import {cleanupSandbox, getToolHandler, setupSandbox} from "./test-helper.js";
@@ -74,5 +75,38 @@ describe("MCP Git Tools - Basic Flow", () => {
     const result = await handler({repoPath: repoPath});
     assert.ok(result.structuredContent.success);
     assert.strictEqual(result.structuredContent.result.isClean, true);
+  });
+
+  test("`git_resolve_ref` should resolve 'HEAD' to the latest commit hash", async () => {
+    const handler = getToolHandler("git_resolve_ref");
+    const latestCommit = await git.revparse(["HEAD"]);
+
+    const result = await handler({repoPath: repoPath, ref: "HEAD"});
+    assert.ok(result.structuredContent.success, `Tool failed with: ${!result.structuredContent.success && JSON.stringify(result.structuredContent.error)}`);
+    const commitHash = result.structuredContent.result.commitHash;
+    assert.strictEqual(commitHash, latestCommit);
+  });
+
+  test("`git_get_repo_info` should return correct repository information", async () => {
+    const handler = getToolHandler("git_get_repo_info");
+    const result = await handler({repoPath});
+    assert.ok(result.structuredContent.success);
+    const info = result.structuredContent.result;
+
+    assert.strictEqual(info.toplevel, path.resolve(repoPath));
+    assert.strictEqual(info.prefix, "");
+    assert.strictEqual(info.gitDir, ".git");
+    assert.strictEqual(info.isInsideWorkTree, true);
+  });
+
+  test("`git_get_ref_name` should resolve 'HEAD' to the current branch name", async () => {
+    const handler = getToolHandler("git_get_ref_name");
+    const result = await handler({repoPath, ref: "HEAD"});
+    assert.ok(result.structuredContent.success);
+
+    // Default branch created by simple-git is 'master' or 'main' depending on git version
+    // Let's get it directly to be sure
+    const currentBranch = await git.revparse(["--abbrev-ref", "HEAD"]);
+    assert.strictEqual(result.structuredContent.result.name, currentBranch);
   });
 });

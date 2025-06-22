@@ -68,6 +68,21 @@ export const GitStashListSuccessSchema = {
   stashes: z.array(StashEntrySchema).describe("A list of stashed changesets."),
 };
 
+export const GitResolveRefSuccessSchema = {
+  commitHash: z.string().describe("The resolved, absolute commit hash."),
+};
+
+export const GitGetRepoInfoSuccessSchema = {
+  toplevel: z.string().describe("The absolute path to the repository's root directory."),
+  prefix: z.string().describe("The path prefix relative to the toplevel directory. Empty if at the root."),
+  gitDir: z.string().describe("The path to the .git directory."),
+  isInsideWorkTree: z.boolean().describe("True if the current path is inside a work tree."),
+};
+
+export const GitGetRefNameSuccessSchema = {
+  name: z.string().describe("The symbolic name of the reference (e.g., 'main')."),
+};
+
 // --- Tool Input Schemas ---
 export const RepoPathArgSchema = {
   repoPath: z.string().describe("Path to the Git repository or any of its worktrees."),
@@ -131,6 +146,15 @@ export const GitMergeArgsSchema = {
 export const GitRebaseArgsSchema = {
   ...RepoPathArgSchema,
   baseBranch: z.string().describe("The branch onto which the current branch will be rebased."),
+};
+export const GitResolveRefArgsSchema = {
+  ...RepoPathArgSchema,
+  ref: z.string().describe("The reference to resolve (e.g., 'HEAD', 'main', 'v1.0.0')."),
+};
+export const GitGetRepoInfoArgsSchema = RepoPathArgSchema;
+export const GitGetRefNameArgsSchema = {
+  ...RepoPathArgSchema,
+  ref: z.string().describe("The reference whose symbolic name to find (e.g., 'HEAD')."),
 };
 export const GitTagArgsSchema = {
   ...RepoPathArgSchema,

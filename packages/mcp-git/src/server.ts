@@ -9,11 +9,14 @@ import {git_create_branch_tool} from "./tools/git_create_branch_tool.js";
 import {git_diff_staged_tool} from "./tools/git_diff_staged_tool.js";
 import {git_diff_tool} from "./tools/git_diff_tool.js";
 import {git_diff_unstaged_tool} from "./tools/git_diff_unstaged_tool.js";
+import {git_get_ref_name_tool} from "./tools/git_get_ref_name_tool.js";
+import {git_get_repo_info_tool} from "./tools/git_get_repo_info_tool.js";
 import {git_init_tool} from "./tools/git_init_tool.js";
 import {git_log_tool} from "./tools/git_log_tool.js";
 import {git_merge_tool} from "./tools/git_merge_tool.js";
 import {git_rebase_tool} from "./tools/git_rebase_tool.js";
 import {git_reset_tool} from "./tools/git_reset_tool.js";
+import {git_resolve_ref_tool} from "./tools/git_resolve_ref_tool.js";
 import {git_show_tool} from "./tools/git_show_tool.js";
 import {git_stash_list_tool} from "./tools/git_stash_list_tool.js";
 import {git_stash_pop_tool} from "./tools/git_stash_pop_tool.js";
@@ -42,6 +45,9 @@ export const tools = {
   git_show: git_show_tool,
   git_merge: git_merge_tool,
   git_rebase: git_rebase_tool,
+  git_resolve_ref: git_resolve_ref_tool,
+  git_get_repo_info: git_get_repo_info_tool,
+  git_get_ref_name: git_get_ref_name_tool,
   git_stash_push: git_stash_push_tool,
   git_stash_list: git_stash_list_tool,
   git_stash_pop: git_stash_pop_tool,
