@@ -19,7 +19,7 @@ export const move_file_tool = safeRegisterTool2(
       const validDest = validatePath(destination);
       fs.renameSync(validSource, validDest);
       const message = `Successfully moved ${source} to ${destination}`;
-      return returnSuccess(message, {path: validDest, message});
+      return returnSuccess(message, {source: validSource, destination: validDest, message});
     } catch (error) {
       return handleToolError("move_file", error);
     }

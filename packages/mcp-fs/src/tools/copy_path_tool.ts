@@ -23,7 +23,7 @@ export const copy_path_tool = safeRegisterTool2(
       }
       fs.cpSync(validSource, validDest, {recursive: recursive});
       const message = `Successfully copied ${source} to ${destination}`;
-      return returnSuccess(message, {path: validDest, message});
+      return returnSuccess(message, {source: validSource, destination: validDest, message});
     } catch (error) {
       return handleToolError("copy_path", error);
     }

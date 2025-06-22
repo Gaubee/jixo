@@ -3,6 +3,8 @@ import {z} from "zod";
 // --- Reusable Schemas ---
 export const CommonSuccessMsgSchema = {
   path: z.string().optional().describe("The path that was operated on."),
+  source: z.string().optional().describe("The source path for a move or copy operation."),
+  destination: z.string().optional().describe("The destination path for a move or copy operation."),
   message: z.string().optional().describe("A summary of the successful operation."),
 };
 
