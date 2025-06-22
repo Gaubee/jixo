@@ -2,9 +2,9 @@ import {createStep} from "@mastra/core/workflows";
 import assert from "node:assert";
 import {match} from "ts-pattern";
 import {usePlannerAgent} from "../agent/planner.js";
-import {isJixoApp} from "../app.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
+import {isJixoApp} from "../utils.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriagePlanSchema} from "./schemas.js";
 export const planningStep = createStep({
   id: "planning",
