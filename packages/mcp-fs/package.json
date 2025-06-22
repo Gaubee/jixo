@@ -23,6 +23,7 @@
   "dependencies": {
     "@jixo/mcp-core": "workspace:^",
     "@modelcontextprotocol/sdk": "^1.13.0",
+    "commander": "^14.0.0",
     "diff": "^8.0.2",
     "glob": "^11.0.3",
     "import-meta-ponyfill": "^3.2.2",

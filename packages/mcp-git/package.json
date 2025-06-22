@@ -12,7 +12,7 @@
   },
   "scripts": {
     "fmt": "prettier --write src",
-    "test": "run-test"
+    "test": "run-test --concurrency"
   },
   "keywords": [
     "git",

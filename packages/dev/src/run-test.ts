@@ -4,6 +4,7 @@ import {globbySync} from "globby";
 const rootResolver = createResolverByRootFile(process.cwd());
 const args = parseArgs(process.argv.slice(2), {
   collect: ["filter"],
+  boolean: ["concurrency"],
   alias: {
     F: "filter",
   },
@@ -23,4 +24,4 @@ args.filter?.forEach((f) => {
   }
 });
 
-await $`node --experimental-test-coverage --enable-source-maps --test --test-concurrency ${patternArgs} ${testFiles}`;
+await $`node --experimental-test-coverage --enable-source-maps --test ${args.concurrency ? "--test-concurrency" : ""} ${patternArgs} ${testFiles}`;
