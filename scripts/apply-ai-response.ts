@@ -19,10 +19,11 @@ const logger = {
       .with("add", () => green("❇️"))
       .with("modify", () => yellow("♻️"))
       .with("delete", () => red("❌"))
+      .with("rename", () => red("🚚"))
       .exhaustive(),
 };
 
-type DiffFileMode = "add" | "delete" | "modify";
+type DiffFileMode = "add" | "delete" | "modify" | "rename";
 type DiffFiles = Array<{
   filePath: string;
   code: string;
@@ -47,13 +48,23 @@ function parseMarkdown(markdownContent: string): DiffFiles {
 
   for (const match of markdownContent.matchAll(fileBlockRegex)) {
     const filePath = match[1].trim();
-    const code = match[2].trim();
+    let code = match[2].trim();
     const fullFilepath = rootResolver(filePath);
-    let mode: DiffFileMode = "modify";
+    let mode: DiffFileMode | undefined;
     if (code === "$$DELETE_FILE$$") {
       mode = "delete";
-    } else if (!fs.existsSync(fullFilepath)) {
+    } else if (code.startsWith("$$RENAME_FILE$$")) {
+      code = code.replace(/\$\$RENAME_FILE\$\$`(.+?)`/, (_, pathname) => {
+        mode = "rename";
+        return rootResolver(pathname);
+      });
+    } else if (fs.existsSync(fullFilepath)) {
+      mode = "modify";
+    } else {
       mode = "add";
+    }
+    if (mode == null) {
+      throw new Error(`Invalid parse mode for filepath: ${filePath}`);
     }
     // --- 安全检查 ---
     // 确保目标路径在项目根目录内，防止路径遍历攻击
@@ -81,18 +92,29 @@ function parseMarkdown(markdownContent: string): DiffFiles {
 async function applyChanges(files: DiffFiles): Promise<void> {
   for (const file of files) {
     try {
-      if (file.mode === "delete") {
-        await fsp.rm(file.fullFilepath, {recursive: true, force: true});
-        logger.success(`Successfully deleted file: ${logger.file(file.filePath)}`);
-      } else {
-        // 确保目标目录存在
-        const dirName = path.dirname(file.fullFilepath);
-        await fsp.mkdir(dirName, {recursive: true});
+      await match(file.mode)
+        .with("delete", async () => {
+          await fsp.rm(file.fullFilepath, {recursive: true, force: true});
+          logger.success(`Successfully deleted file: ${logger.file(file.filePath)}`);
+        })
+        .with("rename", async () => {
+          // 确保目标目录存在
+          const newFilepath = file.code;
+          const dirName = path.dirname(newFilepath);
+          await fsp.mkdir(dirName, {recursive: true});
 
-        // 写入文件
-        await fsp.writeFile(file.fullFilepath, file.code + "\n", "utf-8"); // 添加一个换行符以符合惯例
-        logger.success(`Successfully ${file.mode === "add" ? "writed" : "updated"} file: ${logger.file(file.filePath)}`);
-      }
+          await fsp.rename(file.fullFilepath, newFilepath);
+        })
+        .with("add", "modify", async () => {
+          // 确保目标目录存在
+          const dirName = path.dirname(file.fullFilepath);
+          await fsp.mkdir(dirName, {recursive: true});
+
+          // 写入文件
+          await fsp.writeFile(file.fullFilepath, file.code + "\n", "utf-8"); // 添加一个换行符以符合惯例
+          logger.success(`Successfully ${file.mode === "add" ? "writed" : "updated"} file: ${logger.file(file.filePath)}`);
+        })
+        .exhaustive();
     } catch (error) {
       logger.error(`Failed to ${file.mode} file ${logger.file(file.filePath)}: ${error instanceof Error ? error.message : String(error)}`);
     }
