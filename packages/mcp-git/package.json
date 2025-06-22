@@ -12,7 +12,7 @@
   },
   "scripts": {
     "fmt": "prettier --write src",
-    "test": "node --experimental-test-coverage --enable-source-maps --test --test-concurrency dist/test/*.test.js"
+    "test": "node ./scripts/run-test.ts"
   },
   "keywords": [
     "git",

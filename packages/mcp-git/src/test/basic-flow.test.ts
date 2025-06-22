@@ -93,7 +93,7 @@ describe("MCP Git Tools - Basic Flow", () => {
     assert.ok(result.structuredContent.success);
     const info = result.structuredContent.result;
 
-    assert.strictEqual(info.toplevel, path.resolve(repoPath));
+    assert.strictEqual(path.normalize(info.toplevel), path.normalize(repoPath));
     assert.strictEqual(info.prefix, "");
     assert.strictEqual(info.gitDir, ".git");
     assert.strictEqual(info.isInsideWorkTree, true);
