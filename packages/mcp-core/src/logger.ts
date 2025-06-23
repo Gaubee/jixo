@@ -2,27 +2,20 @@ import {func_remember, obj_lazy_builder} from "@gaubee/util";
 import {Console} from "node:console";
 import {createWriteStream, mkdirSync} from "node:fs";
 import path from "node:path";
-const setEnable = (file: string | false) => {
+const setEnable = (file: string | false, baseDir?: string) => {
   if (file) {
-    getConsole(file);
+    baseDir ??= path.join(process.cwd(), ".jixo/logs");
+    const logfilepath = path.resolve(baseDir, file);
+    getConsole(logfilepath);
   } else {
     getConsole.reset();
   }
 };
-const defaultLogdir = path.join(process.cwd(), ".jixo/logs");
-const getConsole = func_remember(
-  (logfile: string) => {
-    logfile = path.resolve(defaultLogdir, logfile);
-    mkdirSync(path.dirname(logfile), {recursive: true});
-    const logStream = createWriteStream(logfile, {flags: "a"});
-    const errStream = createWriteStream(logfile, {flags: "a"});
-
-    return new Console(logStream, errStream);
-  },
-  (logfile: string) => {
-    return path.resolve(defaultLogdir, logfile);
-  },
-);
+const getConsole = func_remember((logfile: string) => {
+  mkdirSync(path.dirname(logfile), {recursive: true});
+  const logStream = createWriteStream(logfile, {flags: "a"});
+  return new Console(logStream, logStream);
+});
 
 const noop = () => {};
 export const logger = obj_lazy_builder(
