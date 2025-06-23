@@ -14,6 +14,7 @@
     "bundle:js": "esbuild ./index.ts --format=cjs --outfile=./bundle/index.cjs --platform=node",
     "G": "pnpm jixo-gen-prompt",
     "A": "pnpm jixo-apply-ai-response",
+    "I": "pnpm jixo-mcp-inspector",
     "F": "prettier --write \"**/scripts/**/*.ts\" \"**/src/**/*.ts\"",
     "core:dev": "mastra dev -d packages/core/src/mastra -r packages/core",
     "jixo": "node bundle/index.cjs"

@@ -71,7 +71,11 @@ const gen_prompt = async (input: string, once: boolean, _output?: string) => {
       }
       const lines: string[] = [];
       for (const filepath of globbySync(glob_or_filepath)) {
-        const fileContent = getFileState(rootResolver(filepath), once).get();
+        const fullFilepath = rootResolver(filepath);
+        if (!statSync(fullFilepath).isFile()) {
+          continue;
+        }
+        const fileContent = getFileState(fullFilepath, once).get();
         if (mode === "FILE") {
           // const split = "````"; //fileContent.includes("```") ? "````" : "```";
           // lines.push(

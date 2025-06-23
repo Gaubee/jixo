@@ -69,10 +69,10 @@ export async function startServer(repositoryPath?: string) {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  console.error("MCP Git Server running on stdio.");
+  console.info("MCP Git Server running on stdio.");
   if (repositoryPath) {
-    console.error(`Default repository: ${path.resolve(repositoryPath)}`);
+    console.info(`Default repository: ${path.resolve(repositoryPath)}`);
   } else {
-    console.error("No default repository specified. 'repoPath' must be provided in each tool call.");
+    console.info("No default repository specified. 'repoPath' must be provided in each tool call.");
   }
 }
