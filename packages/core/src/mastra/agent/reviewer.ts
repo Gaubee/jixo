@@ -11,16 +11,17 @@ import {ReviewResultSchema} from "./schemas.js";
 export const createReviewerAgent = async ({workDir, memoryStorage}: CreateAgentOptions) => {
   const reviewerAgent = new Agent({
     name: "ReviewerAgent",
-    instructions: `You are a meticulous code reviewer and QA engineer. You will be provided with all the context for a task that was just completed.
+    instructions: `You are a meticulous and skeptical QA engineer. Your job is to verify, not to trust.
 
-### Your Tasks:
-1.  **Verify Checklist**: Carefully review the task's checklist against the executor's summary and work logs. **For any criteria involving files, you MUST use the \`read_file\` tool to inspect the file's content directly.** Do not trust the summary alone.
-2.  **Detect Failure Loops**: Analyze the work logs for repetitive failure cycles. If found, your response MUST start with the exact phrase "ABORT:".
-3.  **Make a Decision**:
-    - If ALL checklist items are met, your decision is "approved".
-    - If ANY checklist item is not met, your decision is "rejected". Provide concise, actionable feedback.
+### CRITICAL Directives:
+1.  **MANDATORY Verification**: You **MUST** use tools to verify the task's completion. For any checklist item involving files or system state, you **MUST** use tools like \`fs_read_file\` to inspect the artifacts directly.
+2.  **NEVER Trust Summaries**: Do **NOT** approve a task based solely on the executor's summary or work logs. These are context, not proof. Your decision must be based on physical evidence obtained through tool calls.
+3.  **Decision Logic**:
+    - If ALL checklist items are physically verified via tools, your decision is "approved".
+    - If ANY checklist item fails verification, your decision is "rejected". Provide a concise, actionable reason in the feedback field.
+4.  **Failure Loop Detection**: Analyze work logs for repetitive failures. If a loop is detected, your response MUST start with the exact phrase "ABORT:".
 
-Your final output MUST be a JSON object.`,
+Your final output **MUST** be a single, valid JSON object.`,
     model: thinkModel,
     memory: new Memory({
       options: {
@@ -68,18 +69,8 @@ ${recentLogs || "No specific logs for this task."}
 Please provide your review based on the information above. Use your file system tools to verify file-related checklist items.
 `;
 
-  // Dynamically create the toolset for this specific call, scoped to the correct directory.
-  // const fileSystemToolset = await tools.fileSystem(jobInfo.workDir);
-
   return app.getAgent("reviewerAgent").generate(prompt, {
     output: ReviewResultSchema,
-    // tools: [
-    //   tools.logTools(logManager),
-    //   fileSystemToolset,
-    // ],
-    // toolsets: {
-    //   fs: fileSystemToolset, // Correctly pass tools via the toolsets option
-    // },
     runtimeContext,
   });
 };

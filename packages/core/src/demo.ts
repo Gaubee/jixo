@@ -3,12 +3,12 @@ import {createJixoApp} from "./mastra/app.js";
 // --- Main Execution Block ---
 async function main(workDir: string) {
   console.log("JIXO V3 Core Services Initialized. Starting Master Workflow...");
-  const demoApp = await createJixoApp(workDir);
+  const demoApp = await createJixoApp({workDir, logLevel: "debug"});
   const masterRun = demoApp.getWorkflow("jixoMasterWorkflow").createRun();
   const result = await masterRun.start({
     inputData: {
       jobName: "jixo-v3-demo",
-      jobGoal: "Create a simple 'hello world' nodejs project and run it.",
+      jobGoal: "Create a simple 'hello world' nodejs project and run it. 并且最终提供这个nodejs的程序路径给用户",
       workDir,
       maxLoops: 20,
     },

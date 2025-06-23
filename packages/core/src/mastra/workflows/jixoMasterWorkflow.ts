@@ -2,7 +2,7 @@ import {delay} from "@gaubee/util";
 import {createStep, createWorkflow} from "@mastra/core/workflows";
 import {z} from "zod";
 import {logManagerFactory} from "../services/logManagerFactory.js";
-import {jixoJobWorkflow} from "./jixoJobWorkflow.js";
+import type {JixoJobWorkflow} from "./jixoJobWorkflow.js";
 import {JixoMasterWorkflowInputSchema} from "./schemas.js";
 
 const masterLoopStep = createStep({
@@ -27,7 +27,7 @@ const masterLoopStep = createStep({
       const runnerId = `runner-${loopCount}`;
 
       try {
-        const jobRun = (mastra.getWorkflow("jixoJobWorkflow") as typeof jixoJobWorkflow).createRun();
+        const jobRun = (mastra.getWorkflow("jixoJobWorkflow") as JixoJobWorkflow).createRun();
         const result = await jobRun.start({inputData: {jobName, jobGoal, runnerId, otherRunners: [], workDir}});
 
         if (result.status === "failed") {
@@ -69,3 +69,5 @@ export const jixoMasterWorkflow = createWorkflow({
 })
   .then(masterLoopStep)
   .commit();
+
+export type JixoMasterWorkflow = typeof jixoMasterWorkflow;

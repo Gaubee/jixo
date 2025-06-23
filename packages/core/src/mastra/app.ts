@@ -1,6 +1,6 @@
 import {Mastra} from "@mastra/core";
 import {LibSQLStore} from "@mastra/libsql";
-import {PinoLogger} from "@mastra/loggers";
+import {type LogLevel, PinoLogger} from "@mastra/loggers";
 import {mkdirSync} from "node:fs";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
@@ -9,7 +9,11 @@ import {JixoApp_WS} from "./utils.js";
 import {jixoJobWorkflow} from "./workflows/jixoJobWorkflow.js";
 import {jixoMasterWorkflow} from "./workflows/jixoMasterWorkflow.js";
 
-export const createJixoApp = async (workDir: string) => {
+export type CreateJixoAppOptions = {
+  workDir: string;
+  logLevel?: LogLevel;
+};
+export const createJixoApp = async ({workDir, logLevel}: CreateJixoAppOptions) => {
   const memoryFilepath = path.join(workDir, ".jixo/memory.db");
   mkdirSync(path.dirname(memoryFilepath), {recursive: true});
   const memoryStorage = new LibSQLStore({
@@ -29,9 +33,16 @@ export const createJixoApp = async (workDir: string) => {
     storage: memoryStorage,
     logger: new PinoLogger({
       name: "JIXO",
-      // level: "debug",
-      level: "info",
+      level: logLevel,
     }),
+    telemetry: {
+      serviceName: "jixo",
+      enabled: true,
+      export: {
+        type: "otlp",
+        // endpoint and headers will be picked up from env vars
+      },
+    },
   });
   JixoApp_WS.add(app);
 

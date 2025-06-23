@@ -9,11 +9,11 @@ import type {AnyTaskData, RoadmapTaskNodeData, SubTaskData} from "../entities.js
  */
 export function findTask(predicate: (task: RoadmapTaskNodeData | SubTaskData) => boolean | undefined, tasks: RoadmapTaskNodeData[]): RoadmapTaskNodeData | SubTaskData | null {
   for (const task of tasks) {
-    if (predicate(task)) return task;
     // Only search one level deep.
     for (const subTask of task.children) {
       if (predicate(subTask)) return subTask;
     }
+    if (predicate(task)) return task;
   }
   return null;
 }

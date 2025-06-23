@@ -27,3 +27,5 @@ export const jixoJobWorkflow = createWorkflow({
     ],
   ])
   .commit();
+
+export type JixoJobWorkflow = typeof jixoJobWorkflow;
