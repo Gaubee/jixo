@@ -1,3 +1,5 @@
+process.removeAllListeners("warning");
+
 import {$, createResolverByRootFile} from "@gaubee/nodekit";
 import {parseArgs} from "@std/cli/parse-args";
 import {globbySync} from "globby";

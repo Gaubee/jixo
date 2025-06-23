@@ -1,3 +1,5 @@
+process.removeAllListeners("warning");
+
 import {blue, createResolverByRootFile, cwdResolver, green, normalizeFilePath} from "@gaubee/nodekit";
 import parcelWatcher from "@parcel/watcher";
 import {parseArgs} from "@std/cli/parse-args";
@@ -8,7 +10,7 @@ import path from "node:path";
 import {Signal} from "signal-polyfill";
 import {effect} from "signal-utils/subtle/microtask-effect";
 
-const rootResolver = createResolverByRootFile(import.meta.url);
+const rootResolver = createResolverByRootFile(process.cwd());
 
 const getFileState = (filepath: string, once: boolean) => {
   const fileState = new Signal.State(readFileSync(filepath, "utf-8"));

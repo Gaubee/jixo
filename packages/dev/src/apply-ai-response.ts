@@ -1,10 +1,14 @@
+process.removeAllListeners("warning");
+
 import {$, createResolverByRootFile, cyan, green, magenta, normalizeFilePath, prompts, red, yellow} from "@gaubee/nodekit";
 import {iter_map_not_null} from "@gaubee/util";
+import {parseArgs} from "@std/cli/parse-args";
+import {import_meta_ponyfill} from "import-meta-ponyfill";
 import fs from "node:fs";
 import path from "node:path";
 import {match} from "ts-pattern";
 const fsp = fs.promises;
-const rootResolver = createResolverByRootFile(import.meta.url);
+const rootResolver = createResolverByRootFile(process.cwd());
 const rootDirname = normalizeFilePath(rootResolver.dirname) + "/";
 
 // --- 日志记录器 ---
@@ -177,13 +181,23 @@ async function main() {
   }
 }
 
-// 运行主函数
-const filesToUpdate = await main();
+if (import_meta_ponyfill(import.meta).main) {
+  const args = parseArgs(process.argv.slice(2), {
+    boolean: ["format"],
+    alias: {
+      F: "format",
+    },
+  });
+  // 运行主函数
+  const filesToUpdate = await main();
 
-console.log(cyan("----Format----"));
-await $`pnpm prettier --write ${iter_map_not_null(filesToUpdate, (f) => {
-  if (f.mode === "delete") {
-    return;
+  if (args.format) {
+    console.log(cyan("----Format----"));
+    await $`pnpm prettier --write ${iter_map_not_null(filesToUpdate, (f) => {
+      if (f.mode === "delete") {
+        return;
+      }
+      return f.fullFilepath;
+    })}`;
   }
-  return f.fullFilepath;
-})}`;
+}
