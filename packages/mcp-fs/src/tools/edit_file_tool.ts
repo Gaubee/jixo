@@ -1,4 +1,4 @@
-import {returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
+import {logger, returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
 import {createTwoFilesPatch} from "diff";
 import fs from "node:fs";
 import {applyFileEdits} from "../fs-utils/apply-edits.js";
@@ -43,6 +43,8 @@ export const edit_file_tool = safeRegisterTool2(
       }
 
       const finalMessage = responseText ? `${statusMessage}\n${responseText}` : statusMessage;
+
+      logger.log("edit_file", finalMessage);
 
       return {
         ...returnSuccess(finalMessage, {

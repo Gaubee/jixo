@@ -46,6 +46,7 @@
     "zod-to-json-schema": "^3.24.5"
   },
   "devDependencies": {
+    "@jixo/dev": "workspace:^",
     "@types/node": "^22",
     "mastra": "^0.10.5",
     "ai": "^4.3.16",

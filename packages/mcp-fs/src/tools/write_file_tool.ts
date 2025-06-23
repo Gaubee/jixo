@@ -1,4 +1,4 @@
-import {returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
+import {logger, returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
 import fs from "node:fs";
 import {InvalidOperationError} from "../error.js";
 import {validatePath} from "../fs-utils/path-validation.js";
@@ -14,11 +14,12 @@ export const write_file_tool = safeRegisterTool2(
     inputSchema: s.WriteFileArgsSchema,
     outputSuccessSchema: s.WriteFileSuccessSchema,
   },
-  async ({path, content}) => {
+  async ({path, content}, extra) => {
     try {
       const validPath = validatePath(path);
       fs.writeFileSync(validPath, content, "utf-8");
       const message = `Successfully wrote to ${path}`;
+      logger.log("write_file", message);
       return returnSuccess(message, {path: validPath, message});
     } catch (error: any) {
       if (error.code === "EISDIR") {

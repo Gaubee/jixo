@@ -4,6 +4,7 @@
   "description": "",
   "main": "dist/cli.js",
   "type": "module",
+  "sideEffects": false,
   "exports": {
     ".": "./dist/index.js"
   },
