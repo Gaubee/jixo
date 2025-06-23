@@ -10,10 +10,12 @@ import {jixoJobWorkflow} from "./workflows/jixoJobWorkflow.js";
 import {jixoMasterWorkflow} from "./workflows/jixoMasterWorkflow.js";
 
 export type CreateJixoAppOptions = {
+  appName?: string;
   workDir: string;
   logLevel?: LogLevel;
+  otlpEndpoint?: string;
 };
-export const createJixoApp = async ({workDir, logLevel}: CreateJixoAppOptions) => {
+export const createJixoApp = async ({appName = "JIXO", workDir, logLevel, otlpEndpoint}: CreateJixoAppOptions) => {
   const memoryFilepath = path.join(workDir, ".jixo/memory.db");
   mkdirSync(path.dirname(memoryFilepath), {recursive: true});
   const memoryStorage = new LibSQLStore({
@@ -32,18 +34,21 @@ export const createJixoApp = async ({workDir, logLevel}: CreateJixoAppOptions) =
     },
     storage: memoryStorage,
     logger: new PinoLogger({
-      name: "JIXO",
+      name: appName,
       level: logLevel,
     }),
-    telemetry: {
-      serviceName: "jixo",
-      enabled: true,
-      export: {
-        type: "otlp",
-        // endpoint and headers will be picked up from env vars
-      },
-    },
+    telemetry: otlpEndpoint
+      ? {
+          serviceName: "MIMI",
+          enabled: true,
+          export: {
+            type: "otlp",
+            endpoint: otlpEndpoint,
+          },
+        }
+      : void 0,
   });
+  console.log("QAQ app.getTelemetry", app.getTelemetry());
   JixoApp_WS.add(app);
 
   return app;

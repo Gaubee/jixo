@@ -3,7 +3,12 @@ import {createJixoApp} from "./mastra/app.js";
 // --- Main Execution Block ---
 async function main(workDir: string) {
   console.log("JIXO V3 Core Services Initialized. Starting Master Workflow...");
-  const demoApp = await createJixoApp({workDir, logLevel: "debug"});
+  const demoApp = await createJixoApp({
+    appName: "jixo-v3-demo",
+    workDir,
+    // logLevel: "debug",
+    otlpEndpoint: "http://localhost:4318",
+  });
   const masterRun = demoApp.getWorkflow("jixoMasterWorkflow").createRun();
   const result = await masterRun.start({
     inputData: {

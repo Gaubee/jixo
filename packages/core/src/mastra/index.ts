@@ -42,7 +42,7 @@ export const mastra = new Mastra({
     enabled: true,
     export: {
       type: "otlp",
-      endpoint: "http://localhost:4318/v1/traces",
+      endpoint: "http://localhost:4318",
       // endpoint and headers will be picked up from env vars
     },
   },
