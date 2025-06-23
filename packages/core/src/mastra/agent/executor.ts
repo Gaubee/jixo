@@ -2,12 +2,14 @@ import {YAML} from "@gaubee/nodekit";
 import type {Mastra} from "@mastra/core";
 import {Agent} from "@mastra/core/agent";
 import {type RuntimeContext} from "@mastra/core/runtime-context";
+import {Memory} from "@mastra/memory";
 import {commonModel} from "../llm/index.js";
 import {tools} from "../tools/index.js";
 import type {ExecutorRuntimeContextData} from "../workflows/schemas.js";
+import type {CreateAgentOptions} from "./common.js";
 import {ExecutionResultSchema} from "./schemas.js";
 
-export const createExecutorAgent = async (dir: string) => {
+export const createExecutorAgent = async ({workDir, memoryStorage}: CreateAgentOptions) => {
   const executorAgent = new Agent({
     name: "ExecutorAgent",
     instructions: `You are a diligent software engineer operating in a sandbox environment.
@@ -20,10 +22,17 @@ export const createExecutorAgent = async (dir: string) => {
 
 Your final output MUST be a JSON object.`,
     model: commonModel,
+    memory: new Memory({
+      options: {
+        workingMemory: {
+          enabled: true,
+        },
+      },
+    }),
     tools: {
-      ...(await tools.fileSystem(dir)),
+      ...(await tools.fileSystem(workDir)),
       ...(await tools.pnpm()),
-      ...(await tools.git()),
+      ...(await tools.git(workDir)),
     },
   });
 

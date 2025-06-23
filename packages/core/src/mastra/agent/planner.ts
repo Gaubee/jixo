@@ -1,11 +1,13 @@
 import {YAML} from "@gaubee/nodekit";
 import {Agent} from "@mastra/core/agent";
+import {Memory} from "@mastra/memory";
 import type {JixoApp} from "../app.js";
 import {thinkModel} from "../llm/index.js";
 import {type LogManager} from "../services/logManager.js";
 import {tools} from "../tools/index.js";
+import type {CreateAgentOptions} from "./common.js";
 import {PlannerOutputSchema} from "./schemas.js";
-export const createPlannerAgent = async (workDir: string) => {
+export const createPlannerAgent = async ({workDir, memoryStorage}: CreateAgentOptions) => {
   const plannerAgent = new Agent({
     name: "PlannerAgent",
     instructions: `You are an expert project planner AI. Your job is to analyze the provided context (job goal, current roadmap, and specific planning scenario) and generate a set of instructions to modify the project roadmap.
@@ -30,6 +32,14 @@ For every new task or sub-task you create, you MUST provide:
 
 Analyze the user's request carefully and provide a precise and actionable plan.`,
     model: thinkModel,
+    memory: new Memory({
+      storage: memoryStorage,
+      options: {
+        workingMemory: {
+          enabled: true,
+        },
+      },
+    }),
   });
   return plannerAgent;
 };

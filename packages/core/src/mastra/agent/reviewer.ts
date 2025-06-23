@@ -1,12 +1,14 @@
 import type {Mastra} from "@mastra/core";
 import {Agent} from "@mastra/core/agent";
 import {type RuntimeContext} from "@mastra/core/runtime-context";
+import {Memory} from "@mastra/memory";
 import {thinkModel} from "../llm/index.js";
 import {tools} from "../tools/index.js";
 import type {ReviewerRuntimeContextData} from "../workflows/schemas.js";
+import type {CreateAgentOptions} from "./common.js";
 import {ReviewResultSchema} from "./schemas.js";
 
-export const createReviewerAgent = async (dir: string) => {
+export const createReviewerAgent = async ({workDir, memoryStorage}: CreateAgentOptions) => {
   const reviewerAgent = new Agent({
     name: "ReviewerAgent",
     instructions: `You are a meticulous code reviewer and QA engineer. You will be provided with all the context for a task that was just completed.
@@ -20,9 +22,16 @@ export const createReviewerAgent = async (dir: string) => {
 
 Your final output MUST be a JSON object.`,
     model: thinkModel,
+    memory: new Memory({
+      options: {
+        workingMemory: {
+          enabled: true,
+        },
+      },
+    }),
     tools: {
-      ...(await tools.fileSystem(dir)),
-      ...(await tools.git()),
+      ...(await tools.fileSystem(workDir)),
+      ...(await tools.git(workDir)),
     },
   });
   return reviewerAgent;
