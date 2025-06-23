@@ -14,6 +14,9 @@
     "fmt": "prettier --write src",
     "test": "node --experimental-test-coverage --enable-source-maps --test dist/test/*.test.js"
   },
+  "files": [
+    "dist"
+  ],
   "keywords": [
     "pnpm",
     "mcp"

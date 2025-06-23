@@ -20,6 +20,9 @@
   "engines": {
     "node": ">=20.9.0"
   },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
     "@ai-sdk/deepseek": "^0.2.14",
     "@ai-sdk/google": "^1.2.19",

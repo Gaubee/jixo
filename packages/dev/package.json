@@ -15,6 +15,9 @@
     "jixo-run-test": "./dist/run-test.js",
     "jixo-T": "./dist/run-test.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "fmt": "prettier --write src"
   },

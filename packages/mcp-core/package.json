@@ -7,6 +7,9 @@
   "exports": {
     ".": "./dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "fmt": "prettier --write src",
     "test": "node --test dist/test/*.test.js"
