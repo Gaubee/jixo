@@ -1,6 +1,6 @@
 import {func_remember, obj_lazy_builder} from "@gaubee/util";
 import {Console} from "node:console";
-import {createWriteStream} from "node:fs";
+import {createWriteStream, mkdirSync} from "node:fs";
 import path from "node:path";
 const setEnable = (file: string | false) => {
   if (file) {
@@ -9,15 +9,18 @@ const setEnable = (file: string | false) => {
     getConsole.reset();
   }
 };
+const defaultLogdir = path.join(process.cwd(), ".jixo/logs");
 const getConsole = func_remember(
   (logfile: string) => {
+    logfile = path.resolve(defaultLogdir, logfile);
+    mkdirSync(path.dirname(logfile), {recursive: true});
     const logStream = createWriteStream(logfile, {flags: "a"});
     const errStream = createWriteStream(logfile, {flags: "a"});
 
     return new Console(logStream, errStream);
   },
   (logfile: string) => {
-    return path.resolve(process.cwd(), logfile);
+    return path.resolve(defaultLogdir, logfile);
   },
 );
 
