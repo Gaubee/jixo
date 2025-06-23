@@ -18,3 +18,4 @@ _coverage/
 *.prompt-gen.md
 !.clinerules/
 packages/cli/src/prompts.json
+*.log
