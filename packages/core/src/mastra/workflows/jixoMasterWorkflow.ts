@@ -3,12 +3,12 @@ import {createStep, createWorkflow} from "@mastra/core/workflows";
 import {z} from "zod";
 import {logManagerFactory} from "../services/logManagerFactory.js";
 import type {JixoJobWorkflow} from "./jixoJobWorkflow.js";
-import {JixoMasterWorkflowInputSchema} from "./schemas.js";
+import {JixoMasterWorkflowInputSchema, JixoMasterWorkflowOutputSchema} from "./schemas.js";
 
 const masterLoopStep = createStep({
   id: "masterLoop",
   inputSchema: JixoMasterWorkflowInputSchema,
-  outputSchema: z.object({finalStatus: z.string()}),
+  outputSchema: JixoMasterWorkflowOutputSchema,
   async execute({inputData, mastra}) {
     let loopCount = 0;
     let consecutiveErrors = 0;

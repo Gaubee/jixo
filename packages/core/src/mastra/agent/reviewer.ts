@@ -37,6 +37,8 @@ Your final output **MUST** be a single, valid JSON object.`,
   });
   return reviewerAgent;
 };
+export type ReviewerAgent = Awaited<ReturnType<typeof createReviewerAgent>>;
+
 export const useReviewerAgent = async (app: Mastra, args: {runtimeContext: RuntimeContext<ReviewerRuntimeContextData>}) => {
   const {runtimeContext} = args;
   const task = runtimeContext.get("task");

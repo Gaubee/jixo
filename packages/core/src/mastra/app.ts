@@ -1,13 +1,14 @@
-import {Mastra} from "@mastra/core";
+import {Mastra, type Config, type OtelConfig} from "@mastra/core";
 import {LibSQLStore} from "@mastra/libsql";
-import {type LogLevel, PinoLogger} from "@mastra/loggers";
+import {PinoLogger, type LogLevel} from "@mastra/loggers";
 import {mkdirSync} from "node:fs";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
-import {createExecutorAgent, createPlannerAgent, createReviewerAgent} from "./agent/index.js";
-import {JixoApp_WS} from "./utils.js";
-import {jixoJobWorkflow} from "./workflows/jixoJobWorkflow.js";
-import {jixoMasterWorkflow} from "./workflows/jixoMasterWorkflow.js";
+import {createChefAgent, type ChefAgent} from "./agent/chef.js";
+import type {CreateAgentOptions} from "./agent/common.js";
+import {createExecutorAgent, createPlannerAgent, createReviewerAgent, type ExecutorAgent, type PlannerAgent, type ReviewerAgent} from "./agent/index.js";
+import {jixoJobWorkflow, type JixoJobWorkflow} from "./workflows/jixoJobWorkflow.js";
+import {jixoMasterWorkflow, type JixoMasterWorkflow} from "./workflows/jixoMasterWorkflow.js";
 
 export type CreateJixoAppOptions = {
   appName?: string;
@@ -15,18 +16,20 @@ export type CreateJixoAppOptions = {
   logLevel?: LogLevel;
   otlpEndpoint?: string;
 };
-export const createJixoApp = async ({appName = "JIXO", workDir, logLevel, otlpEndpoint}: CreateJixoAppOptions) => {
-  const memoryFilepath = path.join(workDir, ".jixo/memory.db");
+export const jixoAppConfigFactory = async ({appName = "JIXO", workDir, logLevel, otlpEndpoint = "http://localhost:4318"}: CreateJixoAppOptions) => {
+  const memoryFilepath = path.join(workDir, ".jixo/memory/shared.db");
   mkdirSync(path.dirname(memoryFilepath), {recursive: true});
   const memoryStorage = new LibSQLStore({
     url: pathToFileURL(memoryFilepath).href,
   });
+  const opts: CreateAgentOptions = {workDir, memoryStorage};
 
-  const app = new Mastra({
+  return {
     agents: {
-      plannerAgent: await createPlannerAgent({workDir, memoryStorage}),
-      executorAgent: await createExecutorAgent({workDir, memoryStorage}),
-      reviewerAgent: await createReviewerAgent({workDir, memoryStorage}),
+      plannerAgent: await createPlannerAgent(opts),
+      executorAgent: await createExecutorAgent(opts),
+      reviewerAgent: await createReviewerAgent(opts),
+      chefAgent: await createChefAgent(opts),
     },
     workflows: {
       jixoJobWorkflow,
@@ -37,21 +40,60 @@ export const createJixoApp = async ({appName = "JIXO", workDir, logLevel, otlpEn
       name: appName,
       level: logLevel,
     }),
-    telemetry: otlpEndpoint
-      ? {
-          serviceName: appName,
-          enabled: true,
-          export: {
-            type: "otlp",
-            endpoint: otlpEndpoint,
-          },
-        }
-      : void 0,
-  });
-  console.log("QAQ app.getTelemetry", app.getTelemetry());
-  JixoApp_WS.add(app);
+    telemetry:
+      otlpEndpoint &&
+      (await fetch(otlpEndpoint).then(
+        () => true,
+        () => false,
+      ))
+        ? {
+            serviceName: appName,
+            enabled: true,
+            export: {
+              type: "otlp",
+              endpoint: otlpEndpoint,
+            },
+          }
+        : void 0,
+  } satisfies Config;
+};
+
+export type JixoAppConfig = {
+  agents: {
+    plannerAgent: PlannerAgent;
+    executorAgent: ExecutorAgent;
+    reviewerAgent: ReviewerAgent;
+    chefAgent: ChefAgent;
+  };
+  workflows: {
+    jixoJobWorkflow: JixoJobWorkflow;
+    jixoMasterWorkflow: JixoMasterWorkflow;
+  };
+  storage: LibSQLStore;
+  logger: PinoLogger;
+  telemetry?: OtelConfig;
+
+  vectors?: Config["vectors"];
+  tts: Config["tts"];
+  networks?: Config["networks"];
+  mcpServers?: Config["mcpServers"];
+}; //Awaited<ReturnType<typeof jixoAppConfigFactory>>;
+export const createJixoApp = async ({appName = "JIXO", workDir, logLevel, otlpEndpoint}: CreateJixoAppOptions) => {
+  const config = await jixoAppConfigFactory({appName, workDir, logLevel, otlpEndpoint});
+  const app = new Mastra(config);
 
   return app;
 };
 
-export type JixoApp = Awaited<ReturnType<typeof createJixoApp>>;
+export type JixoApp = Mastra<
+  JixoAppConfig["agents"],
+  {},
+  JixoAppConfig["workflows"],
+  RecordNoNull<JixoAppConfig["vectors"]>,
+  RecordNoNull<JixoAppConfig["tts"]>,
+  JixoAppConfig["logger"],
+  RecordNoNull<JixoAppConfig["networks"]>,
+  RecordNoNull<JixoAppConfig["mcpServers"]>
+>;
+
+type RecordNoNull<T> = T extends Record<string, any> ? T : {};

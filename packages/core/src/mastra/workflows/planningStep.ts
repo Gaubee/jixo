@@ -3,14 +3,14 @@ import {match} from "ts-pattern";
 import {usePlannerAgent} from "../agent/planner.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
-import {assert, isJixoApp} from "../utils.js";
+import {ok, isJixoApp} from "../utils.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriagePlanSchema} from "./schemas.js";
 export const planningStep = createStep({
   id: "planning",
   inputSchema: TriagePlanSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
   async execute({inputData, mastra, getInitData}) {
-    assert(isJixoApp(mastra));
+    ok(isJixoApp(mastra));
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const {planningContext} = inputData;
     const {jobName, runnerId, jobGoal, workDir} = init;

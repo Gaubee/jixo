@@ -3,7 +3,7 @@ import {createStep} from "@mastra/core/workflows";
 import {useExecutorAgent} from "../agent/executor.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
-import {assert, isJixoApp} from "../utils.js";
+import {ok, isJixoApp} from "../utils.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageExecuteSchema, type ExecutorRuntimeContextData} from "./schemas.js";
 
 export const executionStep = createStep({
@@ -11,7 +11,7 @@ export const executionStep = createStep({
   inputSchema: TriageExecuteSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
   async execute({inputData, mastra, getInitData}) {
-    assert(isJixoApp(mastra));
+    ok(isJixoApp(mastra));
 
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const task = inputData.task!;

@@ -1,4 +1,6 @@
 .env
-.jixo/cache
+.jixo/logs/
+.jixo/cache/
+.jixo/memory/
 .jixo/*.md
 demo/

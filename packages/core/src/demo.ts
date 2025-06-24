@@ -7,7 +7,6 @@ async function main(workDir: string) {
     appName: "jixo-v3-demo",
     workDir,
     // logLevel: "debug",
-    otlpEndpoint: "http://localhost:4318",
   });
 
   const masterRun = demoApp.getWorkflow("jixoMasterWorkflow").createRun();

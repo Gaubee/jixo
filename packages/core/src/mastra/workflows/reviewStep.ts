@@ -3,7 +3,7 @@ import {createStep} from "@mastra/core/workflows";
 import {useReviewerAgent} from "../agent/reviewer.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
-import {assert, isJixoApp} from "../utils.js";
+import {ok, isJixoApp} from "../utils.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, type ReviewerRuntimeContextData, TriageReviewSchema} from "./schemas.js";
 
 export const reviewStep = createStep({
@@ -11,7 +11,7 @@ export const reviewStep = createStep({
   inputSchema: TriageReviewSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
   async execute({inputData, mastra, getInitData}) {
-    assert(isJixoApp(mastra));
+    ok(isJixoApp(mastra));
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const task = inputData.task!;
     const logManager = await logManagerFactory.getOrCreate(init.jobName, init);

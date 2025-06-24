@@ -1,10 +1,11 @@
 import {YAML} from "@gaubee/nodekit";
+import type {Mastra} from "@mastra/core";
 import {Agent} from "@mastra/core/agent";
 import {Memory} from "@mastra/memory";
-import type {JixoApp} from "../app.js";
 import {thinkModel} from "../llm/index.js";
 import {type LogManager} from "../services/logManager.js";
 import {tools} from "../tools/index.js";
+import {isJixoApp, ok} from "../utils.js";
 import type {CreateAgentOptions} from "./common.js";
 import {PlannerOutputSchema} from "./schemas.js";
 export const createPlannerAgent = async ({workDir, memoryStorage}: CreateAgentOptions) => {
@@ -43,15 +44,19 @@ Analyze the user's request carefully and provide a precise and actionable plan.`
   });
   return plannerAgent;
 };
-const split = "```";
-export const usePlannerAgent = (mastra: JixoApp, planningPrompt: string, args: {logManager: LogManager}) => {
+
+export type PlannerAgent = Awaited<ReturnType<typeof createPlannerAgent>>;
+
+const MD_CODE_WRAPPER = "```";
+export const usePlannerAgent = (mastra: Mastra, planningPrompt: string, args: {logManager: LogManager}) => {
+  ok(isJixoApp(mastra));
   const {logManager} = args;
   const {
     roadmap,
     info: {workDir, jobGoal},
   } = logManager.getLogFile();
 
-  const roadmapMd = roadmap.length ? `${split}yaml\n${YAML.stringify(roadmap)}\n${split}` : "";
+  const roadmapMd = roadmap.length ? `${MD_CODE_WRAPPER}yaml\n${YAML.stringify(roadmap)}\n${MD_CODE_WRAPPER}` : "";
 
   const finalPrompt = `
 The project's working directory is: \`${workDir}\`. ALL file paths in your plan must be relative to this directory.

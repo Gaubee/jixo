@@ -43,6 +43,8 @@ Your final output MUST be a JSON object.`,
   return executorAgent;
 };
 
+export type ExecutorAgent = Awaited<ReturnType<typeof createExecutorAgent>>;
+
 export const useExecutorAgent = async (mastra: Mastra, args: {runtimeContext: RuntimeContext<ExecutorRuntimeContextData>}) => {
   const {runtimeContext} = args;
   const logManager = runtimeContext.get("logManager");
