@@ -1,13 +1,18 @@
-import {returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
+import {returnSuccess} from "@jixo/mcp-core";
 import {config} from "../fs-utils/config.js";
 import * as s from "../schema.js";
-import {server} from "./server.js";
+import {registerTool} from "./server.js";
 
-export const list_allowed_directories_tool = safeRegisterTool2(
-  server,
+export const list_allowed_directories_tool = registerTool(
+  "readonly",
   "list_allowed_directories",
   {
-    description: "Returns the list of root directories the server is allowed to access.",
+    description: `
+Returns the list of root directories the server is sandboxed to. All file operations must be within these directories.
+
+**AI Decision Guidance**:
+- Call this tool first if you are unsure about the operating environment's boundaries or if you receive an 'AccessDeniedError'.
+    `,
     inputSchema: s.ListAllowedDirectoriesArgsSchema,
     outputSuccessSchema: s.ListAllowedDirectoriesOutputSuccessSchema,
   },

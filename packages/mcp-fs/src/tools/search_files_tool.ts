@@ -1,17 +1,27 @@
-import {returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
+import {returnSuccess} from "@jixo/mcp-core";
 import {minimatch} from "minimatch";
 import fs from "node:fs";
 import path from "node:path";
 import {validatePath} from "../fs-utils/path-validation.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
-import {server} from "./server.js";
+import {registerTool} from "./server.js";
 
-export const search_files_tool = safeRegisterTool2(
-  server,
+export const search_files_tool = registerTool(
+  "readonly",
   "search_files",
   {
-    description: "Recursively search for files and directories matching a pattern within a given path.",
+    description: `
+Recursively search for files and directories whose names contain a given pattern, starting from a root path.
+
+**AI Decision Guidance**:
+- Use this tool when you need to find a file but don't know its exact location, or when you need to find all files of a certain type (e.g., all '.test.ts' files).
+- This is more efficient than using 'list_directory' recursively and then filtering the results yourself.
+
+**Usage Notes**:
+- **Pattern**: The 'pattern' is a case-insensitive substring. It matches against the file or directory name, not the full path.
+- **Exclusions**: The 'excludePatterns' parameter accepts an array of glob patterns (like 'node_modules' or '*.log') to prune the search, significantly speeding it up in large projects.
+    `,
     inputSchema: s.SearchFilesArgsSchema,
     outputSuccessSchema: s.SearchFilesOutputSuccessSchema,
   },

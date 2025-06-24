@@ -1,4 +1,4 @@
-import {returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
+import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
 import path from "node:path";
 import {AccessDeniedError, DeleteNonEmptyDirectoryError} from "../error.js";
@@ -6,13 +6,23 @@ import {config} from "../fs-utils/config.js";
 import {expandHome} from "../fs-utils/path-validation.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
-import {server} from "./server.js";
+import {registerTool} from "./server.js";
 
-export const delete_path_tool = safeRegisterTool2(
-  server,
+export const delete_path_tool = registerTool(
+  "readwrite",
   "delete_path",
   {
-    description: "Deletes a file or directory. Requires `recursive: true` to delete non-empty directories. Is idempotent (succeeds if path already does not exist).",
+    description: `
+Deletes a file or directory.
+
+**AI Decision Guidance**:
+- This is a destructive operation. Be certain before using it.
+- To clear a directory's contents without deleting the directory itself, it is safer to 'list_directory', then 'delete_path' on each item.
+
+**Usage Notes**:
+- **Non-Empty Directories**: To delete a directory that contains files or other directories, you MUST set the 'recursive' parameter to 'true'.
+- **Idempotency**: The tool will succeed even if the path does not exist, making it safe for cleanup scripts. It effectively ensures the path is gone.
+    `,
     inputSchema: s.DeletePathArgsSchema,
     outputSuccessSchema: s.DeletePathSuccessSchema,
   },

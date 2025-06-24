@@ -1,11 +1,11 @@
-import {returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
+import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
 import path from "node:path";
 import {NotADirectoryError} from "../error.js";
 import {validatePath} from "../fs-utils/path-validation.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
-import {server} from "./server.js";
+import {registerTool} from "./server.js";
 
 type DirectoryEntry = {
   name: string;
@@ -13,11 +13,21 @@ type DirectoryEntry = {
   children?: DirectoryEntry[];
 };
 
-export const list_directory_tool = safeRegisterTool2(
-  server,
+export const list_directory_tool = registerTool(
+  "readonly",
   "list_directory",
   {
-    description: "Get a listing of files and directories. Can list recursively to show a directory tree.",
+    description: `
+Get a listing of files and subdirectories within a specified directory.
+
+**AI Decision Guidance**:
+- This is your primary tool for exploring the file system structure.
+- Use it to discover files before reading them or to understand a project's layout.
+- For finding files by name across a deep hierarchy, 'search_files' might be more efficient.
+
+**Usage Notes**:
+- **Recursion**: By default, this tool performs a flat listing (depth of 1). To get a nested tree structure, set the 'maxDepth' parameter to a value greater than 1. This is useful for quickly understanding the layout of an entire directory.
+    `,
     inputSchema: s.ListDirectoryArgsSchema,
     outputSuccessSchema: s.ListDirectoryOutputSuccessSchema,
   },
@@ -25,9 +35,7 @@ export const list_directory_tool = safeRegisterTool2(
     try {
       const validPath = validatePath(rootPath);
 
-      // Precondition check: ensure the path is a directory.
       if (!fs.statSync(validPath).isDirectory()) {
-        // This line is defensive; the readdirSync below should also throw ENOTDIR.
         throw new NotADirectoryError(`Path is not a directory: ${rootPath}`);
       }
 
@@ -48,7 +56,7 @@ export const list_directory_tool = safeRegisterTool2(
             return result;
           });
         } catch {
-          return []; // Ignore errors reading subdirectories
+          return [];
         }
       };
 

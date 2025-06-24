@@ -1,15 +1,21 @@
-import {logger, returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
+import {logger, returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
 import {validatePath} from "../fs-utils/path-validation.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
-import {server} from "./server.js";
+import {registerTool} from "./server.js";
 
-export const create_directory_tool = safeRegisterTool2(
-  server,
+export const create_directory_tool = registerTool(
+  "readwrite",
   "create_directory",
   {
-    description: "Create a new directory, including any necessary parent directories.",
+    description: `
+Create a new directory. It will also create any necessary parent directories along the path.
+
+**AI Decision Guidance**:
+- Use this to set up the folder structure for a new project or component.
+- This tool is idempotent: if the directory already exists, the operation will succeed without making any changes.
+    `,
     inputSchema: s.CreateDirectoryArgsSchema,
     outputSuccessSchema: s.CreateDirectorySuccessSchema,
   },

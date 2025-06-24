@@ -16,14 +16,14 @@ export function cleanupSandbox() {
   fs.rmSync(SANDBOX, {recursive: true, force: true});
 }
 
-type Tools = typeof server.tools;
+type Tools = typeof server.readwriteTools;
 type ToolName = keyof Tools;
 type ToolDefinition = Tools[ToolName];
 type ToolCallback<T extends ToolDefinition> = T["callback"];
 type ToolHandler<T extends ToolDefinition> = (args: Func.Args<ToolCallback<T>>[0]) => ReturnType<ToolCallback<T>>;
 
 export function getToolHandler<T extends ToolName>(toolName: T): ToolHandler<Tools[T]> {
-  const tool = server.tools[toolName];
+  const tool = server.readwriteTools[toolName];
   if (!tool) throw new Error(`Tool definition for "${toolName}" not found.`);
 
   return ((args: any) => tool.callback(args, {} as RequestHandlerExtra<ServerRequest, ServerNotification>)) as any;

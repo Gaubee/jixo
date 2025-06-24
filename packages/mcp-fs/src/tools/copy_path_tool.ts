@@ -1,16 +1,27 @@
-import {returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
+import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
 import {InvalidOperationError} from "../error.js";
 import {validatePath} from "../fs-utils/path-validation.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
-import {server} from "./server.js";
+import {registerTool} from "./server.js";
 
-export const copy_path_tool = safeRegisterTool2(
-  server,
+export const copy_path_tool = registerTool(
+  "readwrite",
   "copy_path",
   {
-    description: "Copies a file or directory. Requires `recursive: true` to copy directories.",
+    description: `
+Copies a file or a directory to a new location.
+
+**AI Decision Guidance**:
+- Use this tool to duplicate files or entire project structures.
+- To rename or move a file without duplicating it, use 'move_file' instead, which is more efficient.
+- This tool cannot be used to overwrite a file with itself.
+
+**Usage Notes**:
+- **Directories**: To copy a directory and all its contents, you MUST set the 'recursive' parameter to 'true'. Failing to do so for a directory will result in an error.
+- **Destination**: If the 'destination' path ends with a directory separator ('/' or '\\') or already exists as a directory, the source will be copied *inside* it. Otherwise, the source will be copied and renamed to the destination name.
+    `,
     inputSchema: s.CopyPathArgsSchema,
     outputSuccessSchema: s.CopyPathSuccessSchema,
   },

@@ -28,6 +28,11 @@ async function main(args: string[] = process.argv) {
               normalize: true,
               describe: "List of directories the server is allowed to access.",
             })
+            .option("readOnly", {
+              type: "boolean",
+              alias: "R",
+              describe: "Run the server in read-only mode, disabling all write operations.",
+            })
             .option("log", {
               type: "boolean",
               alias: "L",

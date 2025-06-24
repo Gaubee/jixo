@@ -292,9 +292,6 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.13.0
         version: 1.13.0
-      commander:
-        specifier: ^14.0.0
-        version: 14.0.0
       import-meta-ponyfill:
         specifier: ^3.2.2
         version: 3.2.2
