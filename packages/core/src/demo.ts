@@ -9,6 +9,7 @@ async function main(workDir: string) {
     // logLevel: "debug",
     otlpEndpoint: "http://localhost:4318",
   });
+
   const masterRun = demoApp.getWorkflow("jixoMasterWorkflow").createRun();
   const result = await masterRun.start({
     inputData: {

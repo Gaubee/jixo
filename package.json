@@ -36,7 +36,7 @@
     "url": "https://github.com/Gaubee/jixo.git"
   },
   "license": "MIT",
-  "packageManager": "pnpm@10.12.1",
+  "packageManager": "pnpm@10.12.2",
   "@jixo/cli": "workspace:^",
   "dependencies": {
     "@jixo/mcp-fs": "workspace:^",
@@ -56,7 +56,7 @@
     "globby": "^14.1.0",
     "import-meta-ponyfill": "^3.2.2",
     "mastra": "^0.10.6",
-    "prettier": "^3.5.3",
+    "prettier": "^3.6.0",
     "prettier-plugin-organize-imports": "^4.1.0",
     "rolldown": "1.0.0-beta.19",
     "signal-polyfill": "^0.2.2",

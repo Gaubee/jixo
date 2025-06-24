@@ -51,7 +51,7 @@ async function main(args: string[] = process.argv) {
         }
         try {
           // 命令处理器
-          await startServer(argv.allowedDirectories as unknown as string[]);
+          await startServer(argv.allowedDirectories as unknown as string[], argv.readOnly);
         } catch (error) {
           console.error("Fatal error running server:", error);
           process.exit(1);

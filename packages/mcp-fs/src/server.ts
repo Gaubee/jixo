@@ -32,7 +32,7 @@ export const readwriteTools = {
   delete_path: delete_path_tool,
 };
 
-export async function startServer(dirs: string[], readOnly: boolean) {
+export async function startServer(dirs: string[], readOnly?: boolean) {
   if (dirs.length > 0) {
     config.allowedDirectories = dirs.map((dir) => {
       const expanded = expandHome(dir);

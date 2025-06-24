@@ -24,7 +24,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.13.0",
+    "@modelcontextprotocol/sdk": "^1.13.1",
     "import-meta-ponyfill": "^3.2.2",
     "react": "^19.1.0",
     "typescript": "^5.8.3",
