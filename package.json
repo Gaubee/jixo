@@ -37,6 +37,14 @@
   },
   "license": "MIT",
   "packageManager": "pnpm@10.12.2",
+  "pnpm": {
+    "overrides": {
+      "ai": "^4.3.16"
+    },
+    "patchedDependencies": {
+      "ai": "patches/ai.patch"
+    }
+  },
   "@jixo/cli": "workspace:^",
   "dependencies": {
     "@jixo/mcp-fs": "workspace:^",
@@ -52,6 +60,7 @@
     "@std/cli": "jsr:^1.0.17",
     "@std/fmt": "jsr:^1.0.8",
     "@types/node": "^22",
+    "ai": "^4.3.16",
     "esbuild": "^0.25.5",
     "globby": "^14.1.0",
     "import-meta-ponyfill": "^3.2.2",

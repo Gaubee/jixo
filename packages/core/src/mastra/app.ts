@@ -39,7 +39,7 @@ export const createJixoApp = async ({appName = "JIXO", workDir, logLevel, otlpEn
     }),
     telemetry: otlpEndpoint
       ? {
-          serviceName: "MIMI",
+          serviceName: appName,
           enabled: true,
           export: {
             type: "otlp",

@@ -14,7 +14,14 @@
   "license": "MIT",
   "type": "module",
   "exports": {
-    ".": "./dist/mastra/index.js"
+    ".": {
+      "types": "./src/mastra/index.ts",
+      "default": "./dist/mastra/index.js"
+    },
+    "./app": {
+      "types": "./src/mastra/app.ts",
+      "default": "./dist/mastra/app.js"
+    }
   },
   "description": "",
   "engines": {

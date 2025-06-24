@@ -20,6 +20,9 @@
         },
         {
             "path": "./packages/mcp-pnpm/tsconfig.json"
+        },
+        {
+            "path": "./packages/webui/tsconfig.json"
         }
     ],
     "files": [],
