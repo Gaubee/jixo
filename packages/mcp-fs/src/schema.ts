@@ -69,8 +69,8 @@ export const WriteFileSuccessSchema = {
 export const EditFileOutputSuccessSchema = {
   path: z.string().describe("The absolute path of the file that was edited."),
   changesApplied: z.boolean().describe("Whether any changes were made to the file."),
-  diff: z.string().nullable().describe("A git-style diff of the changes, or null if no changes were made."),
-  newContent: z.string().optional().nullable().describe("The full new content of the file, if 'returnStyle' was 'full'."),
+  diff: z.string().optional().describe("A git-style diff of the changes, or null if no changes were made."),
+  newContent: z.string().optional().describe("The full new content of the file, if 'returnStyle' was 'full'."),
   message: z.string().describe("A summary of the edit operation."),
 };
 

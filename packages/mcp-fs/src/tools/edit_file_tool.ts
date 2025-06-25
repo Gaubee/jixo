@@ -34,7 +34,7 @@ Performs one or more precise, atomic search-and-replace operations on a single t
       const validPath = validatePath(path);
       const {originalContent, modifiedContent} = applyFileEdits(validPath, edits);
       const changesApplied = originalContent !== modifiedContent;
-      let diff: string | null = null;
+      let diff: string | undefined;
       let statusMessage: string;
 
       if (!changesApplied) {
@@ -65,7 +65,7 @@ Performs one or more precise, atomic search-and-replace operations on a single t
           path: validPath,
           changesApplied,
           diff,
-          newContent: returnStyle === "full" ? modifiedContent : null,
+          newContent: returnStyle === "full" ? modifiedContent : undefined,
           message: statusMessage,
         }),
         content: [{type: "text", text: finalMessage}],

@@ -27,7 +27,7 @@ const masterLoopStep = createStep({
       const runnerId = `runner-${loopCount}`;
 
       try {
-        const jobRun = (mastra.getWorkflow("jixoJobWorkflow") as JixoJobWorkflow).createRun();
+        const jobRun = await (mastra.getWorkflow("jixoJobWorkflow") as JixoJobWorkflow).createRunAsync();
         const result = await jobRun.start({inputData: {jobName, jobGoal, runnerId, otherRunners: [], workDir}});
 
         if (result.status === "failed") {

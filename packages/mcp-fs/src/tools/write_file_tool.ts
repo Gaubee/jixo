@@ -25,7 +25,7 @@ Create a new file with specified content, or completely overwrite an existing fi
     try {
       const validPath = validatePath(path);
       fs.writeFileSync(validPath, content, "utf-8");
-      const message = `Successfully wrote to ${path}`;
+      const message = `Successfully wrote to ${validPath}`;
       logger.log("write_file", message);
       return returnSuccess(message, {path: validPath, message});
     } catch (error: any) {

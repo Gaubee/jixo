@@ -22,7 +22,7 @@ export const workspaceToolsets = {
       const jobInfo = jobManager.getJobInfo();
 
       const workflow = app.getWorkflow("jixoMasterWorkflow") as JixoMasterWorkflow;
-      const run = workflow.createRun();
+      const run = await workflow.createRunAsync();
 
       // Start job asynchronously. The master workflow will now run within the context of the job's workDir.
       run

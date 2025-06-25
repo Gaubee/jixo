@@ -13,7 +13,7 @@ export const jobToolsets = {
     execute: async ({context: _context, mastra}) => {
       const context = _context as z.TypeOf<typeof JixoMasterWorkflowInputSchema>;
       //   ok(isJixoApp(mastra));
-      const masterRun = (mastra.getWorkflow("jixoMasterWorkflow") as JixoMasterWorkflow).createRun();
+      const masterRun = await (mastra.getWorkflow("jixoMasterWorkflow") as JixoMasterWorkflow).createRunAsync();
       const result = await masterRun.start({
         inputData: context,
       });

@@ -5,21 +5,23 @@ import path from "node:path";
 const setEnable = (file: string | false, baseDir?: string) => {
   if (file) {
     baseDir ??= path.join(process.cwd(), ".jixo/logs");
-    const logfilepath = path.resolve(baseDir, file);
-    getConsole(logfilepath);
+    const basefilepath = path.resolve(baseDir, file);
+    // const errfilepath = basefilepath.replace(/\.log$/, ".err.log");
+    getConsole(basefilepath, basefilepath);
   } else {
     getConsole.reset();
   }
 };
-const getConsole = func_remember((logfile: string) => {
-  mkdirSync(path.dirname(logfile), {recursive: true});
-  const logStream = createWriteStream(logfile, {flags: "a"});
-  return new Console(logStream, logStream);
+const getConsole = func_remember((outfile: string, errfile: string) => {
+  mkdirSync(path.dirname(outfile), {recursive: true});
+  const outStream = createWriteStream(outfile, {flags: "a"});
+  const errStream = createWriteStream(errfile, {flags: "a"});
+  return new Console(outStream, errStream);
 });
 
 const noop = () => {};
 export const logger = obj_lazy_builder(
-  console as Console & {
+  {} as Console & {
     setEnable: typeof setEnable;
   },
   (_, p) => {

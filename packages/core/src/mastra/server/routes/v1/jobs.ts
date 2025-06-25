@@ -15,7 +15,7 @@ export const jobsApi = [
       await workspaceManager.createJob(jobData.jobName, jobData.jobGoal);
 
       const workflow = mastra.getWorkflow("jixoMasterWorkflow");
-      const run = workflow.createRun();
+      const run = await workflow.createRunAsync();
 
       // Asynchronously start the job
       run.start({inputData: jobData}).catch((err) => {

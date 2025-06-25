@@ -13,7 +13,7 @@ export const tools = {
           servers: {
             fs: {
               command: "pnpm",
-              args: ["mcp-fs", dir, "-L"],
+              args: ["mcp-fs", "-L", dir],
             },
           },
         });

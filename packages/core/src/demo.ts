@@ -9,7 +9,7 @@ async function main(workDir: string) {
     // logLevel: "debug",
   });
 
-  const masterRun = demoApp.getWorkflow("jixoMasterWorkflow").createRun();
+  const masterRun = await demoApp.getWorkflow("jixoMasterWorkflow").createRunAsync();
   const result = await masterRun.start({
     inputData: {
       jobName: "jixo-v3-demo",
