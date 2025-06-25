@@ -11,3 +11,7 @@ export const ok: Assert = (isJixo: boolean): asserts isJixo => {
     throw new Error("App is not a Jixo app");
   }
 };
+export const assertJixoApp = (app: Mastra): JixoApp => {
+  ok(isJixoApp(app));
+  return app;
+};

@@ -31,7 +31,7 @@ async function checkServiceHealth(id: string, displayName: string, hint?: string
     installationHint: hint,
   };
 
-  const url = `${safeEnv.JIXO_CORE_URL}/api/health`;
+  const url = `${safeEnv.JIXO_CORE_URL}/jixo/v1/health`;
   try {
     const response = await fetch(url, { signal: AbortSignal.timeout(3000) });
     if (response.ok) {

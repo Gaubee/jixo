@@ -19,7 +19,7 @@ export const run = async (options: RunOptions) => {
   console.log(`   - Target: ${coreUrl}`);
 
   try {
-    const response = await fetch(`${coreUrl}/api/jixo/v1/jobs`, {
+    const response = await fetch(`${coreUrl}/jixo/v1/jobs`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

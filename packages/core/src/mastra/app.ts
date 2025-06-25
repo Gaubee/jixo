@@ -7,6 +7,8 @@ import {pathToFileURL} from "node:url";
 import {createChefAgent, type ChefAgent} from "./agent/chef.js";
 import type {CreateAgentOptions} from "./agent/common.js";
 import {createExecutorAgent, createPlannerAgent, createReviewerAgent, type ExecutorAgent, type PlannerAgent, type ReviewerAgent} from "./agent/index.js";
+import {middleware} from "./server/middleware/index.js";
+import {routes} from "./server/routes/index.js";
 import {jixoJobWorkflow, type JixoJobWorkflow} from "./workflows/jixoJobWorkflow.js";
 import {jixoMasterWorkflow, type JixoMasterWorkflow} from "./workflows/jixoMasterWorkflow.js";
 
@@ -23,7 +25,10 @@ export const jixoAppConfigFactory = async ({appName = "JIXO", workDir, logLevel,
     url: pathToFileURL(memoryFilepath).href,
   });
   const opts: CreateAgentOptions = {workDir, memoryStorage};
-
+  const logger = new PinoLogger({
+    name: appName,
+    level: logLevel,
+  });
   return {
     agents: {
       plannerAgent: await createPlannerAgent(opts),
@@ -36,10 +41,7 @@ export const jixoAppConfigFactory = async ({appName = "JIXO", workDir, logLevel,
       jixoMasterWorkflow,
     },
     storage: memoryStorage,
-    logger: new PinoLogger({
-      name: appName,
-      level: logLevel,
-    }),
+    logger: logger,
     telemetry:
       otlpEndpoint &&
       (await fetch(otlpEndpoint).then(
@@ -55,6 +57,10 @@ export const jixoAppConfigFactory = async ({appName = "JIXO", workDir, logLevel,
             },
           }
         : void 0,
+    server: {
+      middleware: middleware,
+      apiRoutes: routes,
+    },
   } satisfies Config;
 };
 
@@ -77,7 +83,7 @@ export type JixoAppConfig = {
   tts: Config["tts"];
   networks?: Config["networks"];
   mcpServers?: Config["mcpServers"];
-}; //Awaited<ReturnType<typeof jixoAppConfigFactory>>;
+};
 export const createJixoApp = async ({appName = "JIXO", workDir, logLevel, otlpEndpoint}: CreateJixoAppOptions) => {
   const config = await jixoAppConfigFactory({appName, workDir, logLevel, otlpEndpoint});
   const app = new Mastra(config);
