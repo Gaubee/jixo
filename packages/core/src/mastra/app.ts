@@ -82,6 +82,7 @@ export type JixoAppConfig = {
   vectors?: Config["vectors"];
   tts: Config["tts"];
   networks?: Config["networks"];
+  vnext_networks?: Config["vnext_networks"];
   mcpServers?: Config["mcpServers"];
 };
 export const createJixoApp = async ({appName = "JIXO", workDir, logLevel, otlpEndpoint}: CreateJixoAppOptions) => {
@@ -99,6 +100,7 @@ export type JixoApp = Mastra<
   RecordNoNull<JixoAppConfig["tts"]>,
   JixoAppConfig["logger"],
   RecordNoNull<JixoAppConfig["networks"]>,
+  RecordNoNull<JixoAppConfig["vnext_networks"]>,
   RecordNoNull<JixoAppConfig["mcpServers"]>
 >;
 

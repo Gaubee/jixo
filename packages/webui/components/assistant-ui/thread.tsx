@@ -68,19 +68,19 @@ const ThreadWelcomeSuggestions: FC = () => {
     <div className="mt-3 flex w-full items-stretch justify-center gap-4">
       <ThreadPrimitive.Suggestion
         className="hover:bg-muted/80 flex max-w-sm grow basis-0 flex-col items-center justify-center rounded-lg border p-3 transition-colors ease-in"
-        prompt="What is the weather in Tokyo?"
+        prompt="列出所有的工作"
         method="replace"
         autoSend
       >
-        <span className="line-clamp-2 text-ellipsis text-sm font-semibold">What is the weather in Tokyo?</span>
+        <span className="line-clamp-2 text-ellipsis text-sm font-semibold">列出所有的工作</span>
       </ThreadPrimitive.Suggestion>
       <ThreadPrimitive.Suggestion
         className="hover:bg-muted/80 flex max-w-sm grow basis-0 flex-col items-center justify-center rounded-lg border p-3 transition-colors ease-in"
-        prompt="What is assistant-ui?"
+        prompt="请你发挥创意，想象一个使用Web技术构建的小工具、小游戏，然后创建新工作去完成这个创意"
         method="replace"
         autoSend
       >
-        <span className="line-clamp-2 text-ellipsis text-sm font-semibold">What is assistant-ui?</span>
+        <span className="line-clamp-2 text-ellipsis text-sm font-semibold">请你发挥创意，随机创建一个新的小工具、小游戏</span>
       </ThreadPrimitive.Suggestion>
     </div>
   );

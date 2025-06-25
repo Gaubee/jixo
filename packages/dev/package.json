@@ -36,7 +36,7 @@
     "@std/cli": "jsr:^1.0.20",
     "globby": "^14.1.0",
     "import-meta-ponyfill": "^3.2.2",
-    "prettier": "^3.6.0",
+    "prettier": "^3.6.1",
     "signal-polyfill": "^0.2.2",
     "signal-utils": "^0.21.1",
     "ts-pattern": "^5.7.1",

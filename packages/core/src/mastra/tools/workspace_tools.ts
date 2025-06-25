@@ -3,30 +3,35 @@ import {z} from "zod";
 import {workspaceManager} from "../services/workspaceManager.js";
 import {assertJixoApp} from "../utils.js";
 import type {JixoMasterWorkflow} from "../workflows/jixoMasterWorkflow.js";
+import {JixoMasterWorkflowInputSchema} from "../workflows/schemas.js";
 
 export const workspaceToolsets = {
   create_job: createTool({
     id: "create_job",
     description: "Creates and starts a new JIXO job with a given name and goal.",
-    inputSchema: z.object({
-      jobName: z.string().describe("A unique, URL-friendly name for the job (e.g., 'snake-game-feature')."),
-      jobGoal: z.string().describe("The high-level objective for the job."),
-    }),
+    inputSchema: JixoMasterWorkflowInputSchema.pick({jobName: true, jobGoal: true}),
     outputSchema: z.object({
-      runId: z.string(),
-      status: z.string(),
+      runId: z.string().describe("The unique identifier for the started job run."),
+      status: z.string().describe("The status of the job initiation, typically 'started'."),
     }),
     execute: async ({context, mastra}) => {
       const app = assertJixoApp(mastra);
+
+      // Use the workspaceManager to create the job, which also creates the log file.
       const jobManager = await workspaceManager.createJob(context.jobName, context.jobGoal);
+      const jobInfo = jobManager.getJobInfo();
 
       const workflow = app.getWorkflow("jixoMasterWorkflow") as JixoMasterWorkflow;
       const run = workflow.createRun();
 
-      // Start job asynchronously
+      // Start job asynchronously. The master workflow will now run within the context of the job's workDir.
       run
         .start({
-          inputData: jobManager.getJobInfo(),
+          inputData: {
+            ...jobInfo, // pass the full job info
+            maxLoops: 20, // default or could be a tool parameter
+            gitCommit: false, // default or could be a tool parameter
+          },
         })
         .catch((err) => {
           app.getLogger().error("Failed to start job from tool", {err, runId: run.runId});
@@ -42,7 +47,12 @@ export const workspaceToolsets = {
     id: "list_jobs",
     description: "Lists all existing jobs in the current workspace.",
     inputSchema: z.object({}),
-    outputSchema: z.array(z.object({jobName: z.string(), jobGoal: z.string()})),
+    outputSchema: z.array(
+      z.object({
+        jobName: z.string().describe("The unique name of the job."),
+        jobGoal: z.string().describe("The high-level goal of the job."),
+      }),
+    ),
     execute: async () => {
       return workspaceManager.listJobs();
     },
@@ -53,8 +63,7 @@ export const workspaceToolsets = {
     inputSchema: z.object({
       jobName: z.string().describe("The name of the job to inspect."),
     }),
-    // The output schema can be enhanced later to be more structured
-    outputSchema: z.any(),
+    outputSchema: z.any().describe("The full content of the job's log file, including roadmap and work log."),
     execute: async ({context}) => {
       return workspaceManager.getJobLogFile(context.jobName);
     },
