@@ -51,6 +51,7 @@ export type WorkLogEntryData = z.infer<typeof WorkLogEntrySchema>;
 
 // Defines the persistent metadata associated with a Job.
 export const JobInfoSchema = z.object({
+  jobName: z.string().describe("A unique, URL-friendly name for the job (e.g., 'snake-game-feature')."),
   jobGoal: z.string().describe("The high-level goal of the job."),
   workDir: z.string().describe("The absolute path to the sandboxed working directory for this job."),
   // Future fields like gitRepositoryUrl can be added here.

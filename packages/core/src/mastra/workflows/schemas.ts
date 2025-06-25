@@ -10,7 +10,7 @@ export const JixoBaseWorkflowInputSchema = z.object({
 });
 
 export const JixoMasterWorkflowInputSchema = JixoBaseWorkflowInputSchema.extend({
-  maxLoops: z.number().default(20).describe("The maximum number of loops to execute before exiting."),
+  maxLoops: z.number().default(20).optional().describe("The maximum number of loops to execute before exiting."),
 });
 export const JixoMasterWorkflowOutputSchema = z.object({finalStatus: z.string()});
 

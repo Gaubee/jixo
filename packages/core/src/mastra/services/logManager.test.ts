@@ -18,7 +18,7 @@ beforeEach(async () => {
   await fsp.unlink(logFilePath).catch(() => {});
 
   // Corrected: Pass a valid JobInfoData object
-  logManager = await logManagerFactory.createIsolated(TEST_JOB_NAME, {jobGoal: "testonly", workDir: workDir});
+  logManager = await logManagerFactory.createIsolated({jobName: TEST_JOB_NAME, jobGoal: "testonly", workDir: workDir});
 });
 
 const newTask = (title: string, args?: Partial<NewTaskData>): NewTaskData => ({title, description: "", details: [], checklist: [], ...args});

@@ -3,7 +3,7 @@ import {match} from "ts-pattern";
 import {usePlannerAgent} from "../agent/planner.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {logManagerFactory} from "../services/logManagerFactory.js";
-import {ok, isJixoApp} from "../utils.js";
+import {isJixoApp, ok} from "../utils.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriagePlanSchema} from "./schemas.js";
 export const planningStep = createStep({
   id: "planning",
@@ -14,7 +14,7 @@ export const planningStep = createStep({
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const {planningContext} = inputData;
     const {jobName, runnerId, jobGoal, workDir} = init;
-    const logManager = await logManagerFactory.getOrCreate(jobName, {jobGoal, workDir});
+    const logManager = await logManagerFactory.getOrCreate(jobName, {jobName, jobGoal, workDir});
 
     let planningPrompt = "";
     let objective = "";

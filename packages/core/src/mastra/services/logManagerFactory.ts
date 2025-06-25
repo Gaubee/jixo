@@ -1,4 +1,4 @@
-import {map_get_or_put_async} from "@gaubee/util";
+import {map_get_or_put_async, type PromiseMaybe} from "@gaubee/util";
 import matter from "gray-matter";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
@@ -51,16 +51,16 @@ class LogManagerFactory {
     return new LogManager(jobName, initialData, logParserAgent);
   }
 
-  public getOrCreate(jobName: string, info: JobInfoData): Promise<LogManager> {
+  public getOrCreate(jobName: string, info: JobInfoData | (() => PromiseMaybe<JobInfoData>)): Promise<LogManager> {
     return map_get_or_put_async(this.instances, jobName, async () => {
-      const manager = await this._createManagerInstance(jobName, info);
+      const manager = await this._createManagerInstance(jobName, typeof info === "function" ? await info() : info);
       this.instances.set(jobName, manager);
       return manager;
     });
   }
 
-  public async createIsolated(jobName: string, info: JobInfoData): Promise<LogManager> {
-    return this._createManagerInstance(jobName, info);
+  public async createIsolated(info: JobInfoData): Promise<LogManager> {
+    return this._createManagerInstance(info.jobName, info);
   }
 }
 

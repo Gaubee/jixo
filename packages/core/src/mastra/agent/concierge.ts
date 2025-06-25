@@ -1,9 +1,8 @@
 import {Agent} from "@mastra/core/agent";
 import {Memory} from "@mastra/memory";
 import {commonModel} from "../llm/index.js";
+import {workspaceToolsets} from "../tools/workspace_tools.js";
 import type {CreateAgentOptions} from "./common.js";
-// Future: Import workspace tools here
-// import {workspaceToolsets} from "../tools/workspace_tools.js";
 
 export const createConciergeAgent = async ({workDir, memoryStorage}: CreateAgentOptions) => {
   const conciergeAgent = new Agent({
@@ -29,7 +28,7 @@ You have tools to interact with the Jixo workspace.
       },
     }),
     tools: {
-      // Future: ...workspaceToolsets
+      ...workspaceToolsets,
     },
   });
   return conciergeAgent;

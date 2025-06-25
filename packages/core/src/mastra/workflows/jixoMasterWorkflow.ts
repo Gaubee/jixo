@@ -12,8 +12,8 @@ const masterLoopStep = createStep({
   async execute({inputData, mastra}) {
     let loopCount = 0;
     let consecutiveErrors = 0;
-    const {jobName, jobGoal, workDir = process.cwd(), maxLoops} = inputData;
-    const logManager = await logManagerFactory.getOrCreate(jobName, {jobGoal, workDir});
+    const {jobName, jobGoal, workDir = process.cwd(), maxLoops = 20} = inputData;
+    const logManager = await logManagerFactory.getOrCreate(jobName, {jobName, jobGoal, workDir});
 
     while (loopCount < maxLoops) {
       loopCount++;
