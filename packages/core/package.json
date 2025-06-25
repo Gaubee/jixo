@@ -46,6 +46,7 @@
     "@mastra/loggers": "^0.10.2",
     "@mastra/mcp": "^0.10.3",
     "@mastra/memory": "^0.10.3",
+    "cosmiconfig": "^9.0.0",
     "gray-matter": "^4.0.3",
     "ts-pattern": "^5.7.1",
     "tslib": "^2.8.1",

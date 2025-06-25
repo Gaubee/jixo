@@ -10,7 +10,7 @@ import {useChatRuntime} from "@assistant-ui/react-ai-sdk";
 
 export const Assistant = () => {
   const runtime = useChatRuntime({
-    api: "http://localhost:4111/api/agents/chefAgent/stream",
+    api: "http://localhost:4111/api/agents/conciergeAgent/stream",
     onError: (err) => {
       console.log("QAQ", err);
     },

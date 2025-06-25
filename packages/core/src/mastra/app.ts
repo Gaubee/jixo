@@ -4,8 +4,8 @@ import {PinoLogger, type LogLevel} from "@mastra/loggers";
 import {mkdirSync} from "node:fs";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
-import {createChefAgent, type ChefAgent} from "./agent/chef.js";
 import type {CreateAgentOptions} from "./agent/common.js";
+import {createConciergeAgent, type ConciergeAgent} from "./agent/concierge.js";
 import {createExecutorAgent, createPlannerAgent, createReviewerAgent, type ExecutorAgent, type PlannerAgent, type ReviewerAgent} from "./agent/index.js";
 import {middleware} from "./server/middleware/index.js";
 import {routes} from "./server/routes/index.js";
@@ -34,7 +34,7 @@ export const jixoAppConfigFactory = async ({appName = "JIXO", workDir, logLevel,
       plannerAgent: await createPlannerAgent(opts),
       executorAgent: await createExecutorAgent(opts),
       reviewerAgent: await createReviewerAgent(opts),
-      chefAgent: await createChefAgent(opts),
+      conciergeAgent: await createConciergeAgent(opts),
     },
     workflows: {
       jixoJobWorkflow,
@@ -69,7 +69,7 @@ export type JixoAppConfig = {
     plannerAgent: PlannerAgent;
     executorAgent: ExecutorAgent;
     reviewerAgent: ReviewerAgent;
-    chefAgent: ChefAgent;
+    conciergeAgent: ConciergeAgent;
   };
   workflows: {
     jixoJobWorkflow: JixoJobWorkflow;

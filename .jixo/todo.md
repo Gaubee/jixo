@@ -20,3 +20,9 @@
 
 - 可以配置env文件
 - 可以配置底层模型，目前有 thinkModel、commonModel，未来应该加入 embeddingModel、coderModel 等等
+
+---
+
+1. Workspace是基础：文件系统即是数据库。每个Jixo实例都管理一个本地的workspace，而workspace由.jixo目录下的日志文件集合定义。
+2. Concierge是交互核心：ChefAgent的角色被重新定义为“前台/管家”（Concierge），它成为人与Jixo系统交互的主要接口，负责接收指令、汇报进度和协调内部工作。
+3. Evals是质量保证：AI系统的核心是其输出质量。因此，建立一套AI评估（Evals）体系比传统的单元测试更为重要，是衡量系统智能水平的标尺。
