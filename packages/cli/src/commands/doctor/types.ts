@@ -8,14 +8,14 @@ export interface ToolCheckConfig {
   displayName: string;
 
   /** The command to execute to get the version (e.g., "pnpm --version") */
-  versionCommand: string;
+  versionCommand?: string;
 
   /**
    * A regular expression to parse the version string from the command's output.
    * It MUST have at least one capturing group, which should capture the version string.
    * Example: For "pnpm 10.11.0", regex could be /pnpm\s+([\d.]+)/ or simply /([\d.]+)/
    */
-  versionParseRegex: RegExp;
+  versionParseRegex?: RegExp;
 
   /**
    * The minimum required version (Semantic Versioning string).
@@ -36,3 +36,20 @@ export interface ToolCheckConfig {
 }
 
 export type DoctorConfig = ToolCheckConfig[];
+
+export interface ToolCheckResult {
+  id: string;
+  displayName: string;
+  exists: boolean;
+  version?: string; // Actual version found
+  requiredVersion?: string; // From config
+  meetsVersionRequirement: boolean; // True if version >= minVersion or if minVersion not set & exists
+  isOptional: boolean;
+  message: string;
+  installationHint?: string;
+}
+
+export interface DoctorReport {
+  overallSuccess: boolean;
+  results: ToolCheckResult[];
+}

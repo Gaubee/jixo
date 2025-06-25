@@ -1,24 +1,26 @@
-[.jixo\meta.tmp.md](@Inject)
+[.jixo/meta.tmp.md](@Inject)
 
 ---
 
-我之前已经在做基于单个巨大的提示词文件的AI应用了。这个应用叫做JIXO。
+**5月20号**
+我在做基于单个巨大的提示词文件的AI应用了。这个应用叫做JIXO。
 现在我想将我的AI应用升级到基于 mastra.ai 的这个框架下的应用。
 
 这是我之前的“系统提示词”：
 
-[packages\cli\prompts\system.md](@File)
+[packages/cli/prompts/system.md](@File)
 
 还有“用户提示词的模板文件”：
 
-[packages\cli\prompts\user.md](@File)
+[packages/cli/prompts/user.md](@File)
 
 以及生成“系统提示词”和“用户提示词模板”的“元提示词”，这是更高维度的一个信息源头，可能很重要：
 
-[.jixo\jixo-gen-system-prompt.md](@File)
+[.jixo/jixo-gen-system-prompt.md](@File)
 
 ---
 
+**6月05号**
 然后我跟你讲一下为什么我要把我的JIXO应用迁移到 mastra.ai 这个框架下。
 
 核心原因是，我的在编写提示词的过程中，一直在对抗AI的幻觉问题，同时也慢慢梳理出了双层循环的架构来让AI持久地一直运行下去。但是由于幻觉，导致AI没法很好的履行我提示词中提出的要求。
@@ -27,9 +29,19 @@
 也因此我调查到最前沿的 LangGraph、LlamaIndex 都是这个想法的产物。
 所以我选择了一个比较成熟的 mastra.ai 这个框架，帮助我快速实现JIXO这个应用。
 
+以下是mastra的官方文档介绍：
+
+[.jixo/mastra-llms-full.md](@FILE)
+
 ---
 
-目前，我已经在AI的帮助下，完成了 JIXO-V3 原型的开发，基本走通了JIXO的基础工作流了。
+**6月20号**
+
+在AI的帮助下，完成了 JIXO-V3 原型的开发，基本走通了JIXO的基础工作流了。以下是JIXO-v3的源代码：
+
+[`packages/core/src/**/*.ts`](@File)
+
+---
 
 接下来，JIXO 将开始逐步产品化，达到一个稳定的产品，需要做到这几点：
 
@@ -45,3 +57,13 @@
    1. 还有比如如果运行在个人PC上，那么还能监听文件夹变更、查看用户的桌面、用户的键盘鼠标输入等等。
    1. 它还能提供一个浏览器，从而实施操作浏览器，用户可以在这个浏览器上和它一同协作操作网页，完整复杂的网页操作。
    1. 也能接入或者控制一些外部信号，比如USB设备、蓝牙设备等等。
+
+---
+
+**6月24号**
+
+我自己已经尝试搭建出来了webui这个项目，并且也基本走通了基本的对话能力，以下是主要源代码
+
+[`packages/webui/{app,components,hooks,lib}/**/*.{ts,tsx,css}`](@File)
+
+目前我只是搭建了这个WebUI，但主要的精力不在这里，今天我搭建这个webui的目的只是为了验证core部分的设计符合预期，并且探明一些问题，方面我做更好的设计。

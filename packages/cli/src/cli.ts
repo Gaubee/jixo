@@ -1,13 +1,11 @@
 import {cwdResolver} from "@gaubee/node";
-import {match, P} from "ts-pattern";
 import yargs from "yargs";
 import {hideBin} from "yargs/helpers";
 import packageJson from "../package.json" with {type: "json"};
 import {doctor} from "./commands/doctor/index.js";
 import {init} from "./commands/init.js";
-import {listPrompts} from "./commands/prompts/list.js";
-import {upgradePrompts} from "./commands/prompts/upgrade.js";
 import {run} from "./commands/tasks/run.js";
+import {startDaemon, stopDaemon, statusDaemon, restartDaemon} from "./commands/daemon.js";
 
 export const runCli = async (args: string[] = process.argv) => {
   const cli = await yargs(hideBin(args))
@@ -15,7 +13,7 @@ export const runCli = async (args: string[] = process.argv) => {
     .version(packageJson.version)
     .command(
       "doctor",
-      "Check the requirements for run jixo",
+      "Check the requirements and health of the JIXO environment",
       (yargs) => yargs,
       () => {
         doctor();
@@ -23,7 +21,7 @@ export const runCli = async (args: string[] = process.argv) => {
     )
     .command(
       "init [dir]",
-      "Create a new JIXO project",
+      "Create a new JIXO project configuration",
       (yargs) => {
         return yargs.positional("dir", {
           describe: "The directory to create the JIXO config",
@@ -35,90 +33,64 @@ export const runCli = async (args: string[] = process.argv) => {
       },
     )
     .command(
-      "run [filter...]",
-      "Run JIXO tasks",
+      "run <goal>",
+      "Run a JIXO job with a specific goal",
       (yargs) => {
         return yargs
-          .positional("filter", {
-            describe: 'Fliter tasks by name or directory(starts with "./")',
-            array: true,
-            default: [],
+          .positional("goal", {
+            describe: "The high-level goal for the job",
+            type: "string",
+            demandOption: true,
           })
           .option("dir", {
             alias: "D",
             type: "string",
-            description: "The project directory with JIXO config",
-          })
-          .option("force", {
-            alias: "F",
-            type: "boolean",
-            description: "Tasks are forced to run, even at 100% progress. It is suitable for running after modifying the content of the task",
-          })
-          .option("once", {
-            type: "boolean",
-            description: "The task is executed only once in the loop, equal to --loop=1",
+            description: "The project directory to run in",
+            default: process.cwd(),
           })
           .option("loop", {
             alias: "L",
             type: "number",
-            description: "The task is executed N times in the loop",
+            description: "The max loop times for the job",
+            default: 20,
           });
       },
       (argv) => {
-        const filters = argv.filter.map((v) => v.toString().split(/[\s,]+/)).flat();
-        const nameFilter: string[] = [];
-        const dirFilter: string[] = [];
-        for (const f of filters) {
-          if (f.startsWith("./") || f.startsWith("../") || f.startsWith("~/")) {
-            dirFilter.push(f);
-          } else {
-            nameFilter.push(f);
-          }
-        }
-        run(cwdResolver(argv.dir ?? ""), {
-          nameFilter,
-          dirFilter,
-          force: argv.force,
-          loopTimes: match(argv)
-            .with({loop: P.number.gt(0).select()}, (loop) => loop)
-            .with({once: P.boolean.select()}, (once) => (once ? 1 : Infinity))
-            .otherwise(() => Infinity),
+        run({
+          jobGoal: argv.goal,
+          workDir: cwdResolver(argv.dir),
+          maxLoops: argv.loop,
         });
       },
     )
-    .command(
-      "prompts",
-      "Manage prompts",
-      (yargs) => {
-        return (
-          yargs
-            //
-            .option("dir", {
-              alias: "D",
-              type: "string",
-              description: "The project directory with JIXO config",
-            })
-            .option("mirrorUrl", {
-              alias: "M",
-              type: "string",
-              description: "The Url for download prompts",
-            })
-            .option("upgrade", {
-              alias: "U",
-              type: "boolean",
-              description: "Upgrade builtin prompts",
-            })
-        );
-      },
-      async (argv) => {
-        if (argv.upgrade) {
-          upgradePrompts(argv.dir ? cwdResolver(argv.dir) : cwdResolver(), {mirrorUrl: argv.mirrorUrl});
-        } else {
-          listPrompts();
+    .command("daemon <action>", "Manage the JIXO Core daemon", (yargs) => {
+      return yargs
+        .positional("action", {
+          describe: "The action to perform on the daemon",
+          type: "string",
+          choices: ["start", "stop", "status", "restart"],
+          demandOption: true,
+        })
+    }, (argv) => {
+        switch (argv.action) {
+            case 'start':
+                startDaemon();
+                break;
+            case 'stop':
+                stopDaemon();
+                break;
+            case 'status':
+                statusDaemon();
+                break;
+            case 'restart':
+                restartDaemon();
+                break;
         }
-      },
-    )
-    .strict();
+    })
+    .demandCommand(1, "You need at least one command before moving on")
+    .strict()
+    .help();
+
   const argv = await cli.parse();
 
   if (argv._.length === 0) {

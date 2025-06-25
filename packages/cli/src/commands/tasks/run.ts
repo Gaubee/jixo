@@ -1,112 +1,54 @@
-import {FileEntry, findChangedFilesSinceTime, Ignore, normalizeFilePath, walkFiles} from "@gaubee/nodekit";
-import {iter_map_not_null} from "@gaubee/util";
-import fs from "node:fs";
-import path from "node:path";
-import {loadConfig} from "../../config.js";
-import {loadJixoEnv} from "../../env.js";
-import {resolveAiTasks} from "../../helper/resolve-ai-tasks.js";
-import {runAiTask} from "./run-ai-task.js";
+import {red, green, cyan, yellow} from "@gaubee/nodekit";
+import {safeEnv} from "../../env.js";
 
-export const run = async (
-  _cwd: string,
-  options: {
-    nameFilter: string[];
-    dirFilter: string[];
-    force?: boolean;
-    loopTimes?: number;
-  },
-) => {
-  const cwd = normalizeFilePath(_cwd);
-  const config = await loadConfig(cwd);
+interface RunOptions {
+  jobGoal: string;
+  workDir: string;
+  maxLoops: number;
+  jobName?: string;
+  gitCommit?: boolean;
+}
 
-  const nameMatcher = options.nameFilter.length ? new Ignore(options.nameFilter, cwd) : {isMatch: () => true};
-  const dirMatcher = options.dirFilter.length ? new Ignore(options.dirFilter, cwd) : {isMatch: () => true};
-  const cwdIgnoreFilepath = path.join(cwd, ".gitignore");
-  const ignore = [".git"];
-  if (fs.existsSync(cwdIgnoreFilepath)) {
-    ignore.push(...fs.readFileSync(cwdIgnoreFilepath, "utf-8").split("\n"));
-  }
-  const exitedJobs = new Set<string>();
+export const run = async (options: RunOptions) => {
+  const {jobGoal, workDir, maxLoops, jobName, gitCommit} = options;
+  const coreUrl = safeEnv.JIXO_CORE_URL;
+  const apiKey = safeEnv.JIXO_API_KEY;
 
-  let {force = false} = options;
-  const {loopTimes: MAX_LOOP_TIMES = Infinity} = options;
-  let currentTimes = 1;
-  let retryTimes = 0;
-  const MAX_RETRY_TIMES = 3;
-  while (currentTimes <= MAX_LOOP_TIMES) {
-    const ai_tasks = resolveAiTasks(cwd, config.tasks, currentTimes - 1);
+  console.log(cyan(`🚀 Starting JIXO job...`));
+  console.log(`   - Goal: ${jobGoal}`);
+  console.log(`   - Target: ${coreUrl}`);
 
-    const allFiles = [...walkFiles(cwd, {ignore})];
-    let allDone = true;
+  try {
+    const response = await fetch(`${coreUrl}/api/jixo/v1/jobs`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        jobGoal,
+        workDir,
+        maxLoops,
+        jobName,
+        gitCommit,
+      }),
+    });
 
-    try {
-      for (const ai_task of ai_tasks) {
-        // 如果进度已经满了，并且没有任何依赖文件的变更，那么跳过这个任务
-        if (!force) {
-          if (ai_task.log.preProgress >= 1) {
-            continue;
-          }
-        }
-        if (exitedJobs.has(ai_task.jobName)) {
-          continue;
-        }
-
-        const {dirs: task_dirs} = ai_task;
-        if (!task_dirs.some((dir) => dirMatcher.isMatch(dir))) {
-          continue;
-        }
-        if (!nameMatcher.isMatch(ai_task.jobName)) {
-          continue;
-        }
-        const isCwdTask = cwd === task_dirs[0] && task_dirs.length === 1;
-
-        const changedFiles = (await findChangedFilesSinceTime(ai_task.log.preUpdateTime, cwd)) ?? allFiles;
-
-        const task_changedFiles = isCwdTask
-          ? {[cwd]: changedFiles}
-          : task_dirs.reduce(
-              (tree, task_dir) => {
-                tree[task_dir] = iter_map_not_null(changedFiles, (file) => {
-                  if (file.path.startsWith(task_dirs + "/")) {
-                    return new FileEntry(file.path, {cwd: task_dir, state: file.stats});
-                  }
-                });
-                return tree;
-              },
-              {} as Record<string, FileEntry[]>,
-            );
-
-        const task_allFiles = isCwdTask ? allFiles : task_dirs.map((task_dir) => [...walkFiles(task_dir, {ignore})]).flat();
-
-        loadJixoEnv(cwd);
-
-        /// 只要有一个任务执行了，那么allDone就要标记成false，进入下一次循环来判断
-        allDone = false;
-        await runAiTask(ai_task, currentTimes, task_allFiles, task_changedFiles);
-
-        if (ai_task.exitCode != null) {
-          exitedJobs.add(ai_task.jobName);
-        }
-      }
-    } catch (e) {
-      console.error(e);
-      // 遇到异常，那么重试
-      if (retryTimes < MAX_RETRY_TIMES) {
-        retryTimes += 1;
-        continue;
-      } else {
-        break;
-      }
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Failed to start job. Server responded with ${response.status}: ${errorBody}`);
     }
-    // force 只能生效一次，避免无限循环
-    force = false;
-    currentTimes += 1;
-    /// 成功一次后，retry计数就重制
-    retryTimes = 0;
 
-    /// 如果没有任务执行了，那么退出循环
-    if (allDone) {
-      break;
+    const result = await response.json();
+    console.log(green(`✅ Job successfully started with Run ID: ${result.runId}`));
+  } catch (error) {
+    if (error instanceof TypeError && error.message.includes("fetch failed")) {
+      console.error(red("\n❌ Error: Could not connect to the JIXO Core service."));
+      console.error(yellow(`   Please ensure the core service is running at ${coreUrl}.`));
+      console.error(yellow(`   You can start it by running 'jixo daemon start' or running the core package directly.`));
+    } else {
+      console.error(red("\n❌ An unexpected error occurred:"), error);
     }
+    process.exit(1);
   }
 };

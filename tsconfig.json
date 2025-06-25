@@ -1,8 +1,8 @@
 {
     "references": [
-        // {
-        //     "path": "./packages/cli/tsconfig.json"
-        // },
+        {
+            "path": "./packages/cli/tsconfig.json"
+        },
         {
             "path": "./packages/core/tsconfig.json"
         },
@@ -21,12 +21,14 @@
         {
             "path": "./packages/mcp-pnpm/tsconfig.json"
         },
-        {
-            "path": "./packages/webui/tsconfig.json"
-        }
+        // {
+        //     "path": "./packages/webui/tsconfig.json"
+        // }
     ],
     "files": [],
     "compilerOptions": {
-        "types": ["node"]
+        "types": [
+            "node"
+        ]
     }
 }

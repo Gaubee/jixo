@@ -1,39 +1,27 @@
 import {cosmiconfig} from "cosmiconfig";
 import {defu} from "defu";
 import z from "zod";
-
-const zJixoTask = z.union([
-  z.string(),
-  z.object({
-    type: z.literal("file"),
-    name: z.string().optional(),
-    filename: z.string(),
-  }),
-  z.object({
-    type: z.literal("dir"),
-    dirname: z.string(),
-  }),
-  z.object({
-    type: z.literal("prompt"),
-    name: z.string().optional(),
-    content: z.string(),
-  }),
-]);
+const DEFAULT_CORE_URL = "http://localhost:4111";
 const zJixoConfig = z.object({
-  tasks: z.union([z.array(zJixoTask), zJixoTask]),
+  coreUrl: z.string().url().optional().default(DEFAULT_CORE_URL),
 });
 
 const defaultConfig: JixoConfig = {
-  tasks: {type: "dir", dirname: ".jixo"},
+  coreUrl: DEFAULT_CORE_URL,
 };
-export type JixoTask = z.output<typeof zJixoTask>;
+
 export type JixoConfig = z.output<typeof zJixoConfig>;
+
 export const defineConfig = (config: Partial<JixoConfig>) => {
   return zJixoConfig.parse(config);
 };
 
-export const loadConfig = async (dir: string) => {
-  const explorer = cosmiconfig("jixo");
+export const loadConfig = async (dir: string): Promise<JixoConfig> => {
+  const explorer = cosmiconfig("jixo", {
+    searchStrategy: "global",
+  });
   const loaded = await explorer.search(dir);
-  return defu(loaded?.config as JixoConfig, defaultConfig);
+  // Use Zod to parse the loaded config, which applies defaults if properties are missing.
+  return defu(zJixoConfig.parse(loaded?.config || {}), defaultConfig);
 };
+console.log(defineConfig({}));
