@@ -1,10 +1,10 @@
 import {McpToolError} from "@jixo/mcp-core";
 
 /**
- * Thrown when a file operation attempts to access a path outside the allowed directories.
+ * Thrown when an operation is denied due to insufficient permissions on a mounted path.
  */
-export class AccessDeniedError extends McpToolError {
-  override readonly name = "AccessDeniedError";
+export class PermissionDeniedError extends McpToolError {
+  override readonly name = "PermissionDeniedError";
   constructor(message: string) {
     super(message);
   }
@@ -55,6 +55,26 @@ export class FileNotFoundError extends McpToolError {
  */
 export class NotADirectoryError extends McpToolError {
   override readonly name = "NotADirectoryError";
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+/**
+ * Thrown during startup if the same drive letter is assigned to multiple different paths.
+ */
+export class MountConflictError extends McpToolError {
+  override readonly name = "MountConflictError";
+  constructor(message: string) {
+    super(message);
+  }
+}
+
+/**
+ * Thrown when an operation targets a path that does not fall within any mounted directory.
+ */
+export class PathNotMountedError extends McpToolError {
+  override readonly name = "PathNotMountedError";
   constructor(message: string) {
     super(message);
   }

@@ -58,16 +58,15 @@ function parseMarkdown(markdownContent: string): DiffFiles {
     if (code === "$$DELETE_FILE$$") {
       mode = "delete";
     } else if (code.startsWith("$$RENAME_FILE$$")) {
-      code = code.replace(/\$\$RENAME_FILE\$\$`(.+?)`/, (_, pathname) => {
-        mode = "rename";
-        return rootResolver(pathname);
-      });
+      code = rootResolver(code.replace("$$RENAME_FILE$$", ""));
+      mode = "rename";
     } else if (fs.existsSync(fullFilepath)) {
       mode = "modify";
     } else {
       mode = "add";
     }
     if (mode == null) {
+      console.error("ERROR:", filePath, code);
       throw new Error(`Invalid parse mode for filepath: ${filePath}`);
     }
     // --- 安全检查 ---

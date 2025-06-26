@@ -1,18 +1,15 @@
 import assert from "node:assert";
 import path from "node:path";
 import {afterEach, beforeEach, describe, test} from "node:test";
-import {config} from "../fs-utils/config.js";
 import {cleanupSandbox, getToolHandler, SANDBOX, setupSandbox} from "./test-helper.js";
 
 describe("MCP Filesystem Tools - Scenarios", () => {
   beforeEach(() => {
     setupSandbox();
-    config.allowedDirectories = [SANDBOX];
   });
 
   afterEach(() => {
     cleanupSandbox();
-    config.allowedDirectories = [];
   });
 
   test("Full project setup workflow", async () => {

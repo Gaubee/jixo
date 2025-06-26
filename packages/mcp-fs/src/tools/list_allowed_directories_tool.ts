@@ -1,6 +1,6 @@
 import {returnSuccess} from "@jixo/mcp-core";
-import {config} from "../fs-utils/config.js";
 import * as s from "../schema.js";
+import {state} from "../state.js";
 import {registerTool} from "./server.js";
 
 export const list_allowed_directories_tool = registerTool(
@@ -17,13 +17,14 @@ Returns the list of root directories the server is sandboxed to. All file operat
     outputSuccessSchema: s.ListAllowedDirectoriesOutputSuccessSchema,
   },
   async () => {
+    const directories = state.mountPoints.map((mp) => mp.realPath);
     const text =
-      config.allowedDirectories.length > 0
-        ? `This server can only access files and directories within the following paths:\n- ${config.allowedDirectories.join("\n- ")}`
+      directories.length > 0
+        ? `This server can only access files and directories within the following paths:\n- ${directories.join("\n- ")}`
         : "Warning: No directory restrictions are set. The server can access any path.";
 
     return {
-      ...returnSuccess(text, {directories: config.allowedDirectories}),
+      ...returnSuccess(text, {directories}),
       content: [{type: "text", text}],
     };
   },

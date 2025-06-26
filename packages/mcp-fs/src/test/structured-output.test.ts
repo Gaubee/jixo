@@ -2,18 +2,15 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import {afterEach, beforeEach, describe, test} from "node:test";
-import {config} from "../fs-utils/config.js";
 import {cleanupSandbox, getToolHandler, SANDBOX, setupSandbox} from "./test-helper.js";
 
 describe("MCP Filesystem Tools - Structured Output", () => {
   beforeEach(() => {
     setupSandbox();
-    config.allowedDirectories = [SANDBOX];
   });
 
   afterEach(() => {
     cleanupSandbox();
-    config.allowedDirectories = [];
   });
 
   test("read_file returns correct structured output", async () => {

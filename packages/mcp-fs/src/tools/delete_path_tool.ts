@@ -1,9 +1,7 @@
 import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
-import path from "node:path";
-import {AccessDeniedError, DeleteNonEmptyDirectoryError} from "../error.js";
-import {config} from "../fs-utils/config.js";
-import {expandHome} from "../fs-utils/path-validation.js";
+import {DeleteNonEmptyDirectoryError, PermissionDeniedError} from "../error.js";
+import {validatePath} from "../fs-utils/path-validation.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
 import {registerTool} from "./server.js";
@@ -28,15 +26,23 @@ Deletes a file or directory.
   },
   async ({path: targetPath, recursive = false}) => {
     try {
-      const expandedPath = expandHome(targetPath);
-      const absolutePath = path.isAbsolute(expandedPath) ? path.resolve(expandedPath) : path.resolve(process.cwd(), expandedPath);
-      const validPath = path.normalize(absolutePath);
-
-      if (config.allowedDirectories.length > 0 && !config.allowedDirectories.some((dir) => validPath.startsWith(dir))) {
-        throw new AccessDeniedError(`Access denied: Path '${validPath}' is outside the allowed directories.`);
+      let validPath: string;
+      try {
+        // Validate the path exists and is accessible.
+        validPath = validatePath(targetPath);
+      } catch (error) {
+        // If permission is denied, re-throw immediately.
+        if (error instanceof PermissionDeniedError) {
+          throw error;
+        }
+        // For other errors (like file not found), we treat it as a success for idempotency.
+        // We must return a valid ToolResult object.
+        const message = `Successfully deleted ${targetPath} (path did not exist).`;
+        return returnSuccess(message, {path: targetPath, message});
       }
 
-      fs.rmSync(validPath, {recursive: recursive, force: true});
+      // If validation succeeded, proceed with deletion.
+      fs.rmSync(validPath, {recursive, force: true});
       const message = `Successfully deleted ${targetPath}`;
       return returnSuccess(message, {path: validPath, message});
     } catch (error: any) {

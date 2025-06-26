@@ -1,7 +1,5 @@
 import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
-import path from "node:path";
-import {config} from "./fs-utils/config.js";
-import {expandHome} from "./fs-utils/path-validation.js";
+import {state} from "./state.js";
 import {copy_path_tool} from "./tools/copy_path_tool.js";
 import {create_directory_tool} from "./tools/create_directory_tool.js";
 import {delete_path_tool} from "./tools/delete_path_tool.js";
@@ -14,6 +12,7 @@ import {read_file_tool} from "./tools/read_file_tool.js";
 import {search_files_tool} from "./tools/search_files_tool.js";
 import {readOnlyServer, readWriteServer} from "./tools/server.js";
 import {write_file_tool} from "./tools/write_file_tool.js";
+import {readOnlyPermissions, type MountPoint} from "./types.js";
 
 export const readonlyTools = {
   read_file: read_file_tool,
@@ -32,12 +31,13 @@ export const readwriteTools = {
   delete_path: delete_path_tool,
 };
 
-export async function startServer(dirs: string[], readOnly?: boolean) {
-  if (dirs.length > 0) {
-    config.allowedDirectories = dirs.map((dir) => {
-      const expanded = expandHome(dir);
-      return path.resolve(expanded);
-    });
+export async function startServer(mountPoints: MountPoint[], readOnly?: boolean) {
+  // Initialize global server state
+  state.mountPoints = mountPoints.map((mp) => (readOnly ? {...mp, permissions: readOnlyPermissions} : mp));
+  if (state.mountPoints.length > 0) {
+    state.cwd = state.mountPoints[0].realPath;
+  } else {
+    state.cwd = process.cwd();
   }
 
   const transport = new StdioServerTransport();
@@ -47,9 +47,15 @@ export async function startServer(dirs: string[], readOnly?: boolean) {
   await server.connect(transport);
 
   console.error(`Secure MCP Filesystem Server running on stdio in ${mode} mode.`);
-  if (config.allowedDirectories.length > 0) {
-    console.error("Allowed directories:", config.allowedDirectories);
+
+  if (state.mountPoints.length > 0) {
+    console.error("Mounted paths:");
+    state.mountPoints.forEach((mp: MountPoint) => {
+      const drive = mp.drive ? ` ($${mp.drive})` : "";
+      console.error(`- [${mp.permissions}]${drive}: ${mp.rawPath}`);
+    });
+    console.error(`Current working directory (CWD): ${state.cwd}`);
   } else {
-    console.error("Warning: No directory restrictions specified. Access is not sandboxed.");
+    console.error("Warning: No mount points specified. Access is not sandboxed.");
   }
 }

@@ -3,68 +3,51 @@ import {import_meta_ponyfill} from "import-meta-ponyfill";
 import yargs from "yargs";
 import {hideBin} from "yargs/helpers";
 import pkg from "../package.json" with {type: "json"};
+import {parseCliArgs} from "./cli-parser.js";
 import {startServer} from "./server.js";
 
-async function main(args: string[] = process.argv) {
+async function main() {
   const cli = yargs(hideBin(process.argv))
     .scriptName(Object.keys(pkg.bin)[0] ?? "mcp-fs")
     .version(pkg.version)
-    .usage("MCP Secure Filesystem Server\n\nUsage: $0 [options] <allowed-directories...>")
-    // 定义默认命令及其参数。
-    // '$0' 代表根命令。
-    // '<dirs...>' 定义了一个名为 'dirs' 的位置参数。
-    // '<...>' 表示它是必需的。
-    // '...' 表示它可以接受多个值，yargs 会将它们收集到一个数组中。
-    .command(
-      "$0 <allowed-directories...>",
-      "Starts the MCP filesystem server with specified accessible directories.",
-      (yargs) => {
-        // 构建选项
-        return (
-          yargs // 检查是否至少提供了一个必需的 <dirs...> 参数
-            // .demandCommand(1, "You must provide at least one directory path for the server to access.")
-            .positional("allowed-directories", {
-              demandOption: false,
-              normalize: true,
-              describe: "List of directories the server is allowed to access.",
-            })
-            .option("readOnly", {
-              type: "boolean",
-              alias: "R",
-              describe: "Run the server in read-only mode, disabling all write operations.",
-            })
-            .option("log", {
-              type: "boolean",
-              alias: "L",
-              describe: "Enable logging",
-            })
-            .option("logFile", {
-              type: "string",
-              describe: "Enable logging to a specified file path",
-            })
-        );
-      },
-      async (argv) => {
-        if (argv.log || argv.logFile) {
-          const logFilename = argv.logFile || `${argv.$0}.log`;
-          logger.setEnable(logFilename);
-        }
-        try {
-          // 命令处理器
-          await startServer(argv.allowedDirectories as unknown as string[], argv.readOnly);
-        } catch (error) {
-          console.error("Fatal error running server:", error);
-          process.exit(1);
-        }
-      },
-    )
-    // 启用标准的 --help 选项
+    .usage("MCP Secure Filesystem Server\n\nUsage: $0 [options] [mount-points...]\n\nMount Point Syntax:\n  [R|W|RW]=/path/to/dir\n  $A=/path/to/dir\n  $B[RW]=/another/path")
+    .option("readOnly", {
+      type: "boolean",
+      alias: "R",
+      describe: "Globally override all mounts to be read-only. Disables all write operations.",
+    })
+    .option("log", {
+      type: "boolean",
+      alias: "L",
+      describe: "Enable logging",
+    })
+    .option("logFile", {
+      type: "string",
+      describe: "Enable logging to a specified file path",
+    })
     .help()
     .alias("help", "h")
-    // .strict() 会让 yargs 对未知命令或参数报错，增加健壮性
     .strict()
-    // 触发解析和执行
-    .parse();
+    .fail((msg, err, yargs) => {
+      console.error(msg || err?.message || "An unknown error occurred.");
+      console.error("\n" + yargs.help());
+      process.exit(1);
+    });
+
+  try {
+    const argv = await cli.argv;
+    const {mountPoints, readOnly} = parseCliArgs(hideBin(process.argv));
+
+    if (argv.log || argv.logFile) {
+      const logFilename = argv.logFile || `${argv.$0}.log`;
+      logger.setEnable(logFilename);
+    }
+
+    await startServer(mountPoints, argv.readOnly || readOnly);
+  } catch (error) {
+    console.error(`Fatal error: ${(error as Error).message}`);
+    process.exit(1);
+  }
 }
 
 if (import_meta_ponyfill(import.meta).main) {
