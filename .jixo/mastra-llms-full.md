@@ -843,8 +843,6 @@ Once you have a server you want to use with your agent, import the Mastra `MCPCl
 
 ```typescript filename="src/mastra/mcp.ts" {1,7-16}
 import { MCPClient } from "@mastra/mcp";
-import { Agent } from "@mastra/core/agent";
-import { openai } from "@ai-sdk/openai";
 
 // Configure MCPClient to connect to your server(s)
 export const mcp = new MCPClient({
@@ -864,7 +862,10 @@ export const mcp = new MCPClient({
 Then connect your agent to the server tools:
 
 ```typescript filename="src/mastra/agents/mcpAgent.ts" {7}
+import { Agent } from "@mastra/core/agent";
+import { openai } from "@ai-sdk/openai";
 import { mcp } from "../mcp";
+
 // Create an agent and add tools from the MCP client
 const agent = new Agent({
   name: "Agent with MCP Tools",
@@ -965,93 +966,12 @@ For more details on setting up and configuring `MCPServer`, refer to the [MCPSer
 
 
 ---
-title: "Discord Community and Bot | Documentation | Mastra"
-description: Information about the Mastra Discord community and MCP bot.
----
-
-# Discord Community
-[EN] Source: https://mastra.ai/en/docs/community/discord
-
-The Discord server has over 1000 members and serves as the main discussion forum for Mastra. The Mastra team monitors Discord during North American and European business hours, with community members active across other time zones.[Join the Discord server](https://discord.gg/BTYqqHKUrf).
-
-## Discord MCP Bot
-
-In addition to community members, we have an (experimental!) Discord bot that can also help answer questions. It uses [Model Context Protocol (MCP)](/docs/agents/mcp-guide). You can ask it a question with `/ask` (either in public channels or DMs) and clear history (in DMs only) with `/cleardm`.
-
-
----
-title: "Licensing"
-description: "Mastra License"
----
-
-# License
-[EN] Source: https://mastra.ai/en/docs/community/licensing
-
-## Elastic License 2.0 (ELv2)
-
-Mastra is licensed under the Elastic License 2.0 (ELv2), a modern license designed to balance open-source principles with sustainable business practices.
-
-### What is Elastic License 2.0?
-
-The Elastic License 2.0 is a source-available license that grants users broad rights to use, modify, and distribute the software while including specific limitations to protect the project's sustainability. It allows:
-
-- Free use for most purposes
-- Viewing, modifying, and redistributing the source code
-- Creating and distributing derivative works
-- Commercial use within your organization
-
-The primary limitation is that you cannot provide Mastra as a hosted or managed service that offers users access to the substantial functionality of the software.
-
-### Why We Chose Elastic License 2.0
-
-We selected the Elastic License 2.0 for several important reasons:
-
-1. **Sustainability**: It enables us to maintain a healthy balance between openness and the ability to sustain long-term development.
-
-2. **Innovation Protection**: It ensures we can continue investing in innovation without concerns about our work being repackaged as competing services.
-
-3. **Community Focus**: It maintains the spirit of open source by allowing users to view, modify, and learn from our code while protecting our ability to support the community.
-
-4. **Business Clarity**: It provides clear guidelines for how Mastra can be used in commercial contexts.
-
-### Building Your Business with Mastra
-
-Despite the licensing restrictions, there are numerous ways to build successful businesses using Mastra:
-
-#### Allowed Business Models
-
-- **Building Applications**: Create and sell applications built with Mastra
-- **Offering Consulting Services**: Provide expertise, implementation, and customization services
-- **Developing Custom Solutions**: Build bespoke AI solutions for clients using Mastra
-- **Creating Add-ons and Extensions**: Develop and sell complementary tools that extend Mastra's functionality
-- **Training and Education**: Offer courses and educational materials about using Mastra effectively
-
-#### Examples of Compliant Usage
-
-- A company builds an AI-powered customer service application using Mastra and sells it to clients
-- A consulting firm offers implementation and customization services for Mastra
-- A developer creates specialized agents and tools with Mastra and licenses them to other businesses
-- A startup builds a vertical-specific solution (e.g., healthcare AI assistant) powered by Mastra
-
-#### What to Avoid
-
-The main restriction is that you cannot offer Mastra itself as a hosted service where users access its core functionality. This means:
-
-- Don't create a SaaS platform that is essentially Mastra with minimal modifications
-- Don't offer a managed Mastra service where customers are primarily paying to use Mastra's features
-
-### Questions About Licensing?
-
-If you have specific questions about how the Elastic License 2.0 applies to your use case, please [contact us](https://discord.gg/BTYqqHKUrf) on Discord for clarification. We're committed to supporting legitimate business use cases while protecting the sustainability of the project.
-
-
----
 title: "MastraClient"
 description: "Learn how to set up and use the Mastra Client SDK"
 ---
 
 # Mastra Client SDK
-[EN] Source: https://mastra.ai/en/docs/deployment/client
+[EN] Source: https://mastra.ai/en/docs/client-js/overview
 
 The Mastra Client SDK provides a simple and type-safe interface for interacting with your [Mastra Server](/docs/deployment/server) from your client environment.
 
@@ -1187,6 +1107,219 @@ return new Response(result.body);
 
 
 ---
+title: "Discord Community and Bot | Documentation | Mastra"
+description: Information about the Mastra Discord community and MCP bot.
+---
+
+# Discord Community
+[EN] Source: https://mastra.ai/en/docs/community/discord
+
+The Discord server has over 1000 members and serves as the main discussion forum for Mastra. The Mastra team monitors Discord during North American and European business hours, with community members active across other time zones.[Join the Discord server](https://discord.gg/BTYqqHKUrf).
+
+## Discord MCP Bot
+
+In addition to community members, we have an (experimental!) Discord bot that can also help answer questions. It uses [Model Context Protocol (MCP)](/docs/agents/mcp-guide). You can ask it a question with `/ask` (either in public channels or DMs) and clear history (in DMs only) with `/cleardm`.
+
+
+---
+title: "Licensing"
+description: "Mastra License"
+---
+
+# License
+[EN] Source: https://mastra.ai/en/docs/community/licensing
+
+## Elastic License 2.0 (ELv2)
+
+Mastra is licensed under the Elastic License 2.0 (ELv2), a modern license designed to balance open-source principles with sustainable business practices.
+
+### What is Elastic License 2.0?
+
+The Elastic License 2.0 is a source-available license that grants users broad rights to use, modify, and distribute the software while including specific limitations to protect the project's sustainability. It allows:
+
+- Free use for most purposes
+- Viewing, modifying, and redistributing the source code
+- Creating and distributing derivative works
+- Commercial use within your organization
+
+The primary limitation is that you cannot provide Mastra as a hosted or managed service that offers users access to the substantial functionality of the software.
+
+### Why We Chose Elastic License 2.0
+
+We selected the Elastic License 2.0 for several important reasons:
+
+1. **Sustainability**: It enables us to maintain a healthy balance between openness and the ability to sustain long-term development.
+
+2. **Innovation Protection**: It ensures we can continue investing in innovation without concerns about our work being repackaged as competing services.
+
+3. **Community Focus**: It maintains the spirit of open source by allowing users to view, modify, and learn from our code while protecting our ability to support the community.
+
+4. **Business Clarity**: It provides clear guidelines for how Mastra can be used in commercial contexts.
+
+### Building Your Business with Mastra
+
+Despite the licensing restrictions, there are numerous ways to build successful businesses using Mastra:
+
+#### Allowed Business Models
+
+- **Building Applications**: Create and sell applications built with Mastra
+- **Offering Consulting Services**: Provide expertise, implementation, and customization services
+- **Developing Custom Solutions**: Build bespoke AI solutions for clients using Mastra
+- **Creating Add-ons and Extensions**: Develop and sell complementary tools that extend Mastra's functionality
+- **Training and Education**: Offer courses and educational materials about using Mastra effectively
+
+#### Examples of Compliant Usage
+
+- A company builds an AI-powered customer service application using Mastra and sells it to clients
+- A consulting firm offers implementation and customization services for Mastra
+- A developer creates specialized agents and tools with Mastra and licenses them to other businesses
+- A startup builds a vertical-specific solution (e.g., healthcare AI assistant) powered by Mastra
+
+#### What to Avoid
+
+The main restriction is that you cannot offer Mastra itself as a hosted service where users access its core functionality. This means:
+
+- Don't create a SaaS platform that is essentially Mastra with minimal modifications
+- Don't offer a managed Mastra service where customers are primarily paying to use Mastra's features
+
+### Questions About Licensing?
+
+If you have specific questions about how the Elastic License 2.0 applies to your use case, please [contact us](https://discord.gg/BTYqqHKUrf) on Discord for clarification. We're committed to supporting legitimate business use cases while protecting the sustainability of the project.
+
+
+---
+title: "Digital Ocean"
+description: "Deploy your Mastra applications to Digital Ocean."
+---
+
+import { Callout, Steps, Tabs } from "nextra/components";
+import ServerConfig from "@/components/content-blocks/server-config.mdx";
+
+## Digital Ocean
+[EN] Source: https://mastra.ai/en/docs/deployment/cloud-providers/digital-ocean
+
+Deploy your Mastra applications to Digital Ocean's App Platform and Droplets.
+
+<Callout>
+  This guide assumes your Mastra application has been created using the default
+  `npx create-mastra@latest` command.
+  For more information on how to create a new Mastra application,
+  refer to our [getting started guide](./../../getting-started/installation.mdx)
+</Callout>
+
+<Tabs items={["App Platform", "Droplets"]}>
+
+<Tabs.Tab>
+
+### App Platform
+
+#### Prerequisites [#app-platform-prerequisites]
+
+- A Git repository containing your Mastra application. This can be a GitHub repository, GitLab repository, or any other compatible source provider.
+- A Digital Ocean account
+
+#### Deployment Steps
+
+<Steps>
+
+#### Create a new App
+
+- Log in to your Digital Ocean dashboard.
+- Navigate to the App Platform service.
+- Select your source provider and create a new app.
+
+#### Configure Deployment Source
+
+- Connect and select your repository. You may also choose a container image or a sample app.
+- Select the branch you want to deploy from.
+- Configure the source directory if necessary. If your Mastra application uses the default directory structure, no action is required here.
+- Head to the next step.
+
+#### Configure Resource Settings and Environment Variables
+
+- A Node.js build should be detected automatically.
+- Add any required environment variables for your Mastra application. This includes API keys, database URLs, and other configuration values.
+- You may choose to configure the size of your resource here.
+- Other things you may optionally configure include, the region of your resource, the unique app name, and what project the resource belongs to.
+- Once you're done, you may create the app after reviewing your configuration and pricing estimates.
+
+#### Deployment
+
+- Your app will be built and deployed automatically.
+- Digital Ocean will provide you with a URL to access your deployed application.
+
+</Steps>
+
+You can now access your deployed application at the URL provided by Digital Ocean.
+
+<Callout>
+The Digital Ocean App Platform uses an ephemeral file system,
+meaning that any files written to the file system are short-lived and may be lost.
+Avoid using a Mastra storage provider that uses the file system,
+such as `LibSQLStore` with a file URL.
+</Callout>
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+### Droplets
+
+Deploy your Mastra application to Digital Ocean's Droplets.
+This guide will cover setting up a droplet, a reverse proxy using Nginx, and running your Mastra application.
+
+<Callout>
+The guide assumes your droplet runs Ubuntu 24+.
+</Callout>
+
+#### Prerequisites [#droplets-prerequisites]
+
+- A Digital Ocean account
+- A droplet running Ubuntu 24+
+- A domain name with an A record pointing to your droplet
+
+#### Setting up the droplet
+
+<ServerConfig />
+
+</Tabs.Tab>
+
+</Tabs>
+
+### Connect to your Mastra server
+
+You can now connect to your Mastra server from your client application using a `MastraClient` from the `@mastra/client-js` package.
+
+Refer to the [`MastraClient` documentation](../../client-js/overview.mdx) for more information.
+
+```typescript copy showLineNumbers
+import { MastraClient } from "@mastra/client-js";
+
+const mastraClient = new MastraClient({
+  baseUrl: "https://<your-domain-name>",
+});
+```
+
+
+---
+title: "Cloud Providers"
+description: "Deploy your Mastra applications to popular cloud providers."
+asIndexPage: true
+---
+
+import { CardGrid, CardGridItem } from "@/components/cards/card-grid";
+
+## Cloud Providers
+[EN] Source: https://mastra.ai/en/docs/deployment/cloud-providers
+
+Deploy your Mastra applicaitons to popular cloud providers.
+
+<CardGrid>
+  <CardGridItem title="Digital Ocean" description="Deploy your Mastra applications to Digital Ocean" href="./cloud-providers/digital-ocean" />
+</CardGrid>
+
+
+---
 title: "Custom API Routes"
 description: "Expose additional HTTP endpoints from your Mastra server."
 ---
@@ -1252,7 +1385,9 @@ description: "Build and deploy Mastra applications using platform-specific deplo
 # Serverless Deployment
 [EN] Source: https://mastra.ai/en/docs/deployment/deployment
 
-This guide covers deploying Mastra to Cloudflare Workers, Vercel, and Netlify using platform-specific deployers
+This guide covers deploying standalone Mastra applications to Cloudflare Workers, Vercel, and Netlify using platform-specific deployers.
+
+Deployers **aren't** required when integrating Mastra with a framework. See [Web Framework Integration](/docs/deployment/web-framework) for more information.
 
 For self-hosted Node.js server deployment, see the [Creating A Mastra Server](/docs/deployment/server) guide.
 
@@ -1265,6 +1400,34 @@ Before you begin, ensure you have:
   - An account with your chosen platform
   - Required API keys or credentials
 
+## LibSQLStore
+
+`LibSQLStore` writes to the local filesystem, which is not supported in serverless environments due to their ephemeral nature. If you're deploying to a platform like Vercel, Netlify or Cloudflare, you **must remove** all usage of `LibSQLStore`.
+
+Specifically, ensure you've removed it from both `src/mastra/index.ts` and `src/mastra/agents/weather-agent.ts`:
+
+
+```diff filename="src/mastra/index.ts" showLineNumbers
+export const mastra = new Mastra({
+  // ...
+-  storage: new LibSQLStore({
+-    // stores telemetry, evals, ... into memory storage, if it needs to persist, change to file:../mastra.db
+-    url: ":memory:",
+-  })
+});
+```
+
+``` diff filename="src/mastra/agents/weather-agent.ts" showLineNumbers
+export const weatherAgent = new Agent({
+  // ..
+-  memory: new Memory({
+-    storage: new LibSQLStore({
+-      url: "file:../mastra.db" // path is relative to the .mastra/output directory
+-    })
+-  })
+});
+```
+
 ## Serverless Platform Deployers
 
 Platform-specific deployers handle configuration and deployment for:
@@ -1273,107 +1436,6 @@ Platform-specific deployers handle configuration and deployment for:
 - **[Vercel](/reference/deployer/vercel)**
 - **[Netlify](/reference/deployer/netlify)**
 - **[Mastra Cloud](/docs/mastra-cloud/overview)** _(beta)_. You can join the [cloud waitlist](https://mastra.ai/cloud-beta) for early access.
-
-### Installing Deployers
-
-```bash copy
-# For Cloudflare
-npm install @mastra/deployer-cloudflare@latest
-
-# For Vercel
-npm install @mastra/deployer-vercel@latest
-
-# For Netlify
-npm install @mastra/deployer-netlify@latest
-```
-
-### Configuring Deployers
-
-Configure the deployer in your entry file:
-
-```typescript copy showLineNumbers
-import { Mastra } from "@mastra/core";
-import { PinoLogger } from "@mastra/loggers";
-import { CloudflareDeployer } from "@mastra/deployer-cloudflare";
-
-export const mastra = new Mastra({
-  agents: {
-    /* your agents here */
-  },
-  logger: new PinoLogger({ name: "MyApp", level: "debug" }),
-  deployer: new CloudflareDeployer({
-    scope: "your-cloudflare-scope",
-    projectName: "your-project-name",
-    // See complete configuration options in the reference docs
-  }),
-});
-```
-
-### Deployer Configuration
-
-Each deployer has specific configuration options. Below are basic examples, but refer to the reference documentation for complete details.
-
-#### Cloudflare Deployer
-
-```typescript copy showLineNumbers
-new CloudflareDeployer({
-  scope: "your-cloudflare-account-id",
-  projectName: "your-project-name",
-  // For complete configuration options, see the reference documentation
-});
-```
-
-[View Cloudflare Deployer Reference →](/reference/deployer/cloudflare)
-
-#### Vercel Deployer
-
-```typescript copy showLineNumbers
-new VercelDeployer({
-  teamSlug: "your-vercel-team-slug",
-  projectName: "your-project-name",
-  token: "your-vercel-token",
-  // For complete configuration options, see the reference documentation
-});
-```
-
-[View Vercel Deployer Reference →](/reference/deployer/vercel)
-
-#### Netlify Deployer
-
-```typescript copy showLineNumbers
-new NetlifyDeployer({
-  scope: "your-netlify-team-slug",
-  projectName: "your-project-name",
-  token: "your-netlify-token",
-});
-```
-
-[View Netlify Deployer Reference →](/reference/deployer/netlify)
-
-## Environment Variables
-
-Required variables:
-
-1. Platform deployer variables (if using platform deployers):
-   - Platform credentials
-2. Agent API keys:
-   - `OPENAI_API_KEY`
-   - `ANTHROPIC_API_KEY`
-3. Server configuration (for universal deployment):
-   - `PORT`: HTTP server port (default: 3000)
-   - `HOST`: Server host (default: 0.0.0.0)
-
-## Build Mastra Project
-
-To build your Mastra project for your target platform run:
-
-```bash
-npx mastra build
-```
-
-When a Deployer is used, the build output is automatically prepared for the target platform.
-You can then deploy the build output `.mastra/output` via your platform's (Vercel, netlify, cloudfare e.t.c)
-CLI/UI.
 
 
 ---
@@ -1531,7 +1593,7 @@ description: Learn about different deployment options for your Mastra applicatio
 # Deployment Overview
 [EN] Source: https://mastra.ai/en/docs/deployment/overview
 
-Mastra offers multiple deployment options to suit your application's needs, from fully-managed solutions to self-hosted options. This guide will help you understand the available deployment paths and choose the right one for your project.
+Mastra offers multiple deployment options to suit your application's needs, from fully-managed solutions to self-hosted options, and web framework integrations. This guide will help you understand the available deployment paths and choose the right one for your project.
 
 ## Deployment Options
 
@@ -1546,6 +1608,18 @@ Mastra Cloud is a deployment platform that connects to your GitHub repository, a
 - Custom domains for each project
 
 [View Mastra Cloud documentation →](/docs/mastra-cloud/overview)
+
+
+### With a Web Framework
+
+Mastra can be integrated with a variety of web frameworks. For example, see one of the following for a detailed guide.
+
+- [With Next.js](/docs/frameworks/web-frameworks/next-js)
+- [With Astro](/docs/frameworks/web-frameworks/astro)
+
+When integrated with a framework, Mastra typically requires no additional configuration for deployment.
+
+[View Web Framework Integration →](/docs/deployment/web-framework)
 
 ### With a Server
 
@@ -1582,11 +1656,14 @@ Once your Mastra application is deployed, you'll need to configure your client t
 
 ## Choosing a Deployment Option
 
-| Option                   | Best For                                                      | Key Benefits                                                   |
+| Option                   | Best For                                                      | Key Benefits                                                    |
 | ------------------------ | ------------------------------------------------------------- | -------------------------------------------------------------- |
 | **Mastra Cloud**         | Teams wanting to ship quickly without infrastructure concerns | Fully-managed, automatic scaling, built-in observability       |
+| **Framework Deployment** | Teams already using Next.js, Astro etc                          | Simplify deployment with a unified codebase for frontend and backend  |
 | **Server Deployment**    | Teams needing maximum control and customization               | Full control, custom middleware, integrate with existing apps  |
-| **Serverless Platforms** | Teams already using Vercel, Netlify, or Cloudflare            | Platform integration, simplified deployment, automatic scaling |
+| **Serverless Platforms** | Teams already using Vercel, Netlify, or Cloudflare             | Platform integration, simplified deployment, automatic scaling  |
+
+
 
 
 ---
@@ -1706,6 +1783,72 @@ node --import=./.mastra/output/instrumentation.mjs  .mastra/output/index.mjs
 Mastra also supports serverless deployment on Cloudflare Workers, Vercel, and Netlify.
 
 See our [Serverless Deployment](/docs/deployment/deployment) guide for setup instructions.
+
+
+---
+title: "Deploying Mastra with a Web Framework"
+description: "Learn how Mastra can be deployed when integrated with a Web Framework"
+---
+
+# Web Framework Integration
+[EN] Source: https://mastra.ai/en/docs/deployment/web-framework
+
+This guide covers deploying integrated Mastra applications. Mastra can be integrated with a variety of web frameworks, see one of the following for a detailed guide.
+
+- [With Next.js](/docs/frameworks/web-frameworks/next-js)
+- [With Astro](/docs/frameworks/web-frameworks/astro)
+
+When integrated with a framework, Mastra typically requires no additional configuration for deployment.
+
+## With Next.js on Vercel
+
+If you've integrated Mastra with Next.js [by following our guide](/docs/frameworks/web-frameworks/next-js) and plan to deploy to Vercel, no additional setup is required.
+
+The only thing to verify is that you've added the following to your `next.config.ts` and removed any usage of [LibSQLStore](/docs/deployment/deployment#libsqlstore), which is not supported in serverless environments:
+
+```typescript {4} filename="next.config.ts" showLineNumbers copy
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  serverExternalPackages: ["@mastra/*"],
+};
+
+export default nextConfig;
+```
+
+## With Astro on Vercel
+
+If you've integrated Mastra with Astro [by following our guide](/docs/frameworks/web-frameworks/astro) and plan to deploy to Vercel, no additional setup is required.
+
+The only thing to verify is that you've added the following to your `astro.config.mjs` and removed any usage of [LibSQLStore](/docs/deployment/deployment#libsqlstore), which is not supported in serverless environments:
+
+```javascript {2,6,7} filename="astro.config.mjs" showLineNumbers copy
+import { defineConfig } from 'astro/config';
+import vercel from '@astrojs/vercel';
+
+export default defineConfig({
+  // ...
+  adapter: vercel(),
+  output: "server"
+});
+```
+
+## With Astro on Netlify
+
+If you've integrated Mastra with Astro [by following our guide](/docs/frameworks/web-frameworks/astro) and plan to deploy to Vercel, no additional setup is required.
+
+The only thing to verify is that you've added the following to your `astro.config.mjs` and removed any usage of [LibSQLStore](/docs/deployment/deployment#libsqlstore), which is not supported in serverless environments:
+
+```javascript {2,6,7} filename="astro.config.mjs" showLineNumbers copy
+import { defineConfig } from 'astro/config';
+import vercel from '@astrojs/netlify';
+
+export default defineConfig({
+  // ...
+  adapter: netlify(),
+  output: "server"
+});
+```
 
 
 ---
@@ -2675,24 +2818,24 @@ The current version of the integration leverages `MastraClient` to format Mastra
 {/*
 LLM CONTEXT: This Tabs component shows installation commands for the Mastra AGUI package.
 Each tab displays the installation command for that specific package manager.
-This installs the alpha version of @mastra/agui which provides CopilotKit integration capabilities.
-All commands install the same @mastra/agui@alpha package but use different package manager syntax.
+This installs the alpha version of @ag-ui/mastra which provides CopilotKit integration capabilities.
+All commands install the same @ag-ui/mastra package but use different package manager syntax.
 */}
 
 <Tabs items={["npm", "yarn", "pnpm"]}>
   <Tabs.Tab>
     ```bash copy
-    npm install @mastra/agui@alpha
+    npm install @ag-ui/mastra
     ```
   </Tabs.Tab>
   <Tabs.Tab>
     ```bash copy
-    yarn add @mastra/agui@alpha
+    yarn add @ag-ui/mastra
     ```
   </Tabs.Tab>
   <Tabs.Tab>
     ```bash copy
-    pnpm add @mastra/agui@alpha
+    pnpm add @ag-ui/mastra
     ```
   </Tabs.Tab>
 </Tabs>
@@ -2704,7 +2847,7 @@ import { Mastra } from "@mastra/core/mastra";
 import { PinoLogger } from "@mastra/loggers";
 import { LibSQLStore } from "@mastra/libsql";
 import { CopilotRuntime, copilotRuntimeNodeHttpEndpoint, ExperimentalEmptyAdapter } from "@copilotkit/runtime";
-import { registerCopilotKit } from "@mastra/agui";
+import { registerCopilotKit } from "@ag-ui/mastra";
 import { weatherAgent } from "./agents/weather-agent";
 
 const serviceAdapter = new ExperimentalEmptyAdapter();
@@ -2821,6 +2964,7 @@ import {
   copilotRuntimeNextJSAppRouterEndpoint,
 } from "@copilotkit/runtime";
 import { NextRequest } from "next/server";
+import { MastraAgent } from "@ag-ui/mastra";
 
 export const POST = async (req: NextRequest) => {
   // Clone the request before reading the body
@@ -2828,9 +2972,10 @@ export const POST = async (req: NextRequest) => {
   const body = await clonedReq.json();
   const resourceId = body.resourceId || "TEST";
 
-  const mastraAgents = getAGUI({
-    mastra,
+  const mastraAgents = MastraAgent.getLocalAgents({
     resourceId,
+    mastra,
+    runtimeContext,
   });
 
   const runtime = new CopilotRuntime({
@@ -2848,7 +2993,48 @@ export const POST = async (req: NextRequest) => {
 };
 ```
 
-### Using Typed Runtime Context
+## Using with Mastra Client SDK
+
+```typescript copy
+import { MastraClient } from "@mastra/client-js";
+import {
+  CopilotRuntime,
+  ExperimentalEmptyAdapter,
+  copilotRuntimeNextJSAppRouterEndpoint,
+} from "@copilotkit/runtime";
+import { NextRequest } from "next/server";
+import { MastraAgent } from "@ag-ui/mastra";
+
+export const POST = async (req: NextRequest) => {
+  // Clone the request before reading the body
+  const clonedReq = req.clone();
+  const body = await clonedReq.json();
+  const resourceId = body.resourceId || "TEST";
+
+  const baseUrl = process.env.MASTRA_BASE_URL || "http://localhost:4111";
+  const mastraClient = new MastraClient({
+    baseUrl,
+  });
+
+  const mastraAgents = await MastraAgent.getRemoteAgents({ mastraClient });
+
+  const runtime = new CopilotRuntime({
+    agents: mastraAgents,
+  });
+
+  const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
+    runtime,
+    serviceAdapter: new ExperimentalEmptyAdapter(),
+    endpoint: "/api/copilotkit",
+  });
+
+  // Use the original request for handleRequest
+  return handleRequest(req);
+};
+```
+
+
+## Using Typed Runtime Context
 
 For better type safety, you can specify the type of your runtime context:
 
@@ -2856,7 +3042,7 @@ For better type safety, you can specify the type of your runtime context:
 import { Mastra } from "@mastra/core/mastra";
 import { PinoLogger } from "@mastra/loggers";
 import { LibSQLStore } from "@mastra/libsql";
-import { registerCopilotKit } from "@mastra/agui";
+import { registerCopilotKit } from "@ag-ui/mastra";
 import { weatherAgent } from "./agents";
 
 // Define your runtime context type
@@ -3073,6 +3259,100 @@ const response = await assistant.generate([
   },
 ]);
 ```
+
+
+# AI SDK v5 (beta) Migration Guide
+[EN] Source: https://mastra.ai/en/docs/frameworks/ai-sdk-v5
+
+This guide covers Mastra-specific considerations when migrating from AI SDK v4 to v5 beta.
+
+Please add any feedback or bug reports to the [AI SDK v5 mega issue in Github.](https://github.com/mastra-ai/mastra/issues/5470)
+
+## Official Migration Guide
+
+**Follow the official [AI SDK v5 Migration Guide](https://v5.ai-sdk.dev/docs/migration-guides/migration-guide-5-0)** for all AI SDK core breaking changes, package updates, and API changes.
+
+This guide covers only the Mastra-specific aspects of the migration.
+
+## Warnings
+
+- **Data compatibility**: New data stored in v5 format will no longer work if you downgrade from the beta
+- **Backup recommendation**: Keep DB backups from before you upgrade to v5 beta
+- **Production use**: Wait for the AI SDK v5 stable release before using in production applications
+- **Prerelease status**: The Mastra `ai-v5` tag is a prerelease version and may have bugs
+
+## Memory Storage
+
+Your existing AI SDK v4 data will run through our internal `MessageList` class which handles converting to/from various message formats.
+This includes converting from AI SDK v4->v5. This means you don't need to run any DB migrations and your data will be translated on the fly and will just work when you upgrade.
+
+
+## Migration Strategy
+
+Migrating to AI SDK v5 with Mastra involves updating both your **backend** (Mastra server) and **frontend**.
+We provide a compatibility mode to handle stream format conversion during the transition.
+
+### Backend Upgrade
+
+Bump Mastra to the new `ai-v5` prerelease version for all Mastra packages:
+
+```bash npm2yarn copy
+npm i mastra@ai-v5 @mastra/core@ai-v5 @mastra/memory@ai-v5 [etc]
+```
+
+Then configure your Mastra instance with v4 compatibility so your existing frontend will continue to work:
+
+```typescript
+import { Mastra } from '@mastra/core';
+
+export const mastra = new Mastra({
+  agents: { myAgent },
+  aiSdkCompat: 'v4', // <- add this for compatibility
+});
+```
+
+#### Dependencies
+
+You will need to upgrade all AI SDK dependencies to use the new v5 beta versions in your backend when you bump to the Mastra `ai-v5` prerelease tag.
+
+In most cases this will only involve bumping your model provider packages. For example: `npm i @ai-sdk/openai@2.0.0-beta.1` - refer to the [AI SDK v5 documentation](https://v5.ai-sdk.dev/docs/migration-guides/migration-guide-5-0) for more info. Some model providers do not yet have V5 versions (Openrouter for example).
+
+Also note that you need to bump all your Mastra dependencies to the new `ai-v5` tag, and you must upgrade `zod` to the latest version if you have it installed.
+
+#### Using Stream Compatibility Manually
+
+If you have a frontend that calls Mastra agents in an endpoint, you can wrap the new `response.toUIMessageStreamResponse()` manually.
+
+```ts
+import { mastra } from "@/src/mastra";
+import { createV4CompatibleResponse } from "@mastra/core/agent";
+
+const myAgent = mastra.getAgent("weatherAgent");
+export async function POST(req: Request) {
+  const { messages } = await req.json();
+  const stream = await myAgent.stream(messages);
+
+  return createV4CompatibleResponse(stream.toUIMessageStreamResponse().body!);
+}
+```
+
+### Using Mastra Playground
+
+Currently playground is still an AI SDK v4 frontend. For now you need to set `aiSdkCompat: 'v4'` for it to work.
+We'll handle this automatically for you soon.
+
+### Frontend Upgrade
+
+When you're ready, remove the compatibility flag and upgrade your frontend:
+
+1. Remove `aiSdkCompat: 'v4'` from your Mastra configuration
+2. Follow the AI SDK guide on upgrading your frontend dependencies
+3. Update your frontend code for v5 breaking changes
+
+## Discussion and Bug Reports
+
+Please add any feedback or bug reports to the [AI SDK v5 mega issue in Github.](https://github.com/mastra-ai/mastra/issues/5470)
+
 
 
 ---
@@ -3406,10 +3686,11 @@ OPENAI_API_KEY=<your-api-key>
 
 ## Update .gitignore
 
-Add `.mastra` to your `.gitignore` file:
+Add `.mastra` and `.vercel` to your `.gitignore` file:
 
 ```bash filename=".gitignore" copy
 .mastra
+.vercel
 ```
 
 ## Update the Mastra Agent
@@ -3662,6 +3943,7 @@ Add `.mastra` to your `.gitignore` file:
 
 ```bash filename=".gitignore" copy
 .mastra
+.vercel
 ```
 
 ## Update the Mastra Agent
@@ -3808,6 +4090,10 @@ Let me know if you need more information!
   </Tabs.Tab>
 </Tabs>
 
+## Next Steps
+
+- [Deployment | With Astro on Vercel](/docs/deployment/web-framework#with-astro-on-vercel)
+
 
 ---
 title: "Getting Started with Mastra and Next.js | Mastra Guides"
@@ -3891,17 +4177,36 @@ If you prefer to customize the setup, run the `init` command and choose from the
 npx mastra@latest init
 ```
 
+<Callout type="warning">
+By default, `mastra init` suggests `src` as the install location. If you're using the App Router at the root of your project (e.g., `app`, not `src/app`), enter `.` when prompted:
+</Callout>
+
 Add the `dev` and `build` scripts to `package.json`:
 
-```json filename="package.json"
-{
-  "scripts": {
-    ...
-    "dev:mastra": "mastra dev --dir mastra",
-    "build:mastra": "mastra build --dir mastra"
-  }
-}
-```
+<Tabs items={["app", "src/app"]}>
+  <Tabs.Tab>
+    ```json filename="package.json"
+    {
+      "scripts": {
+        ...
+        "dev:mastra": "mastra dev --dir mastra",
+        "build:mastra": "mastra build --dir mastra"
+      }
+    }
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```json filename="package.json"
+    {
+      "scripts": {
+        ...
+        "dev:mastra": "mastra dev --dir src/mastra",
+        "build:mastra": "mastra build --dir src/mastra"
+      }
+    }
+    ```
+  </Tabs.Tab>
+</Tabs>
 
 ## Configure TypeScript
 
@@ -4136,17 +4441,36 @@ If you prefer to customize the setup, run the `init` command and choose from the
 npx mastra@latest init
 ```
 
+<Callout type="warning">
+By default, `mastra init` suggests `src` as the install location. If you're using the Pages Router at the root of your project (e.g., `pages`, not `src/pages`), enter `.` when prompted:
+</Callout>
+
 Add the `dev` and `build` scripts to `package.json`:
 
-```json filename="package.json"
-{
-  "scripts": {
-    ...
-    "dev:mastra": "mastra dev --dir mastra",
-    "build:mastra": "mastra build --dir mastra"
-  }
-}
-```
+<Tabs items={["pages", "src/pages"]}>
+  <Tabs.Tab>
+    ```json filename="package.json"
+    {
+      "scripts": {
+        ...
+        "dev:mastra": "mastra dev --dir mastra",
+        "build:mastra": "mastra build --dir mastra"
+      }
+    }
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```json filename="package.json"
+    {
+      "scripts": {
+        ...
+        "dev:mastra": "mastra dev --dir src/mastra",
+        "build:mastra": "mastra build --dir src/mastra"
+      }
+    }
+    ```
+  </Tabs.Tab>
+</Tabs>
 
 ## Configure TypeScript
 
@@ -4303,7 +4627,466 @@ Let me know if you need more information!
 
 ## Next Steps
 
-- [Serverless Deployment](/docs/deployment/deployment)
+- [Deployment | With Next.js on Vercel](/docs/deployment/web-framework#with-nextjs-on-vercel)
+
+
+---
+title: "Getting Started with Mastra and SvelteKit | Mastra Guides"
+description: A step-by-step guide to integrating Mastra with SvelteKit.
+---
+
+import { Callout, Steps, Tabs } from "nextra/components";
+
+# Integrate Mastra in your SvelteKit project
+[EN] Source: https://mastra.ai/en/docs/frameworks/web-frameworks/sveltekit
+
+Mastra integrates with SvelteKit, making it easy to:
+
+- Build flexible APIs to serve AI-powered features
+- Simplify deployment with a unified codebase for frontend and backend
+- Take advantage of SvelteKit's built-in [Actions](https://kit.svelte.dev/docs/form-actions) or [Server Endpoints](https://svelte.dev/docs/kit/routing#server) for efficient server-client workflows
+
+Use this guide to scaffold and integrate Mastra with your SvelteKit project.
+
+<Tabs items={["Actions", "Server Endpoints"]}>
+  <Tabs.Tab>
+
+  <Steps>
+## Install Mastra
+
+Install the required Mastra packages:
+{/*
+LLM CONTEXT: This Tabs component shows commands for integrating a new Mastra backend project using different package managers.
+Each tab displays the command for that specific package manager to create an integrated Mastra backend service.
+This is part of the "Integrated Backend Integration" approach for SvelteKit projects.
+All commands create the same Mastra project but use different package manager syntax.
+*/}
+
+<Tabs items={["npm", "yarn", "pnpm", "bun"]}>
+  <Tabs.Tab>
+    ```bash copy
+    npm install mastra@latest @mastra/core@latest @mastra/libsql@latest
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash copy
+    yarn add mastra@latest @mastra/core@latest @mastra/libsql@latest
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash copy
+    pnpm add mastra@latest @mastra/core@latest @mastra/libsql@latest
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash copy
+    bun add mastra@latest @mastra/core@latest @mastra/libsql@latest
+    ```
+  </Tabs.Tab>
+</Tabs>
+
+## Integrate Mastra
+
+To integrate Mastra into your project, you have two options:
+
+### 1. Use the One-Liner
+
+Run the following command to quickly scaffold the default Weather agent with sensible defaults:
+
+```bash copy
+npx mastra@latest init --default
+```
+
+> See [mastra init](/reference/cli/init) for more information.
+
+### 2. Use the Interactive CLI
+
+If you prefer to customize the setup, run the `init` command and choose from the options when prompted:
+
+```bash copy
+npx mastra@latest init
+```
+
+Add the `dev` and `build` scripts to `package.json`:
+
+```json filename="package.json"
+{
+  "scripts": {
+    ...
+    "dev:mastra": "mastra dev",
+    "build:mastra": "mastra build"
+  }
+}
+```
+
+## Configure TypeScript
+
+Modify the `tsconfig.json` file in your project root:
+
+```json filename="tsconfig.json"
+{
+  ...
+  "exclude": ["dist", ".mastra"]
+}
+```
+
+## Set Up API Key
+
+The `VITE_` prefix is required for environment variables to be accessible in the Vite environment, that SvelteKit uses.  
+[Read more about Vite environment variables](https://vite.dev/guide/env-and-mode.html#env-variables).
+
+```bash filename=".env" copy
+VITE_OPENAI_API_KEY=<your-api-key>
+```
+
+## Update .gitignore
+
+Add `.mastra` to your `.gitignore` file:
+
+```bash filename=".gitignore" copy
+.mastra
+```
+
+## Update the Mastra Agent
+
+```diff filename="src/mastra/agents/weather-agent.ts"
+- import { openai } from "@ai-sdk/openai";
++ import { createOpenAI } from "@ai-sdk/openai";
+
++ const openai = createOpenAI({
++   apiKey: import.meta.env?.VITE_OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY,
++   compatibility: "strict"
++ });
+```
+
+By reading env vars from both `import.meta.env` and `process.env`, we ensure that the API key is available in both the SvelteKit dev server and the Mastra Dev Server.
+
+> More configuration details are available in the AI SDK docs. See [Provider Instance](https://ai-sdk.dev/providers/ai-sdk-providers/openai#provider-instance) for more information.
+
+## Start the Mastra Dev Server
+
+Start the Mastra Dev Server to expose your agents as REST endpoints:
+
+<Tabs items={["npm", "CLI"]}>
+  <Tabs.Tab>
+    ```bash copy
+    npm run dev:mastra
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash copy
+    mastra dev:mastra
+    ```
+  </Tabs.Tab>
+</Tabs>
+
+> Once running, your agents are available locally. See [Local Development Environment](/docs/local-dev/mastra-dev) for more information.
+
+## Start SvelteKit Dev Server
+
+With the Mastra Dev Server running, you can start your SvelteKit site in the usual way.
+
+## Create Test Directory
+
+```bash copy
+mkdir src/routes/test
+```
+
+### Create Test Action
+
+Create a new Action, and add the example code:
+
+```bash copy
+touch src/routes/test/+page.server.ts
+```
+
+```typescript filename="src/routes/test/+page.server.ts" showLineNumbers copy
+import type { Actions } from './$types';
+import { mastra } from '../../mastra';
+
+export const actions = {
+	default: async (event) => {
+		const city = (await event.request.formData()).get('city')!.toString();
+		const agent = mastra.getAgent('weatherAgent');
+
+		const result = await agent.generate(`What's the weather like in ${city}?`);
+		return { result: result.text };
+	}
+} satisfies Actions;
+
+```
+
+### Create Test Page
+
+Create a new Page file, and add the example code:
+
+```bash copy
+touch src/routes/test/+page.svelte
+```
+
+```typescript filename="src/routes/test/+page.svelte" showLineNumbers copy
+<script lang="ts">
+	import type { PageProps } from './$types';
+	let { form }: PageProps = $props();
+</script>
+
+<h1>Test</h1>
+
+<form method="POST">
+	<input name="city" placeholder="Enter city" required />
+	<button type="submit">Get Weather</button>
+</form>
+
+{#if form?.result}
+	<pre>{form.result}</pre>
+{/if}
+
+```
+
+> You can now navigate to `/test` in your browser to try it out.
+
+Submitting **London** as the city would return a result similar to:
+
+```plaintext
+The current weather in London is as follows:
+
+- **Temperature:** 16°C (feels like 13.8°C)
+- **Humidity:** 62%
+- **Wind Speed:** 12.6 km/h
+- **Wind Gusts:** 32.4 km/h
+- **Conditions:** Overcast
+
+If you need more details or information about a different location, feel free to ask!
+```
+  </Steps>
+  </Tabs.Tab>
+
+  <Tabs.Tab>
+
+  <Steps>
+## Install Mastra
+
+Install the required Mastra packages:
+{/*
+LLM CONTEXT: This Tabs component shows commands for integrating a new Mastra backend project using different package managers.
+Each tab displays the command for that specific package manager to create an integrated Mastra backend service.
+This is part of the "Integrated Framework Integration" approach for SvelteKit projects.
+All commands create the same Mastra project but use different package manager syntax.
+*/}
+
+<Tabs items={["npm", "yarn", "pnpm", "bun"]}>
+  <Tabs.Tab>
+    ```bash copy
+    npm install mastra@latest @mastra/core@latest @mastra/libsql@latest
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash copy
+    yarn add mastra@latest @mastra/core@latest @mastra/libsql@latest
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash copy
+    pnpm add mastra@latest @mastra/core@latest @mastra/libsql@latest
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash copy
+    bun add mastra@latest @mastra/core@latest @mastra/libsql@latest
+    ```
+  </Tabs.Tab>
+</Tabs>
+
+## Integrate Mastra
+
+To integrate Mastra into your project, you have two options:
+
+### 1. Use the One-Liner
+
+Run the following command to quickly scaffold the default Weather agent with sensible defaults:
+
+```bash copy
+npx mastra@latest init --default
+```
+
+> See [mastra init](/reference/cli/init) for more information.
+
+### 2. Use the Interactive CLI
+
+If you prefer to customize the setup, run the `init` command and choose from the options when prompted:
+
+```bash copy
+npx mastra@latest init
+```
+
+Add the `dev` and `build` scripts to `package.json`:
+
+```json filename="package.json"
+{
+  "scripts": {
+    ...
+    "dev:mastra": "mastra dev",
+    "build:mastra": "mastra build"
+  }
+}
+```
+
+## Configure TypeScript
+
+Modify the `tsconfig.json` file in your project root:
+
+```json filename="tsconfig.json"
+{
+  ...
+  "exclude": ["dist", ".mastra"]
+}
+```
+
+## Set Up API Key
+
+The `VITE_` prefix is required for environment variables to be accessible in the Vite environment, that SvelteKit uses.  
+[Read more about Vite environment variables](https://vite.dev/guide/env-and-mode.html#env-variables).
+
+```bash filename=".env" copy
+VITE_OPENAI_API_KEY=<your-api-key>
+```
+
+## Update .gitignore
+
+Add `.mastra` to your `.gitignore` file:
+
+```bash filename=".gitignore" copy
+.mastra
+```
+
+## Update the Mastra Agent
+
+```diff filename="src/mastra/agents/weather-agent.ts"
+- import { openai } from "@ai-sdk/openai";
++ import { createOpenAI } from "@ai-sdk/openai";
+
++ const openai = createOpenAI({
++   apiKey: import.meta.env?.VITE_OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY,
++   compatibility: "strict"
++ });
+```
+
+By reading env vars from both `import.meta.env` and `process.env`, we ensure that the API key is available in both the SvelteKit dev server and the Mastra Dev Server.
+
+> More configuration details are available in the AI SDK docs. See [Provider Instance](https://ai-sdk.dev/providers/ai-sdk-providers/openai#provider-instance) for more information.
+
+## Start the Mastra Dev Server
+
+Start the Mastra Dev Server to expose your agents as REST endpoints:
+
+<Tabs items={["npm", "CLI"]}>
+  <Tabs.Tab>
+    ```bash copy
+    npm run dev:mastra
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```bash copy
+    mastra dev:mastra
+    ```
+  </Tabs.Tab>
+</Tabs>
+
+> Once running, your agents are available locally. See [Local Development Environment](/docs/local-dev/mastra-dev) for more information.
+
+## Start SvelteKit Dev Server
+
+With the Mastra Dev Server running, you can start your SvelteKit site in the usual way.
+
+## Create API Directory
+
+```bash copy
+mkdir src/routes/weather-api
+```
+
+### Create Test Endpoint
+
+Create a new Endpoint, and add the example code:
+
+```bash copy
+touch src/routes/weather-api/+server.ts
+```
+
+```typescript filename="src/routes/weather-api/+server.ts" showLineNumbers copy
+import { json } from '@sveltejs/kit';
+import { mastra } from '../../mastra';
+
+export async function POST({ request }) {
+	const { city } = await request.json();
+
+	const response = await mastra
+		.getAgent('weatherAgent')
+		.generate(`What's the weather like in ${city}?`);
+
+	return json({ result: response.text });
+}
+
+```
+
+### Create Test Page
+
+Create a new Page, and add the example code:
+
+```bash copy
+touch src/routes/weather-api-test/+page.svelte
+```
+
+```typescript filename="src/routes/weather-api-test/+page.svelte" showLineNumbers copy
+<script lang="ts">
+	let result = $state<string | null>(null);
+	async function handleFormSubmit(event: Event) {
+		event.preventDefault();
+		const formData = new FormData(event.currentTarget);
+		const city = formData.get('city')?.toString();
+		if (city) {
+			const response = await fetch('/weather-api', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ city })
+			});
+			const data = await response.json();
+			result = data.result;
+		}
+	}
+</script>
+
+<h1>Test</h1>
+<form method="POST" onsubmit={handleFormSubmit}>
+	<input name="city" placeholder="Enter city" required />
+	<button type="submit">Get Weather</button>
+</form>
+
+{#if result}
+	<pre>{result}</pre>
+{/if}
+```
+
+
+> You can now navigate to `/weather-api-test` in your browser to try it out.
+
+Submitting **London** as the city would return a result similar to:
+
+```plaintext
+The current weather in London is as follows:
+
+- **Temperature:** 16.1°C (feels like 14.2°C)
+- **Humidity:** 64%
+- **Wind Speed:** 11.9 km/h
+- **Wind Gusts:** 30.6 km/h
+- **Conditions:** Overcast
+
+If you need more details or information about a different location, feel free to ask!
+```
+  </Steps>
+  </Tabs.Tab>
+</Tabs>
 
 
 ---
@@ -4384,17 +5167,36 @@ If you prefer to customize the setup, run the `init` command and choose from the
 npx mastra@latest init
 ```
 
+<Callout type="warning">
+By default, `mastra init` suggests `src` as the install location. If you're using Vite/React at the root of your project (e.g., `app`, not `src/app`), enter `.` when prompted:
+</Callout>
+
 Add the `dev` and `build` scripts to `package.json`:
 
-```json filename="package.json"
-{
-  "scripts": {
-    ...
-    "dev:mastra": "mastra dev --dir mastra",
-    "build:mastra": "mastra build --dir mastra"
-  }
-}
-```
+<Tabs items={["app", "src/app"]}>
+  <Tabs.Tab>
+    ```json filename="package.json"
+    {
+      "scripts": {
+        ...
+        "dev:mastra": "mastra dev --dir mastra",
+        "build:mastra": "mastra build --dir mastra"
+      }
+    }
+    ```
+  </Tabs.Tab>
+  <Tabs.Tab>
+    ```json filename="package.json"
+    {
+      "scripts": {
+        ...
+        "dev:mastra": "mastra dev --dir src/mastra",
+        "build:mastra": "mastra build --dir src/mastra"
+      }
+    }
+    ```
+  </Tabs.Tab>
+</Tabs>
 
 ## Configure TypeScript
 
@@ -4528,58 +5330,31 @@ The current weather in London is partly cloudy with a temperature of 19.3°C, fe
 
 
 ---
-title: "Installing Mastra Locally | Getting Started | Mastra Docs"
+title: "Installing Mastra | Getting Started | Mastra Docs"
 description: Guide on installing Mastra and setting up the necessary prerequisites for running it with various LLM providers.
 ---
 
 import { Callout, Steps } from "nextra/components";
-import YouTube from "@/components/youtube";
 import { Tabs, Tab } from "@/components/tabs";
 
-# Installing Mastra Locally
+# Install Mastra
 [EN] Source: https://mastra.ai/en/docs/getting-started/installation
 
-To run Mastra, you need access to an LLM. Typically, you'll want to get an API key from an LLM provider such as:
+To get started with Mastra, you’ll need access to a large language model (LLM). By default, Mastra is set up to work with [OpenAI](https://platform.openai.com/), so you’ll need an API key to begin.
 
-- [OpenAI](https://platform.openai.com/)
-- [Anthropic](https://console.anthropic.com/settings/keys)
-- [Google Gemini](https://ai.google.dev/gemini-api/docs)
+Mastra also supports other LLM providers. For a full list of supported models and setup instructions, see [Model Providers](/docs/getting-started/model-providers).
 
-You can also run Mastra with a local LLM using:
-
-- [Ollama](https://ollama.ai/).
-
-## What You'll Build
-
-By the end of this guide, you'll have built a Weather Agent that generates weather reports using OpenAI's [gpt-4o-mini](https://platform.openai.com/docs/models/gpt-4o-mini) and the Open-Meteo [forecast](https://open-meteo.com/en/docs#api_documentation) endpoint. You can run it directly from the command line or test it in the Mastra Playground. With the Weather agent running you can ask questions like:
-
-> What is the weather in London? <br/>
-> Suggest indoor alternatives in Berlin if it rains tomorrow. <br />
-> Is it windy in San Francisco today?
 
 ## Prerequisites
 
 - Node.js `v20.0` or higher
-- Access to a [supported large language model (LLM)](/docs/frameworks/ai-sdk)
-
-## Automatic Installation
-
-<YouTube id="spGlcTEjuXY" />
+- An API key from a supported [Model Provider](/docs/getting-started/model-providers)
 
 <Steps>
 
-### Create a New Project
+## Install using the `create-mastra` CLI
 
-There are two options when creating a new project with our CLI:
-
-- [Interactive](#interactive)
-- [Non-Interactive](#non-interactive)
-
-> We recommend starting a new Mastra project using the interactive setup, which guides you through scaffolding your project step by step.
-
-#### Interactive
-
-To create a project, run:
+Our CLI is the fastest way to get started with Mastra. Run the following command to start the interactive setup:
 
 {/*
 LLM CONTEXT: This Tabs component shows different package manager commands for creating a new Mastra project.
@@ -4590,77 +5365,68 @@ All commands achieve the same result - creating a new Mastra project with the in
 
 <Tabs items={["npx", "npm", "yarn", "pnpm", "bun"]}>
   <Tab>
-  ```bash copy
-npx create-mastra@latest
-  ```
+    ```bash copy
+    npx create-mastra@latest
+    ```
   </Tab>
   <Tab>
-  ```bash copy
-npm create mastra@latest
-   ```
-   </Tab>
-  <Tab>
-  ```bash copy
-yarn create mastra@latest
-   ```
-   </Tab>
-  <Tab>
-  ```bash copy
-pnpm create mastra@latest
-  ```
+    ```bash copy
+    npm create mastra@latest
+    ```
   </Tab>
-<Tab>
-  ```bash copy
-bun create mastra@latest
-  ```
+  <Tab>
+    ```bash copy
+    yarn create mastra@latest
+    ```
+  </Tab>
+  <Tab>
+    ```bash copy
+    pnpm create mastra@latest
+    ```
+  </Tab>
+  <Tab>
+    ```bash copy
+    bun create mastra@latest
+    ```
   </Tab>
 </Tabs>
 
-After the prompts, `create-mastra` will:
 
-1. Set up your project directory with TypeScript
-2. Install dependencies
-3. Configure your selected components and LLM provider
-4. Configure the MCP server in your IDE (if selected) for instant access to docs, examples, and help while you code
+**Install using CLI flags**
 
-> If you're using a different IDE, you can install the MCP server manually by following the instructions in the [MCP server docs](/docs/getting-started/mcp-docs-server). **Also** note that there are additional steps for [Cursor and Windsurf](/docs/getting-started/mcp-docs-server#after-configuration) to activate the MCP server.
-
-#### Non-Interactive
-
-You can run the Mastra CLI in fully non-interactive mode by passing all required flags, for example:
+You can also run the Mastra CLI in non-interactive mode by passing all required flags, for example:
 
 ```bash copy
 npx create-mastra@latest --project-name hello-mastra --example --components tools,agents,workflows --llm openai
 ```
 
-> See the [mastra init](/reference/cli/init) documentation for a full list of available CLI options.
+> See the [create-mastra](/reference/cli/create-mastra) documentation for a full list of available CLI options.
 
-### Set Up your API Key
+### Add your API key
 
-Create a `.env` file in your project root directory and add your API key:
+Add your API key to the `.env` file:
 
 ```bash filename=".env" copy
 OPENAI_API_KEY=<your-api-key>
 ```
+> This example uses OpenAI. Each LLM provider uses a unique name. See [Model Capabilities](/docs/getting-started/model-capability) for more information.
 
-> Replace `your-api-key` with your API key.
+You can now launch the [Mastra Development Server](/docs/local-dev/mastra-dev) and test your agent using the Mastra Playground.
 
 </Steps>
 
-## Manual Installation
+## Install manually
 
-If you prefer to set up your Mastra project manually, follow these steps:
+The following steps will walk you through installing Mastra manually.
 
 <Steps>
 
-### Create a New Project
+### Create a new project
 
 Create a new project and change directory:
 
 ```bash copy
-mkdir hello-mastra
-
-cd hello-mastra
+mkdir hello-mastra && cd hello-mastra
 ```
 
 Initialize a TypeScript project including the `@mastra/core` package:
@@ -4718,10 +5484,10 @@ This helps users manually set up a Mastra project with their preferred package m
 
 Add the `dev` and `build` scripts to `package.json`:
 
-```json copy
+```json filename="package.json" copy
 {
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    // ...
     "dev": "mastra dev",
     "build": "mastra build"
   }
@@ -4730,9 +5496,15 @@ Add the `dev` and `build` scripts to `package.json`:
 
 ### Initialize TypeScript
 
-Create a `tsconfig.json` file in your project root with the following configuration:
+Create a `tsconfig.json` file:
 
-```json copy
+```bash copy
+touch tsconfig.json
+```
+
+Add the following configuration:
+
+```json filename="tsconfig.json" copy
 {
   "compilerOptions": {
     "target": "ES2022",
@@ -4742,24 +5514,32 @@ Create a `tsconfig.json` file in your project root with the following configurat
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "skipLibCheck": true,
+    "noEmit": true,
     "outDir": "dist"
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", ".mastra"]
+  "include": [
+    "src/**/*"
+  ]
 }
 ```
 
 > This TypeScript configuration is optimized for Mastra projects, using modern module resolution and strict type checking.
 
-### Set Up your API Key
+### Set up your API key
 
-Create a `.env` file in your project root directory and add your API key:
+Create `.env` file:
+
+```bash copy
+touch .env
+```
+
+Add your API key:
 
 ```bash filename=".env" copy
 OPENAI_API_KEY=<your-api-key>
 ```
 
-> Replace `your-api-key` with your API key.
+> This example uses OpenAI. Each LLM provider uses a unique name. See [Model Capabilities](/docs/getting-started/model-capability) for more information.
 
 ### Create a Tool
 
@@ -4775,99 +5555,24 @@ Add the following code:
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 
-interface WeatherResponse {
-  current: {
-    time: string;
-    temperature_2m: number;
-    apparent_temperature: number;
-    relative_humidity_2m: number;
-    wind_speed_10m: number;
-    wind_gusts_10m: number;
-    weather_code: number;
-  };
-}
-
 export const weatherTool = createTool({
   id: "get-weather",
   description: "Get current weather for a location",
   inputSchema: z.object({
-    location: z.string().describe("City name"),
+    location: z.string().describe("City name")
   }),
   outputSchema: z.object({
-    temperature: z.number(),
-    feelsLike: z.number(),
-    humidity: z.number(),
-    windSpeed: z.number(),
-    windGust: z.number(),
-    conditions: z.string(),
-    location: z.string(),
+    output: z.string()
   }),
-  execute: async ({ context }) => {
-    return await getWeather(context.location);
-  },
-});
-
-const getWeather = async (location: string) => {
-  const geocodingUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1`;
-  const geocodingResponse = await fetch(geocodingUrl);
-  const geocodingData = await geocodingResponse.json();
-
-  if (!geocodingData.results?.[0]) {
-    throw new Error(`Location '${location}' not found`);
+  execute: async () => {
+    return {
+      output: "The weather is sunny"
+    };
   }
-
-  const { latitude, longitude, name } = geocodingData.results[0];
-
-  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,wind_gusts_10m,weather_code`;
-
-  const response = await fetch(weatherUrl);
-  const data: WeatherResponse = await response.json();
-
-  return {
-    temperature: data.current.temperature_2m,
-    feelsLike: data.current.apparent_temperature,
-    humidity: data.current.relative_humidity_2m,
-    windSpeed: data.current.wind_speed_10m,
-    windGust: data.current.wind_gusts_10m,
-    conditions: getWeatherCondition(data.current.weather_code),
-    location: name,
-  };
-};
-
-function getWeatherCondition(code: number): string {
-  const conditions: Record<number, string> = {
-    0: "Clear sky",
-    1: "Mainly clear",
-    2: "Partly cloudy",
-    3: "Overcast",
-    45: "Foggy",
-    48: "Depositing rime fog",
-    51: "Light drizzle",
-    53: "Moderate drizzle",
-    55: "Dense drizzle",
-    56: "Light freezing drizzle",
-    57: "Dense freezing drizzle",
-    61: "Slight rain",
-    63: "Moderate rain",
-    65: "Heavy rain",
-    66: "Light freezing rain",
-    67: "Heavy freezing rain",
-    71: "Slight snow fall",
-    73: "Moderate snow fall",
-    75: "Heavy snow fall",
-    77: "Snow grains",
-    80: "Slight rain showers",
-    81: "Moderate rain showers",
-    82: "Violent rain showers",
-    85: "Slight snow showers",
-    86: "Heavy snow showers",
-    95: "Thunderstorm",
-    96: "Thunderstorm with slight hail",
-    99: "Thunderstorm with heavy hail",
-  };
-  return conditions[code] || "Unknown";
-}
+});
 ```
+
+> See the full weatherTool example in [Giving an Agent a Tool](/examples/agents/using-a-tool).
 
 ### Create an Agent
 
@@ -4885,226 +5590,25 @@ import { Agent } from "@mastra/core/agent";
 import { weatherTool } from "../tools/weather-tool";
 
 export const weatherAgent = new Agent({
-  name: "Weather Agent",
-  instructions: `You are a helpful weather assistant that provides accurate weather information.
-
-Your primary function is to help users get weather details for specific locations. When responding:
-- Always ask for a location if none is provided
-- If the location name isn't in English, please translate it
-- Include relevant details like humidity, wind conditions, and precipitation
-- Keep responses concise but informative
-
-Use the weatherTool to fetch current weather data.`,
-  model: openai("gpt-4o-mini"),
-  tools: { weatherTool },
-});
-```
-
-### Create a Workflow
-
-Create a `weather-workflow.ts` file:
-
-```bash copy
-mkdir -p src/mastra/workflows && touch src/mastra/workflows/weather-workflow.ts
-```
-
-Add the following code:
-
-```ts filename="src/mastra/workflows/weather-workflow.ts" showLineNumbers copy
-import { openai } from "@ai-sdk/openai";
-import { Agent } from "@mastra/core/agent";
-import { createStep, createWorkflow } from "@mastra/core/workflows";
-import { z } from "zod";
-
-const llm = openai("gpt-4o-mini");
-
-const agent = new Agent({
-  name: "Weather Agent",
-  model: llm,
+  name: 'Weather Agent',
   instructions: `
-        You are a local activities and travel expert who excels at weather-based planning. Analyze the weather data and provide practical activity recommendations.
+      You are a helpful weather assistant that provides accurate weather information.
 
-        For each day in the forecast, structure your response exactly as follows:
+      Your primary function is to help users get weather details for specific locations. When responding:
+      - Always ask for a location if none is provided
+      - If the location name isn’t in English, please translate it
+      - If giving a location with multiple parts (e.g. "New York, NY"), use the most relevant part (e.g. "New York")
+      - Include relevant details like humidity, wind conditions, and precipitation
+      - Keep responses concise but informative
 
-        📅 [Day, Month Date, Year]
-        ═══════════════════════════
-
-        🌡️ WEATHER SUMMARY
-        • Conditions: [brief description]
-        • Temperature: [X°C/Y°F to A°C/B°F]
-        • Precipitation: [X% chance]
-
-        🌅 MORNING ACTIVITIES
-        Outdoor:
-        • [Activity Name] - [Brief description including specific location/route]
-          Best timing: [specific time range]
-          Note: [relevant weather consideration]
-
-        🌞 AFTERNOON ACTIVITIES
-        Outdoor:
-        • [Activity Name] - [Brief description including specific location/route]
-          Best timing: [specific time range]
-          Note: [relevant weather consideration]
-
-        🏠 INDOOR ALTERNATIVES
-        • [Activity Name] - [Brief description including specific venue]
-          Ideal for: [weather condition that would trigger this alternative]
-
-        ⚠️ SPECIAL CONSIDERATIONS
-        • [Any relevant weather warnings, UV index, wind conditions, etc.]
-
-        Guidelines:
-        - Suggest 2-3 time-specific outdoor activities per day
-        - Include 1-2 indoor backup options
-        - For precipitation >50%, lead with indoor activities
-        - All activities must be specific to the location
-        - Include specific venues, trails, or locations
-        - Consider activity intensity based on temperature
-        - Keep descriptions concise but informative
-
-        Maintain this exact formatting for consistency, using the emoji and section headers as shown.
-      `,
+      Use the weatherTool to fetch current weather data.
+`,
+  model: openai('gpt-4o-mini'),
+  tools: { weatherTool }
 });
-
-const forecastSchema = z.object({
-  date: z.string(),
-  maxTemp: z.number(),
-  minTemp: z.number(),
-  precipitationChance: z.number(),
-  condition: z.string(),
-  location: z.string(),
-});
-
-function getWeatherCondition(code: number): string {
-  const conditions: Record<number, string> = {
-    0: "Clear sky",
-    1: "Mainly clear",
-    2: "Partly cloudy",
-    3: "Overcast",
-    45: "Foggy",
-    48: "Depositing rime fog",
-    51: "Light drizzle",
-    53: "Moderate drizzle",
-    55: "Dense drizzle",
-    61: "Slight rain",
-    63: "Moderate rain",
-    65: "Heavy rain",
-    71: "Slight snow fall",
-    73: "Moderate snow fall",
-    75: "Heavy snow fall",
-    95: "Thunderstorm",
-  };
-  return conditions[code] || "Unknown";
-}
-
-const fetchWeather = createStep({
-  id: "fetch-weather",
-  description: "Fetches weather forecast for a given city",
-  inputSchema: z.object({
-    city: z.string().describe("The city to get the weather for"),
-  }),
-  outputSchema: forecastSchema,
-  execute: async ({ inputData }) => {
-    if (!inputData) {
-      throw new Error("Input data not found");
-    }
-
-    const geocodingUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(inputData.city)}&count=1`;
-    const geocodingResponse = await fetch(geocodingUrl);
-    const geocodingData = (await geocodingResponse.json()) as {
-      results: { latitude: number; longitude: number; name: string }[];
-    };
-
-    if (!geocodingData.results?.[0]) {
-      throw new Error(`Location '${inputData.city}' not found`);
-    }
-
-    const { latitude, longitude, name } = geocodingData.results[0];
-
-    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=precipitation,weathercode&timezone=auto,&hourly=precipitation_probability,temperature_2m`;
-    const response = await fetch(weatherUrl);
-    const data = (await response.json()) as {
-      current: {
-        time: string;
-        precipitation: number;
-        weathercode: number;
-      };
-      hourly: {
-        precipitation_probability: number[];
-        temperature_2m: number[];
-      };
-    };
-
-    const forecast = {
-      date: new Date().toISOString(),
-      maxTemp: Math.max(...data.hourly.temperature_2m),
-      minTemp: Math.min(...data.hourly.temperature_2m),
-      condition: getWeatherCondition(data.current.weathercode),
-      precipitationChance: data.hourly.precipitation_probability.reduce(
-        (acc, curr) => Math.max(acc, curr),
-        0,
-      ),
-      location: inputData.city,
-    };
-
-    return forecast;
-  },
-});
-
-const planActivities = createStep({
-  id: "plan-activities",
-  description: "Suggests activities based on weather conditions",
-  inputSchema: forecastSchema,
-  outputSchema: z.object({
-    activities: z.string(),
-  }),
-  execute: async ({ inputData }) => {
-    const forecast = inputData;
-
-    if (!forecast) {
-      throw new Error("Forecast data not found");
-    }
-
-    const prompt = `Based on the following weather forecast for ${forecast.location}, suggest appropriate activities:
-      ${JSON.stringify(forecast, null, 2)}
-      `;
-
-    const response = await agent.stream([
-      {
-        role: "user",
-        content: prompt,
-      },
-    ]);
-
-    let activitiesText = "";
-
-    for await (const chunk of response.textStream) {
-      process.stdout.write(chunk);
-      activitiesText += chunk;
-    }
-
-    return {
-      activities: activitiesText,
-    };
-  },
-});const weatherWorkflow = createWorkflow({
-  id: "weather-workflow",
-  inputSchema: z.object({
-    city: z.string().describe("The city to get the weather for"),
-  }),
-  outputSchema: z.object({
-    activities: z.string(),
-  }),
-})
-  .then(fetchWeather)
-  .then(planActivities);
-
-weatherWorkflow.commit();
-
-export { weatherWorkflow };
 ```
 
-### Register Agent
+### Register the Agent
 
 Create the Mastra entry point and register agent:
 
@@ -5115,200 +5619,38 @@ touch src/mastra/index.ts
 Add the following code:
 
 ```ts filename="src/mastra/index.ts" showLineNumbers copy
-import { Mastra } from "@mastra/core";
-import { PinoLogger } from "@mastra/loggers";
-import { LibSQLStore } from "@mastra/libsql";
-import { weatherWorkflow } from "./workflows/weather-workflow";
+import { Mastra } from "@mastra/core/mastra";
 import { weatherAgent } from "./agents/weather-agent";
 
 export const mastra = new Mastra({
-  workflows: { weatherWorkflow },
-  agents: { weatherAgent },
-  storage: new LibSQLStore({
-    // stores telemetry, evals, ... into memory storage, if it needs to persist, change to file:../mastra.db
-    url: ":memory:",
-  }),
-  logger: new PinoLogger({
-    name: "Mastra",
-    level: "info",
-  }),
+  agents: { weatherAgent }
 });
 ```
 
-> This registers your agent with Mastra so that `mastra dev` can discover and serve it.
+You can now launch the [Mastra Development Server](/docs/local-dev/mastra-dev) and test your agent using the Mastra Playground.
 
 </Steps>
 
-## Start the Mastra Server
+## Add to an existing project
 
-Mastra provides commands to serve your agents via REST endpoints
+Mastra can be installed and integrated into a wide range of projects. Below are links to integration guides to help you get started:
 
-### Development Server
-
-Run the following command to start the Mastra server:
-
-```bash copy
-npm run dev
-```
-
-If you have the mastra CLI installed, run:
-
-```bash copy
-mastra dev
-```
-
-This command creates REST API endpoints for your agents which are available on the following links:
-
-- Playground: [http://localhost:4111/](http://localhost:4111/)
-- Mastra API: [http://localhost:4111/api](http://localhost:4111/api)
-- OpenAPI Spec: [http://localhost:4111/openapi.json](http://localhost:4111/openapi.json)
-- Swagger UI – API explorer: [http://localhost:4111/swagger-ui](http://localhost:4111/swagger-ui)
-
-### Test the Endpoint
-
-You can also test the agent's endpoint using `curl` or `fetch`:
-
-<Tabs items={['curl', 'fetch']}>
-  <Tab>
-```bash copy
-curl -X POST http://localhost:4111/api/agents/weatherAgent/generate \
--H "Content-Type: application/json" \
--d '{"messages": ["What is the weather in London?"]}'
-```
-  </Tab>
-  <Tab>
-```js copy showLineNumbers
-fetch('http://localhost:4111/api/agents/weatherAgent/generate', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    messages: ['What is the weather in London?'],
-  }),
-})
-  .then(response => response.json())
-  .then(data => {
-    console.log('Agent response:', data.text);
-  })
-  .catch(error => {
-    console.error('Error:', error);
-  });
-```
-  </Tab>
-</Tabs>
-
-### Run from the command line
-
-If you'd like to call agents directly from the command line, create a simple script to get and invoke an agent.
-
-Create a test file:
-
-```bash copy
-touch src/test-agent.ts
-```
-
-Install `dotenv` to load environment variables (e.g. your API keys):
-
-<Tabs items={["npm", "pnpm", "yarn", "bun"]}>
-  <Tab>
-  ```bash copy 
-  npm install dotenv --save-dev 
-  ```
-  </Tab>
-  <Tab>
-  ```bash copy 
-  pnpm add dotenv --save-dev 
-  ```
-  </Tab>
-  <Tab>
-  ```bash copy 
-  yarn add dotenv --dev 
-  ```
-  </Tab>
-  <Tab>
-  ```bash copy 
-  bun add dotenv --dev 
-  ```
-  </Tab>
-</Tabs>
-
-If you're using a `.env` file, add the following code:
-
-```ts filename="src/test-agent.ts" showLineNumbers copy
-import "dotenv/config";
-
-import { mastra } from "./mastra";
-
-async function main() {
-  const agent = await mastra.getAgent("weatherAgent");
-
-  const result = await agent.generate("What is the weather in London?");
-
-  console.log("Agent response:", result.text);
-}
-
-main();
-```
-
-Or, if you're using a `.env.development` file, add the following code:
-
-```ts filename="src/test-agent.ts" showLineNumbers copy
-import { config } from "dotenv";
-config({ path: ".env.development" });
-
-import { mastra } from "./mastra";
-
-async function main() {
-  const agent = await mastra.getAgent("weatherAgent");
-
-  const result = await agent.generate("What is the weather in London?");
-
-  console.log("Agent response:", result.text);
-}
-
-main();
-```
-
-Run the script to test the agent:
-
-```bash copy
-npx tsx src/test-agent.ts
-```
-
-You should see output similar to the following:
-
-```plaintext
-Agent response: The current weather in London is as follows:
-
-- **Temperature:** 12.9°C (Feels like 9.7°C)
-- **Humidity:** 63%
-- **Wind Speed:** 14.7 km/h
-- **Wind Gusts:** 32.4 km/h
-- **Conditions:** Overcast
-
-Let me know if you need more information!
-```
-
-## Use Mastra on the Client
-
-To use Mastra in your frontend applications, use our type-safe client SDK to call your agents via the Mastra REST API.
-
-- [Mastra Client SDK](/docs/deployment/client)
-
-## Existing Project Installation
-
-To add Mastra to an existing project, see our Local development docs:
-
-- [Adding to an Existing Project](/docs/local-dev/add-to-existing-project)
-
-## Next Steps
-
-- [Deploy your Agent to Mastra Cloud](/docs/deployment/overview)
-- [Integrate Mastra in your Next.js project](/docs/frameworks/next-js)
+- [Next.js](/docs/frameworks/web-frameworks/next-js)
+- [Vite + React](/docs/frameworks/web-frameworks/vite-react)
+- [Astro](/docs/frameworks/web-frameworks/astro)
+- [Express](/docs/frameworks/servers/express)
 
 
+### `mastra init`
 
+To install Mastra in an existing project, use the `mastra init` command.
+
+> See [mastra init](/reference/cli/init) for more information.
+
+## Next steps
+
+- [Local Development](/docs/local-dev/mastra-dev)
+- [Deploy to Mastra Cloud](/docs/deployment/overview)
 
 
 ---
@@ -5595,7 +5937,7 @@ title: "Model Providers | Getting Started | Mastra Docs"
 description: "Learn how to configure and use different model providers with Mastra."
 ---
 
-import { Callout, Tabs } from 'nextra/components'
+import { Callout } from 'nextra/components'
 
 # Model Providers
 [EN] Source: https://mastra.ai/en/docs/getting-started/model-providers
@@ -5619,11 +5961,11 @@ const result = await agent.generate("What is the weather like?");
 
 Model providers from the AI SDK can be grouped into three main categories:
 
-- Official providers maintained by the AI SDK team
-- OpenAI-compatible providers
-- Community providers
+- [Official providers maintained by the AI SDK team](/docs/getting-started/model-providers#official-providers)
+- [OpenAI-compatible providers](/docs/getting-started/model-providers#openai-compatible-providers)
+- [Community providers](/docs/getting-started/model-providers#community-providers)
 
-You can find a list of all available model providers in the [AI SDK documentation](https://ai-sdk.dev/providers/ai-sdk-providers).
+> You can find a list of all available model providers in the [AI SDK documentation](https://ai-sdk.dev/providers/ai-sdk-providers).
 
 <Callout>
 AI SDK model providers are packages that need to be installed in your Mastra project.
@@ -5634,128 +5976,119 @@ If you want to use a different model provider, you need to install it in your pr
 
 Here are some examples of how Mastra agents can be configured to use the different types of model providers:
 
-<Tabs items={["Official providers", "OpenAI compatible providers", "Community providers"]}>
-  <Tabs.Tab>
-    ### Official providers
+### Official providers
 
-    Official model providers are maintained by the AI SDK team.
-    Their packages are usually prefixed with `@ai-sdk/`, e.g. `@ai-sdk/anthropic`, `@ai-sdk/openai`, etc.
+Official model providers are maintained by the AI SDK team.
+Their packages are usually prefixed with `@ai-sdk/`, e.g. `@ai-sdk/anthropic`, `@ai-sdk/openai`, etc.
 
-    ```typescript showLineNumbers copy {1,7} filename="src/mastra/agents/weather-agent.ts"
-    import { openai } from "@ai-sdk/openai";
-    import { Agent } from "@mastra/core/agent";
+```typescript showLineNumbers copy {1,7} filename="src/mastra/agents/weather-agent.ts"
+import { openai } from "@ai-sdk/openai";
+import { Agent } from "@mastra/core/agent";
 
-    const agent = new Agent({
-      name: "WeatherAgent",
-      instructions: "Instructions for the agent...",
-      model: openai("gpt-4-turbo"),
-    });
-    ```
+const agent = new Agent({
+  name: "WeatherAgent",
+  instructions: "Instructions for the agent...",
+  model: openai("gpt-4-turbo"),
+});
+```
 
-    Additional configuration may be done by importing a helper function from the AI SDK provider.
-    Here's an example using the OpenAI provider:
+Additional configuration may be done by importing a helper function from the AI SDK provider.
+Here's an example using the OpenAI provider:
 
-    ```typescript showLineNumbers copy filename="src/mastra/agents/weather-agent.ts" {1,4-8,13}
-    import { createOpenAI } from "@ai-sdk/openai";
-    import { Agent } from "@mastra/core/agent"
+```typescript showLineNumbers copy filename="src/mastra/agents/weather-agent.ts" {1,4-8,13}
+import { createOpenAI } from "@ai-sdk/openai";
+import { Agent } from "@mastra/core/agent"
 
-    const openai = createOpenAI({
-        baseUrl: "<your-custom-base-url>",
-        apiKey: "<your-custom-api-key>",
-        ...otherOptions
-    });
+const openai = createOpenAI({
+    baseUrl: "<your-custom-base-url>",
+    apiKey: "<your-custom-api-key>",
+    ...otherOptions
+});
 
-    const agent = new Agent({
-        name: "WeatherAgent",
-        instructions: "Instructions for the agent...",
-        model: openai("<model-name>"),
-    });
-    ```
+const agent = new Agent({
+    name: "WeatherAgent",
+    instructions: "Instructions for the agent...",
+    model: openai("<model-name>"),
+});
+```
 
-    Different AI providers may have different options for configuration. Please refer to the [AI SDK documentation](https://ai-sdk.dev/providers/ai-sdk-providers) for more information.
-  </Tabs.Tab>
+### OpenAI-compatible providers
 
-  <Tabs.Tab>
-    ### OpenAI-compatible providers
+Some language model providers implement the OpenAI API. For these providers, you can use the [`@ai-sdk/openai-compatible`](https://www.npmjs.com/package/@ai-sdk/openai-compatible) provider.
 
-    Some language model providers implement the OpenAI API. For these providers, you can use the [`@ai-sdk/openai-compatible`](https://www.npmjs.com/package/@ai-sdk/openai-compatible) provider.
+Here's the general setup and provider instance creation:
 
-    Here's the general setup and provider instance creation:
+```typescript showLineNumbers copy filename="src/mastra/agents/weather-agent.ts" {1,4-14,19}
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { Agent } from "@mastra/core/agent";
 
-    ```typescript showLineNumbers copy filename="src/mastra/agents/weather-agent.ts" {1,4-14,19}
-    import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-    import { Agent } from "@mastra/core/agent";
+const openaiCompatible = createOpenAICompatible({
+    name: "<model-name>",
+    baseUrl: "<base-url>",
+    apiKey: "<api-key>",
+    headers: {},
+    queryParams: {},
+    fetch: async (url, options) => {
+        // custom fetch logic
+        return fetch(url, options);
+    }
+});
 
-    const openaiCompatible = createOpenAICompatible({
-        name: "<model-name>",
-        baseUrl: "<base-url>",
-        apiKey: "<api-key>",
-        headers: {},
-        queryParams: {},
-        fetch: async (url, options) => {
-            // custom fetch logic
-            return fetch(url, options);
-        }
-    });
+const agent = new Agent({
+    name: "WeatherAgent",
+    instructions: "Instructions for the agent...",
+    model: openaiCompatible("<model-name>"),
+});
+```
 
-    const agent = new Agent({
-        name: "WeatherAgent",
-        instructions: "Instructions for the agent...",
-        model: openaiCompatible("<model-name>"),
-    });
-    ```
+For more information on the OpenAI-compatible provider, please refer to the [AI SDK documentation](https://ai-sdk.dev/providers/openai-compatible-providers).
 
-    For more information on the OpenAI-compatible provider, please refer to the [AI SDK documentation](https://ai-sdk.dev/providers/openai-compatible-providers).
-    
-  </Tabs.Tab>
+### Community providers
 
-  <Tabs.Tab>
-    ### Community providers
+The AI SDK provides a [Language Model Specification](https://github.com/vercel/ai/tree/main/packages/provider/src/language-model/v1).
+Following this specification, you can create your own model provider compatible with the AI SDK.
 
-    The AI SDK provides a [Language Model Specification](https://github.com/vercel/ai/tree/main/packages/provider/src/language-model/v1).
-    Following this specification, you can create your own model provider compatible with the AI SDK.
+Some community providers have implemented this specification and are compatible with the AI SDK.
+We will look at one such provider, the Ollama provider available in the [`ollama-ai-provider`](https://github.com/sgomez/ollama-ai-provider) package.
 
-    Some community providers have implemented this specification and are compatible with the AI SDK.
-    We will look at one such provider, the Ollama provider available in the [`ollama-ai-provider`](https://github.com/sgomez/ollama-ai-provider) package.
+Here's an example:
 
-    Here's an example:
+```typescript showLineNumbers copy filename="src/mastra/agents/weather-agent.ts" {1,7}
+import { ollama } from "ollama-ai-provider";
+import { Agent } from "@mastra/core/agent";
 
-    ```typescript showLineNumbers copy filename="src/mastra/agents/weather-agent.ts" {1,7}
-    import { ollama } from "ollama-ai-provider";
-    import { Agent } from "@mastra/core/agent";
+const agent = new Agent({
+    name: "WeatherAgent",
+    instructions: "Instructions for the agent...",
+    model: ollama("llama3.2:latest"),
+});
+```
 
-    const agent = new Agent({
-        name: "WeatherAgent",
-        instructions: "Instructions for the agent...",
-        model: ollama("llama3.2:latest"),
-    });
-    ```
+You can also configure the Ollama provider like so:
 
-    You can also configure the Ollama provider like so:
+```typescript showLineNumbers copy filename="src/mastra/agents/weather-agent.ts" {1,4-7,12}
+import { createOllama } from "ollama-ai-provider";
+import { Agent } from "@mastra/core/agent";
 
-    ```typescript showLineNumbers copy filename="src/mastra/agents/weather-agent.ts" {1,4-7,12}
-    import { createOllama } from "ollama-ai-provider";
-    import { Agent } from "@mastra/core/agent";
+const ollama = createOllama({
+    baseUrl: "<your-custom-base-url>",
+    ...otherOptions,
+});
 
-    const ollama = createOllama({
-        baseUrl: "<your-custom-base-url>",
-        ...otherOptions,
-    });
+const agent = new Agent({
+    name: "WeatherAgent",
+    instructions: "Instructions for the agent...",
+    model: ollama("llama3.2:latest"),
+});
+```
 
-    const agent = new Agent({
-        name: "WeatherAgent",
-        instructions: "Instructions for the agent...",
-        model: ollama("llama3.2:latest"),
-    });
-    ```
+For more information on the Ollama provider and other available community providers, please refer to the [AI SDK documentation](https://ai-sdk.dev/providers/community-providers).
 
-    For more information on the Ollama provider and other available community providers, please refer to the [AI SDK documentation](https://ai-sdk.dev/providers/community-providers).
+<Callout>
+While this example shows how to use the Ollama provider, other providers like `openrouter`, `azure`, etc. may also be used.
+</Callout>
 
-    <Callout>
-    While this example shows how to use the Ollama provider, other providers like `openrouter`, `azure`, etc. may also be used.
-    </Callout>
-  </Tabs.Tab>
-</Tabs>
+Different AI providers may have different options for configuration. Please refer to the [AI SDK documentation](https://ai-sdk.dev/providers/ai-sdk-providers) for more information.
 
 
 ---
@@ -5774,22 +6107,9 @@ You could write everything in a single file, or separate each agent, tool, and w
 
 We don't enforce a specific folder structure, but we do recommend some best practices, and the CLI will scaffold a project with a sensible structure.
 
-## Using the CLI
+## Example Project Structure
 
-The Mastra CLI is [interactive](/docs/getting-started/installation#interactive) and allows you to:
-
-- **Choose a directory for Mastra files**: Specify where you want the Mastra files to be placed (default is `src/mastra`).
-- **Select components to install**: Choose which components you want to include in your project:
-  - Agents
-  - Tools
-  - Workflows
-- **Select a default LLM provider**: Choose from supported providers like OpenAI, Anthropic, Groq, Google or Cerebras.
-- **Include example code**: Decide whether to include example code to help you get started.
-- **Install Mastra docs MCP server**: Make your AI IDE a Mastra expert
-
-### Example Project Structure
-
-Assuming you select all components and include example code, your project structure will look like this:
+A default project created with the CLI looks like this:
 
 <FileTree>
   <FileTree.Folder name="src" defaultOpen>
@@ -5810,7 +6130,7 @@ Assuming you select all components and include example code, your project struct
   <FileTree.File name="package.json" />
   <FileTree.File name="tsconfig.json" />
 </FileTree>
-{/* 
+{/*
 ```
 root/
 ├── src/
@@ -5872,425 +6192,279 @@ The main features include:
 
 
 ---
-title: "Adding to an Existing Project | Mastra Local Development Docs"
-description: "Add Mastra to your existing Node.js applications"
----
-
-# Adding to an Existing Project
-[EN] Source: https://mastra.ai/en/docs/local-dev/add-to-existing-project
-
-You can add Mastra to an existing project using the CLI:
-
-```bash npm2yarn copy
-npm install -g mastra@latest
-mastra init
-```
-
-Changes made to project:
-
-1. Creates `src/mastra` directory with entry point
-2. Adds required dependencies
-3. Configures TypeScript compiler options
-
-## Interactive Setup
-
-Running commands without arguments starts a CLI prompt for:
-
-1. Component selection
-2. LLM provider configuration
-3. API key setup
-4. Example code inclusion
-
-## Non-Interactive Setup
-
-To initialize mastra in non-interactive mode use the following command arguments:
-
-```bash
-Arguments:
-  --components     Specify components: agents, tools, workflows
-  --llm            LLM provider: openai, anthropic, groq, google or cerebras
-  --llm-api-key    Provider API key
-  --example        Include example implementation
-  --dir            Directory for Mastra files (defaults to src/)
-```
-
-For more details, refer to the [mastra init CLI documentation](../../reference/cli/init).
-
-
----
-title: "Creating a new Project | Mastra Local Development Docs"
-description: "Create new Mastra projects or add Mastra to existing Node.js applications using the CLI"
----
-
-# Creating a new project
-[EN] Source: https://mastra.ai/en/docs/local-dev/creating-a-new-project
-
-You can create a new project using the `create-mastra` package:
-
-```bash npm2yarn copy
-npm create mastra@latest
-```
-
-You can also create a new project by using the `mastra` CLI directly:
-
-```bash npm2yarn copy
-npm install -g mastra@latest
-mastra create
-```
-
-## Interactive Setup
-
-Running commands without arguments starts a CLI prompt for:
-
-1. Project name
-1. Component selection
-1. LLM provider configuration
-1. API key setup
-1. Example code inclusion
-
-## Non-Interactive Setup
-
-To initialize mastra in non-interactive mode use the following command arguments:
-
-```bash
-Arguments:
-  --components     Specify components: agents, tools, workflows
-  --llm-provider   LLM provider: openai, anthropic, groq, google, or cerebras
-  --add-example    Include example implementation
-  --llm-api-key    Provider API key
-  --project-name   Project name that will be used in package.json and as the project directory name
-```
-
-Generated project structure:
-
-```
-my-project/
-├── src/
-│   └── mastra/
-│       └── index.ts    # Mastra entry point
-├── package.json
-└── tsconfig.json
-```
-
-
----
-title: "Inspecting Agents with `mastra dev` | Mastra Local Dev Docs"
+title: "Inspecting agents and workflows with mastra dev | Mastra Local Dev Docs"
 description: Documentation for the Mastra local development environment for Mastra applications.
 ---
 
 import YouTube from "@/components/youtube";
+import { Tabs, Tab } from "@/components/tabs";
 
-# Local Development Environment
+# Playground
 [EN] Source: https://mastra.ai/en/docs/local-dev/mastra-dev
 
-Mastra provides a local development environment where you can test your agents, workflows, and tools while developing locally.
+Mastra provides a local development environment where you can test your agents, workflows, and tools during development.
 
-<YouTube id="spGlcTEjuXY" />
+Start the local development server by running:
 
-## Launch Development Server
+<Tabs items={["npm", "Mastra CLI"]}>
+  <Tab>
+    ```bash copy
+    npm run dev
+    ```
+  </Tab>
+  <Tab>
+    ```bash copy
+    mastra dev
+    ```
+  </Tab>
+</Tabs>
 
-You can launch the Mastra development environment using the Mastra CLI by running:
+The local development server provides access to the following interfaces:
 
-```bash
-mastra dev
-```
+- Playground: [http://localhost:4111/](http://localhost:4111/)
+- Mastra API: [http://localhost:4111/api](http://localhost:4111/api)
+- OpenAPI Spec: [http://localhost:4111/openapi.json](http://localhost:4111/openapi.json)
+- Swagger UI – API explorer: [http://localhost:4111/swagger-ui](http://localhost:4111/swagger-ui)
 
-By default, the server runs on localhost at http://localhost:4111. Custom port and host can be configured via the
-mastra server config.
+## Local Development Playground
 
-```typescript
-import { Mastra } from "@mastra/core";
+The Playground lets you interact with your agents, workflows, and tools. It provides dedicated interfaces for testing each component of your Mastra application during development and is available at: [http://localhost:4111/](http://localhost:4111/).
 
-export const mastra = new Mastra({
-  server: {
-    port: "4111",
-    host: "0.0.0.0",
-  },
-});
-```
+<YouTube id="spGlcTEjuXY" startTime={126}/>
 
-## Dev Playground
+### Agents
 
-`mastra dev` serves a playground UI for interacting with your agents, workflows, and tools. The playground provides dedicated interfaces for testing each component of your Mastra application during development.
+Quickly test and debug your agents during development using the interactive chat interface in the Agent Playground.
 
-### Agent Playground
+![Agents Playground](/image/local-dev/local-dev-agents-playground.jpg)
 
-The Agent playground provides an interactive chat interface where you can test and debug your agents during development. Key features include:
+Key features:
 
-- **Chat Interface**: Directly interact with your agents to test their responses and behavior.
-- **Prompt CMS**: Experiment with different system instructions for your agent:
-  - A/B test different prompt versions.
-  - Track performance metrics for each variant.
-  - Select and deploy the most effective prompt version.
-- **Agent Traces**: View detailed execution traces to understand how your agent processes requests, including:
-  - Prompt construction.
-  - Tool usage.
-  - Decision-making steps.
-  - Response generation.
-- **Agent Evals**: When you've set up [Agent evaluation metrics](/docs/evals/overview), you can:
-  - Run evaluations directly from the playground.
-  - View evaluation results and metrics.
-  - Compare agent performance across different test cases.
+- **Chat Interface**: Talk to your agent and see how it responds in real time.
+- **Model Settings**: Tweak settings like temperature and top-p to see how they affect output.
+- **Agent Endpoints**: See the available REST API routes your agent exposes and how to use them.
+- **Agent Traces**: Step through what the agent did behind the scenes, tool calls, decisions, and more.
+- **Agent Evals**: Run tests against your agent and see how well it performs.
 
-### Workflow Playground
+### Workflows
 
-The Workflow playground helps you visualize and test your workflow implementations:
+Validate workflows by supplying defined inputs and visualizing each step within the Workflow Playground.
 
-- **Workflow Visualization**: Workflow graph visualization.
+![Workflows Playground](/image/local-dev/local-dev-workflow-playground.jpg)
 
-- **Run Workflows**:
+Key features:
 
-  - Trigger test workflow runs with custom input data.
-  - Debug workflow logic and conditions.
-  - Simulate different execution paths.
-  - View detailed execution logs for each step.
+- **Workflow Visualization**: See your workflow as a visual graph so you can follow the steps and branches at a glance.
+- **Step Inputs & Outputs**: Check the data going into and coming out of each step to see how everything flows.
+- **Run Workflows**: Test your workflow with real inputs to validate the logic and debug any issues.
+- **Execution JSON**: Get the full picture of a run as raw JSON—inputs, outputs, errors, and results included.
+- **Workflow Traces**: Dig into a detailed breakdown of each step, including data flow, tool calls, and any errors along the way.
 
-- **Workflow Traces**: Examine detailed execution traces that show:
-  - Step-by-step workflow progression.
-  - State transitions and data flow.
-  - Tool invocations and their results.
-  - Decision points and branching logic.
-  - Error handling and recovery paths.
+### Tools
 
-### Tools Playground
+Quickly test and debug custom tools in isolation using the Tools Playground, without running a full agent or workflow.
 
-The Tools playground allows you to test your custom tools in isolation:
+![Tools Playground](/image/local-dev/local-dev-tools-playground.jpg)
 
-- Test individual tools without running a full agent or workflow.
-- Input test data and view tool responses.
-- Debug tool implementation and error handling.
-- Verify tool input/output schemas.
-- Monitor tool performance and execution time.
+Key features:
+
+- **Test Tools in Isolation**: Try out individual tools on their own without running a full agent or workflow.
+- **Input & Responses**: Send sample inputs to see how the tool responds.
+- **Tool Usage**: Find out which agents rely on this tool and how they’re using it.
+
+
+### MCP Servers
+
+Explore connection details, tool usage, and IDE configuration for local MCP server development.
+
+![MCP Servers Playground](/image/local-dev/local-dev-mcp-server-playground.jpg)
+
+Key features:
+
+- **Connection Details**: Access the endpoints and config needed to wire up your MCP environment.
+- **Available Tools**:  See all tools currently published, including their names, versions, and which agents use them.
+- **IDE Configuration**: Grab ready-to-use config you can drop into your local setup for testing and publishing tools.
+
 
 ## REST API Endpoints
 
-`mastra dev` also spins up REST API routes for your agents and workflows via the local [Mastra Server](/docs/deployment/server). This allows you to test your API endpoints before deployment. See [Mastra Dev reference](/reference/cli/dev#routes) for more details about all endpoints.
+The local development server exposes a set of REST API routes via the [Mastra Server](/docs/deployment/server), allowing you to test and interact with your agents and workflows before deployment.
 
-You can then leverage the [Mastra Client](/docs/deployment/client) SDK to interact with your served REST API routes seamlessly.
+For a full overview of available API routes, including agents, tools, and workflows, see the [Routes reference](/reference/cli/dev#routes).
 
 ## OpenAPI Specification
 
-`mastra dev` provides an OpenAPI spec at http://localhost:4111/openapi.json
+The local development server includes an OpenAPI specification available at: [http://localhost:4111/openapi.json](http://localhost:4111/openapi.json).
 
-To enable OpenAPI documentation in your Mastra instance, add the following configuration:
+To include OpenAPI documentation in your production server, enable it in the Mastra instance:
 
-```typescript
-import { Mastra } from "@mastra/core";
+```typescript {7} filename="src/mastra/index.ts" showLineNumbers copy
+import { Mastra } from "@mastra/core/mastra";
 
 export const mastra = new Mastra({
+  // ...
   server: {
     build: {
-      openAPIDocs: true, // Enable OpenAPI documentation
-      // ... other build config options
-    },
+      openAPIDocs: true
+    }
   },
 });
 ```
 
 ## Swagger UI
 
-Swagger UI provides an interactive interface for testing your API endpoints at `mastra dev` provides an OpenAPI spec at http://localhost:4111/swagger-ui.
-To enable Swagger UI in your Mastra instance, add the following configuration:
+The local development server includes an interactive Swagger UI - API explorer available at: [http://localhost:4111/swagger-ui](http://localhost:4111/swagger-ui).
 
-```typescript
-import { Mastra } from "@mastra/core";
+To include Swagger UI in your production server, enable it in the Mastra instance:
+
+```typescript {7} filename="src/mastra/index.ts" showLineNumbers copy
+import { Mastra } from "@mastra/core/mastra";
 
 export const mastra = new Mastra({
+  // ...
   server: {
     build: {
-      openAPIDocs: true, // Enable OpenAPI documentation
-      swaggerUI: true, // Enable Swagger UI
-      // ... other build config options
+      swaggerUI: true
     },
   },
 });
 ```
 
-## Local Dev Architecture
+## Architecture
 
-The local development server is designed to run without any external dependencies or containerization. This is achieved through:
+The local development server runs fully self-contained without external dependencies or containers. It leverages:
 
-- **Dev Server**: Uses [Hono](https://hono.dev) as the underlying framework to power the [Mastra Server](/docs/deployment/server).
+- **Dev Server** powered by [Hono](https://hono.dev) for the core [Mastra Server](/docs/deployment/server).
+- **In-Memory Storage** via [LibSQL](https://libsql.org/) adapters for agent memory, traces, evals, and workflow snapshots.
+- **Vector Storage** using [FastEmbed](https://github.com/qdrant/fastembed) for embeddings, vector search, and semantic retrieval.
 
-- **In-Memory Storage**: Uses [LibSQL](https://libsql.org/) memory adapters for:
+This setup lets you start developing immediately with production-like behavior, no database or vector store setup required.
 
-  - Agent memory management.
-  - Trace storage.
-  - Evals storage.
-  - Workflow snapshots.
+## Configuration
 
-- **Vector Storage**: Uses [FastEmbed](https://github.com/qdrant/fastembed) for:
-  - Default embedding generation.
-  - Vector storage and retrieval.
-  - Semantic search capabilities.
+By default, the server runs on port `4111`. You can customize the host and port through the Mastra server configuration.
 
-This architecture allows you to start developing immediately without setting up databases or vector stores, while still maintaining production-like behavior in your local environment.
+```typescript {6,7} filename="src/mastra/index.ts" showLineNumbers copy
+import { Mastra } from "@mastra/core/mastra";
 
-### Model settings
+export const mastra = new Mastra({
+  // ...
+  server: {
+    port: 8080,
+    host: "0.0.0.0",
+  },
+});
+```
 
-The local development server also lets you configure the model settings in Overview > Model Settings.
 
-You can configure the following settings:
+## Next steps
 
-- **Temperature**: Controls randomness in model outputs. Higher values (0-2) produce more creative responses while lower values make outputs more focused and deterministic.
-- **Top P**: Sets cumulative probability threshold for token sampling. Lower values (0-1) make outputs more focused by considering only the most likely tokens.
-- **Top K**: Limits the number of tokens considered for each generation step. Lower values produce more focused outputs by sampling from fewer options.
-- **Frequency Penalty**: Reduces repetition by penalizing tokens based on their frequency in previous text. Higher values (0-2) discourage reuse of common tokens.
-- **Presence Penalty**: Reduces repetition by penalizing tokens that appear in previous text. Higher values (0-2) encourage the model to discuss new topics.
-- **Max Tokens**: Maximum number of tokens allowed in the model's response. Higher values allow for longer outputs but may increase latency.
-- **Max Steps**: Maximum number of steps a workflow or agent can execute before stopping. Prevents infinite loops and runaway processes.
-- **Max Retries**: Number of times to retry failed API calls or model requests before giving up. Helps handle temporary failures gracefully.
-
-## Summary
-
-`mastra dev` makes it easy to develop, debug, and iterate on your AI logic in a self-contained environment before deploying to production.
-
-- [Mastra Dev reference](../../reference/cli/dev.mdx)
+- [Mastra Cloud](/docs/mastra-cloud/overview)
+- [Deployment Overview](/docs/deployment/overview)
+- [Mastra Client SDK](/docs/client-js/overview)
 
 
 ---
-title: Deploying to Mastra Cloud
-description: GitHub-based deployment process for Mastra applications
+title: Understanding the Mastra Cloud Dashboard
+description: Details of each feature available in Mastra Cloud
 ---
 
-# Deploying to Mastra Cloud
-[EN] Source: https://mastra.ai/en/docs/mastra-cloud/deploying
+import { MastraCloudCallout } from '@/components/mastra-cloud-callout'
 
-> **Beta Notice**
-> Mastra Cloud is currently in **public beta**.
+# Navigating the Dashboard
+[EN] Source: https://mastra.ai/en/docs/mastra-cloud/dashboard
 
-This page describes the deployment process for Mastra applications to Mastra Cloud using GitHub integration.
+This page explains how to navigate the Mastra Cloud dashboard, where you can configure your project, view deployment details, and interact with agents and workflows using the built-in [Playground](/docs/mastra-cloud/dashboard#playground).
 
-## Prerequisites
+<MastraCloudCallout />
 
-- A GitHub account
-- A GitHub repository containing a Mastra application
-- Access to Mastra Cloud
+## Overview
 
-## Deployment Process
+The **Overview** page provides details about your application, including its domain URL, status, latest deployment, and connected agents and workflows.
 
-Mastra Cloud uses a Git-based deployment workflow similar to platforms like Vercel and Netlify:
+![Project dashboard](/image/mastra-cloud/mastra-cloud-project-dashboard.jpg)
 
-1. **Import GitHub Repository**
+Key features:
 
-   - From the Projects dashboard, click "Add new"
-   - Select the repository containing your Mastra application
-   - Click "Import" next to the desired repository
+Each project shows its current deployment status, active domains, and environment variables, so you can quickly understand how your application is running.
 
-2. **Configure Deployment Settings**
+## Deployments
 
-   - Set the project name (defaults to repository name)
-   - Select branch to deploy (typically `main`)
-   - Configure the Mastra directory path (defaults to `src/mastra`)
-   - Add necessary environment variables (like API keys)
+The **Deployments** page shows recent builds and gives you quick access to detailed build logs. Click any row to view more information about a specific deployment.
 
-3. **Deploy from Git**
-   - After initial configuration, deployments are triggered by pushes to the selected branch
-   - Mastra Cloud automatically builds and deploys your application
-   - Each deployment creates an atomic snapshot of your agents and workflows
+![Dashboard deployment](/image/mastra-cloud/mastra-cloud-dashboard-deployments.jpg)
 
-## Automatic Deployments
+Key features:
 
-Mastra Cloud follows a Git-driven workflow:
+Each deployment includes its current status, the Git branch it was deployed from, and a title generated from the commit hash.
 
-1. Make changes to your Mastra application locally
-2. Commit changes to the `main` branch
-3. Push to GitHub
-4. Mastra Cloud automatically detects the push and creates a new deployment
-5. Once the build completes, your application is live
+## Logs
 
-## Deployment Domains
+The **Logs** page is where you'll find detailed information to help debug and monitor your application's behavior in the production environment.
 
-Each project receives two URLs:
+![Dashboard logs](/image/mastra-cloud/mastra-cloud-dashboard-logs.jpg)
 
-1. **Project-specific domain**: `https://[project-name].mastra.cloud`
+Key features:
 
-   - Example: `https://gray-acoustic-helicopter.mastra.cloud`
+Each log includes a severity level and detailed messages showing agent, workflow, and storage activity.
 
-2. **Deployment-specific domain**: `https://[deployment-id].mastra.cloud`
-   - Example: `https://young-loud-caravan-6156280f-ad56-4ec8-9701-6bb5271fd73d.mastra.cloud`
+## Settings
 
-These URLs provide direct access to your deployed agents and workflows.
+On the **Settings** page you can modify the configuration of your application.
 
-## Viewing Deployments
+![Dashboard settings](/image/mastra-cloud/mastra-cloud-dashboard-settings.jpg)
 
-![Deployments List](../../../../../public/image/cloud-agents.png)
+Key features:
 
-The deployments section in the dashboard shows:
+You can manage environment variables, edit key project settings like the name and branch, configure storage with LibSQLStore, and set a stable URL for your endpoints.
 
-- **Title**: Deployment identifier (based on commit hash)
-- **Status**: Current state (success or archived)
-- **Branch**: The branch used (typically `main`)
-- **Commit**: The Git commit hash
-- **Updated At**: Timestamp of the deployment
+> Changes to configuration require a new deployment before taking effect.
 
-Each deployment represents an atomic snapshot of your Mastra application at a specific point in time.
+## Playground
 
-## Interacting with Agents
+### Agents
 
-![Agent Interface](../../../../../public/image/cloud-agent.png)
+On the **Agents** page you'll see all agents used in your application. Click any agent to interact using the chat interface.
 
-After deployment, interact with your agents:
+![Dashboard playground agents](/image/mastra-cloud/mastra-cloud-dashboard-playground-agents.jpg)
 
-1. Navigate to your project in the dashboard
-2. Go to the Agents section
-3. Select an agent to view its details and interface
-4. Use the Chat tab to communicate with your agent
-5. View the agent's configuration in the right panel:
-   - Model information (e.g., OpenAI)
-   - Available tools (e.g., getWeather)
-   - Complete system prompt
-6. Use suggested prompts (like "What capabilities do you have?") or enter custom messages
+Key features:
 
-The interface shows the agent's branch (typically "main") and indicates whether conversation memory is enabled.
+Test your agents in real time using the chat interface, review traces of each interaction, and see evaluation scores for every response.
 
-## Monitoring Logs
+### Workflows
 
-The Logs section provides detailed information about your application:
+On the **Workflows** page you'll see all workflows used in your application. Click any workflow to interact using the runner interface.
 
-- **Time**: When the log entry was created
-- **Level**: Log level (info, debug)
-- **Hostname**: Server identification
-- **Message**: Detailed log information, including:
-  - API initialization
-  - Storage connections
-  - Agent and workflow activity
+![Dashboard playground workflows](/image/mastra-cloud/mastra-cloud-dashboard-playground-workflows.jpg)
 
-These logs help debug and monitor your application's behavior in the production environment.
+Key features:
 
-## Workflows
+Visualize your workflow with a step-by-step graph, view execution traces, and run workflows directly using the built-in runner.
 
-![Workflows Interface](../../../../../public/image/cloud-workflows.png)
+### Tools
 
-The Workflows section allows you to view and interact with your deployed workflows:
+On the **Tools** page you'll see all tools used by your agents. Click any tool to interact using the input interface.
 
-1. View all workflows in your project
-2. Examine workflow structure and steps
-3. Access execution history and performance data
+![Dashboard playground tools](/image/mastra-cloud/mastra-cloud-dashboard-playground-tools.jpg)
 
-## Database Usage
+Key features:
 
-Mastra Cloud tracks database utilization metrics:
+Test your tools by providing an input that matches the schema and viewing the structured output.
 
-- Number of reads
-- Number of writes
-- Storage used (MB)
+## MCP Servers
 
-These metrics appear in the project overview, helping you monitor resource consumption.
+The **MCP Servers** page lists all MCP Servers included in your application. Click any MCP Server for more information.
 
-## Deployment Configuration
+![Dashboard playground mcp servers](/image/mastra-cloud/mastra-cloud-dashboard-playground-mcpservers.jpg)
 
-Configure your deployment through the dashboard:
+Key features:
 
-1. Navigate to your project settings
-2. Set environment variables (like `OPENAI_API_KEY`)
-3. Configure project-specific settings
+Each MCP Server includes API endpoints for HTTP and SSE, along with IDE configuration snippets for tools like Cursor and Windsurf.
 
-Changes to configuration require a new deployment to take effect.
+## Next steps
 
-## Next Steps
-
-After deployment, [trace and monitor execution](./observability.mdx) using the observability tools.
+- [Understanding Tracing and Logs](/docs/mastra-cloud/observability)
 
 
 ---
@@ -6298,168 +6472,54 @@ title: Observability in Mastra Cloud
 description: Monitoring and debugging tools for Mastra Cloud deployments
 ---
 
-# Observability in Mastra Cloud
+import { MastraCloudCallout } from '@/components/mastra-cloud-callout'
+
+# Understanding Tracing and Logs
 [EN] Source: https://mastra.ai/en/docs/mastra-cloud/observability
 
-> **Beta Notice**
-> Mastra Cloud is currently in **beta**.
+Mastra Cloud captures execution data to help you monitor your application's behavior in the production environment.
 
-Mastra Cloud records execution data for monitoring and debugging. It captures traces, logs, and runtime information from agents and workflows.
-
-## Agent Interface
-
-The agent interface offers three main views, accessible via tabs:
-
-1. **Chat**: Interactive messaging interface to test your agent
-2. **Traces**: Detailed execution records
-3. **Evaluation**: Agent performance assessment
-
-![Agent Interface with Chat Tab](../../../../../public/image/cloud-agent.png)
-
-### Chat Interface
-
-The Chat tab provides:
-
-- Interactive messaging with deployed agents
-- System response to user queries
-- Suggested prompt buttons (e.g., "What capabilities do you have?")
-- Message input area
-- Branch indicator (e.g., "main")
-- Note about agent memory limitations
-
-### Agent Configuration Panel
-
-The right sidebar displays agent details:
-
-- Agent name and deployment identifier
-- Model information (e.g., "OpenAI")
-- Tools available to the agent (e.g., "getWeather")
-- Complete system prompt text
-
-This panel provides visibility into how the agent is configured without needing to check the source code.
-
-## Trace System
-
-Mastra Cloud records traces for agent and workflow interactions.
-
-### Trace Explorer Interface
-
-![Agent Traces View](/image/cloud-agent-traces.png)
-
-The Trace Explorer interface shows:
-
-- All agent and workflow interactions
-- Specific trace details
-- Input and output data
-- Tool calls with parameters and results
-- Workflow execution paths
-- Filtering options by type, status, timestamp, and agent/workflow
-
-### Trace Data Structure
-
-Each trace contains:
-
-1. **Request Data**: The request that initiated the agent or workflow
-2. **Tool Call Records**: Tool calls during execution with parameters
-3. **Tool Response Data**: The responses from tool calls
-4. **Agent Response Data**: The generated agent response
-5. **Execution Timestamps**: Timing information for each execution step
-6. **Model Metadata**: Information about model usage and tokens
-
-The trace view displays all API calls and results throughout execution. This data helps debug tool usage and agent logic flows.
-
-### Agent Interaction Data
-
-Agent interaction traces include:
-
-- User input text
-- Agent processing steps
-- Tool calls (e.g., weather API calls)
-- Parameters and results for each tool call
-- Final agent response text
-
-## Dashboard Structure
-
-The Mastra Cloud dashboard contains:
-
-- Project deployment history
-- Environment variable configuration
-- Agent configuration details (model, system prompt, tools)
-- Workflow step visualization
-- Deployment URLs
-- Recent activity log
-
-## Agent Testing
-
-Test your agents using the Chat interface:
-
-1. Navigate to the Agents section
-2. Select the agent you want to test
-3. Use the Chat tab to interact with your agent
-4. Send messages and view responses
-5. Use suggested prompts for common queries
-6. Switch to the Traces tab to view execution details
-
-Note that by default, agents do not remember conversation history across sessions. The interface indicates this with the message: "Agent will not remember previous messages. To enable memory for agent see image."
-
-## Workflow Monitoring
-
-![Workflow Interface](/image/cloud-workflow.png)
-
-Workflow monitoring shows:
-
-- Diagram of workflow steps and connections
-- Status for each workflow step
-- Execution details for each step
-- Execution trace records
-- Multi-step process execution (e.g., weather lookup followed by activity planning)
-
-### Workflow Execution
-
-![Workflow Run Details](/image/cloud-workflow-run.png)
-
-When examining a specific workflow execution, you can see the detailed steps and their outputs.
+<MastraCloudCallout />
 
 ## Logs
 
-![Logs Interface](/image/cloud-logs.png)
+You can view detailed logs for debugging and monitoring your application's behavior on the [Logs](/docs/mastra-cloud/dashboard#logs) page of the Dashboard.
 
-The Logs section provides detailed information about your application:
+![Dashboard logs](/image/mastra-cloud/mastra-cloud-dashboard-logs.jpg)
 
-- **Time**: When the log entry was created
-- **Level**: Log level (info, debug)
-- **Hostname**: Server identification
-- **Message**: Detailed log information, including:
-  - API initialization
-  - Storage connections
-  - Agent and workflow activity
+Key features:
 
-## Technical Features
+Each log entry includes its severity level and a detailed message showing agent, workflow, or storage activity.
 
-The observability system includes:
+## Traces
 
-- **API Endpoints**: For programmatic access to trace data
-- **Structured Trace Format**: JSON format for filtering and query operations
-- **Historical Data Storage**: Retention of past execution records
-- **Deployment Version Links**: Correlation between traces and deployment versions
+More detailed traces are available for both agents and workflows by using a [logger](/docs/observability/logging) or enabling [telemetry](/docs/observability/tracing) using one of our [supported providers](/reference/observability/providers).
 
-## Debugging Patterns
+### Agents
 
-- Compare trace data when testing agent behavior changes
-- Use the chat interface to test edge case inputs
-- View system prompts to understand agent behavior
-- Examine tool call parameters and results
-- Verify workflow execution step sequencing
-- Identify execution bottlenecks in trace timing data
-- Compare trace differences between agent versions
+With a [logger](/docs/observability/logging) enabled, you can view detailed outputs from your agents in the **Traces** section of the Agents Playground.
 
-## Support Resources
+![observability agents](/image/mastra-cloud/mastra-cloud-observability-agents.jpg)
 
-For technical assistance with observability:
+Key features:
 
-- Review the [Troubleshooting Documentation]()
-- Contact technical support through the dashboard
-- Join the [Discord developer channel](https://discord.gg/mastra)
+Tools passed to the agent during generation are standardized using `convertTools`. This includes retrieving client-side tools, memory tools, and tools exposed from workflows.
+
+
+### Workflows
+
+With a [logger](/docs/observability/logging) enabled, you can view detailed outputs from your workflows in the **Traces** section of the Workflows Playground.
+
+![observability workflows](/image/mastra-cloud/mastra-cloud-observability-workflows.jpg)
+
+Key features:
+
+Workflows are created using `createWorkflow`, which sets up steps, metadata, and tools. You can run them with `runWorkflow` by passing input and options.
+
+## Next steps
+
+- [Logging](/docs/observability/logging)
+- [Tracing](/docs/observability/tracing)
 
 
 ---
@@ -6467,65 +6527,73 @@ title: Mastra Cloud
 description: Deployment and monitoring service for Mastra applications
 ---
 
+import { MastraCloudCallout } from '@/components/mastra-cloud-callout'
+import { FileTree } from "nextra/components";
+
 # Mastra Cloud
 [EN] Source: https://mastra.ai/en/docs/mastra-cloud/overview
 
-Mastra Cloud is a deployment service built by the Mastra team that runs,
-manages, and monitors Mastra applications. It works with standard Mastra
-projects and handles deployment, scaling, and operational tasks.
+[Mastra Cloud](https://mastra.ai/cloud) is a platform for deploying, managing, monitoring, and debugging Mastra applications. When you [deploy](/docs/mastra-cloud/setting-up) your application, Mastra Cloud exposes your agents, tools, and workflows as REST API endpoints.
 
-> **Beta Notice**
-> Mastra Cloud is currently in **public beta**. Features, APIs, and UIs may
-> change as development continues.
+<MastraCloudCallout />
 
-## Core Functionality
+## Platform features
 
-- **Atomic Deployments** - Agents and workflows deploy as a single unit
-- **Project Organization** - Group agents and workflows into projects with assigned URLs
-- **Environment Variables** - Store configuration securely by environment
-- **Testing Console** - Send messages to agents through a web interface
-- **Execution Tracing** - Record agent interactions and tool calls
-- **Workflow Visualization** - Display workflow steps and execution paths
-- **Logs** - Standard logging output for debugging
-- **Platform Compatibility** - Uses the same infrastructure as Cloudflare, Vercel, and Netlify deployers
+Deploy and manage your applications with automated builds, organized projects, and no additional configuration.
 
-## Dashboard Components
+![Platform features](/image/mastra-cloud/mastra-cloud-platform-features.jpg)
 
-The Mastra Cloud dashboard contains:
+Key features:
 
-- **Projects List** - All projects in the account
-- **Project Details** - Deployments, environment variables, and access URLs
-- **Deployment History** - Record of deployments with timestamps and status
-- **Agent Inspector** - Agent configuration view showing models, tools, and system prompts
-- **Testing Console** - Interface for sending messages to agents
-- **Trace Explorer** - Records of tool calls, parameters, and responses
-- **Workflow Viewer** - Diagram of workflow steps and connections
+Mastra Cloud supports zero-config deployment, continuous integration with GitHub, and atomic deployments that package agents, tools, and workflows together.
 
-## Technical Implementation
+## Project Dashboard
 
-Mastra Cloud runs on the same core code as the platform-specific deployers with these modifications:
+Monitor and debug your applications with detailed output logs, deployment state, and interactive tools.
 
-- **Edge Network Distribution** - Geographically distributed execution
-- **Dynamic Resource Allocation** - Adjusts compute resources based on traffic
-- **Mastra-specific Runtime** - Runtime optimized for agent execution
-- **Standard Deployment API** - Consistent deployment interface across environments
-- **Tracing Infrastructure** - Records all agent and workflow execution steps
+![Project dashboard](/image/mastra-cloud/mastra-cloud-project-dashboard.jpg)
 
-## Use Cases
+Key features:
 
-Common usage patterns:
+The Project Dashboard gives you an overview of your application's status and deployments, with access to logs and a built-in playground for testing agents and workflows.
 
-- Deploying applications without managing infrastructure
-- Maintaining staging and production environments
-- Monitoring agent behavior across many requests
-- Testing agent responses through a web interface
-- Deploying to multiple regions
+## Project structure
 
-## Setup Process
+Use a standard Mastra project structure for proper detection and deployment.
 
-1. [Configure a Mastra Cloud project](/docs/mastra-cloud/setting-up)
-2. [Deploy code](/docs/mastra-cloud/deploying)
-3. [View execution traces](/docs/mastra-cloud/observability)
+<FileTree>
+  <FileTree.Folder name="src" defaultOpen>
+    <FileTree.Folder name="mastra" defaultOpen>
+      <FileTree.Folder name="agents" defaultOpen>
+        <FileTree.File name="agent-name.ts" />
+      </FileTree.Folder>
+      <FileTree.Folder name="tools" defaultOpen>
+        <FileTree.File name="tool-name.ts" />
+      </FileTree.Folder>
+      <FileTree.Folder name="workflows" defaultOpen>
+        <FileTree.File name="workflow-name.ts" />
+      </FileTree.Folder>
+      <FileTree.File name="index.ts" />
+    </FileTree.Folder>
+  </FileTree.Folder>
+  <FileTree.File name="package.json" />
+</FileTree>
+
+Mastra Cloud scans your repository for:
+
+- **Agents**: Defined using: `new Agent({...})`
+- **Tools**: Defined using: `createTool({...})`
+- **Workflows**: Defined using: `createWorkflow({...})`
+- **Steps**: Defined using: `createStep({...})`
+- **Environment Variables**: API keys and configuration variables
+
+## Technical implementation
+
+Mastra Cloud is purpose-built for Mastra agents, tools, and workflows. It handles long-running requests, records detailed traces for every execution, and includes built-in support for evals.
+
+## Next steps
+
+- [Setting Up and Deploying](/docs/mastra-cloud/setting-up)
 
 
 ---
@@ -6533,130 +6601,94 @@ title: Setting Up a Project
 description: Configuration steps for Mastra Cloud projects
 ---
 
-# Setting Up a Mastra Cloud Project
+import { MastraCloudCallout } from '@/components/mastra-cloud-callout'
+import { Steps } from "nextra/components";
+
+# Setting Up and Deploying
 [EN] Source: https://mastra.ai/en/docs/mastra-cloud/setting-up
 
-> **Beta Notice**
-> Mastra Cloud is currently in **beta**.
+This page explains how to set up a project on [Mastra Cloud](https://mastra.ai/cloud) with automatic deployments using our GitHub integration.
 
-This page describes the steps to set up a project on Mastra Cloud using GitHub integration.
+<MastraCloudCallout />
 
 ## Prerequisites
 
-- A Mastra Cloud account
-- A GitHub account
-- A GitHub repository containing a Mastra application
+- A [Mastra Cloud](https://mastra.ai/cloud) account
+- A GitHub account / repository containing a Mastra application
 
-## Project Creation Process
+> See our [Getting started](/docs/getting-started/installation) guide to scaffold out a new Mastra project with sensible defaults.
 
-1. **Sign in to Mastra Cloud**
+## Setup and Deploy process
 
-   - Navigate to the Mastra Cloud dashboard at https://cloud.mastra.ai
-   - Sign in with your account credentials
+<Steps>
 
-2. **Add a New Project**
+### Sign in to Mastra Cloud
 
-   - From the "All Projects" view, click the "Add new" button in the top right
-   - This opens the GitHub repository import dialog
+Head over to [https://cloud.mastra.ai/](https://cloud.mastra.ai) and sign in with either:
 
-   ![Mastra Cloud Projects Dashboard](/image/cloud-agents.png)
+- **GitHub**
+- **Google**
 
-3. **Import Git Repository**
+### Install the Mastra GitHub app
 
-   - Search for repositories or select from the list of available GitHub repositories
-   - Click the "Import" button next to the repository you want to deploy
+When prompted, install the Mastra GitHub app.
 
-4. **Configure Deployment Details**
-   The deployment configuration page includes:
-   - **Repo Name**: The GitHub repository name (read-only)
-   - **Project Name**: Customize the project name (defaults to repo name)
-   - **Branch**: Select the branch to deploy (dropdown, defaults to `main`)
-   - **Project root**: Set the root directory of your project (defaults to `/`)
-   - **Mastra Directory**: Specify where Mastra files are located (defaults to `src/mastra`)
-   - **Build Command**: Optional command to run during build process
-   - **Store Settings**: Configure data storage options
-   - **Environment Variables**: Add key-value pairs for configuration (e.g., API keys)
+![Install GitHub](/image/mastra-cloud/mastra-cloud-install-github.jpg)
 
-## Project Structure Requirements
+### Create a new project
 
-Mastra Cloud scans the GitHub repository for:
+Click the **Create new project** button to create a new project.
 
-- **Agents**: Agent definitions (e.g., Weather Agent) with models and tools
-- **Workflows**: Workflow step definitions (e.g., weather-workflow)
-- **Environment Variables**: Required API keys and configuration variables
+![Create new project](/image/mastra-cloud/mastra-cloud-create-new-project.jpg)
 
-The repository should contain a standard Mastra project structure for proper detection and deployment.
+### Import a Git repository
 
-## Understanding the Dashboard
+Search for a repository, then click **Import**.
 
-After creating a project, the dashboard shows:
+![Import Git repository](/image/mastra-cloud/mastra-cloud-import-git-repository.jpg)
 
-### Project Overview
+### Configure the deployment
 
-- **Created Date**: When the project was created
-- **Domains**: URLs for accessing your deployed application
-  - Format: `https://[project-name].mastra.cloud`
-  - Format: `https://[random-id].mastra.cloud`
-- **Status**: Current deployment status (success or archived)
-- **Branch**: The branch deployed (typically `main`)
-- **Environment Variables**: Configured API keys and settings
-- **Workflows**: List of detected workflows with step counts
-- **Agents**: List of detected agents with models and tools
-- **Database Usage**: Reads, writes, and storage statistics
+Mastra Cloud automatically detects the right build settings, but you can customize them using the options described below.
 
-### Deployments Section
+![Deployment details](/image/mastra-cloud/mastra-cloud-deployment-details.jpg)
 
-- List of all deployments with:
-  - Deployment ID (based on commit hash)
-  - Status (success/archived)
-  - Branch
-  - Commit hash
-  - Timestamp
+- **Importing from GitHub**: The GitHub repository name
+- **Project name**: Customize the project name
+- **Branch**: The branch to deploy from
+- **Project root**: The root directory of your project
+- **Mastra directory**: Where Mastra files are located
+- **Environment variables**: Add environment variables used by the application
+- **Build and Store settings**:
+   - **Install command**: Runs pre-build to install project dependencies
+   - **Project setup command**: Runs pre-build to prepare any external dependencies
+   - **Port**: The network port the server will use
+   - **Store settings**: Use Mastra Cloud's built-in [LibSQLStore](/docs/storage/overview) storage
+- **Deploy Project**: Starts the deployment process
 
-### Logs Section
+### Deploy project
 
-The Logs view displays:
+Click **Deploy Project** to create and deploy your application using the configuration you’ve set.
 
-- Timestamp for each log entry
-- Log level (info, debug)
-- Hostname
-- Detailed log messages, including:
-  - API startup information
-  - Storage initialization
-  - Agent and workflow activity
+</Steps>
 
-## Navigation
+## Successful deployment
 
-The sidebar provides access to:
+After a successful deployment you'll be shown the **Overview** screen where you can view your project's status, domains, latest deployments and connected agents and workflows.
 
-- **Overview**: Project summary and statistics
-- **Deployments**: Deployment history and details
-- **Logs**: Application logs for debugging
-- **Agents**: List and configuration of all agents
-- **Workflows**: List and structure of all workflows
-- **Settings**: Project configuration options
+![Successful deployment](/image/mastra-cloud/mastra-cloud-successful-deployment.jpg)
 
-## Environment Variable Configuration
+## Continuous integration
 
-Set environment variables through the dashboard:
+Your project is now configured with automatic deployments which occur whenever you push to the configured branch of your GitHub repository.
 
-1. Navigate to your project in the dashboard
-2. Go to the "Environment Variables" section
-3. Add or edit variables (such as `OPENAI_API_KEY`)
-4. Save the configuration
+## Testing your application
 
-Environment variables are encrypted and made available to your application during deployment and execution.
+After a successful deployment you can test your agents and workflows from the [Playground](/docs/mastra-cloud/dashboard#playground) in Mastra Cloud, or interact with them using our [Client SDK](/docs/client-js/overview).
 
-## Testing Your Deployment
+## Next steps
 
-After deployment, you can test your agents and workflows using:
-
-1. The custom domain assigned to your project: `https://[project-name].mastra.cloud`
-2. The dashboard interface for direct interaction with agents
-
-## Next Steps
-
-After setting up your project, automatic deployments occur whenever you push to the `main` branch of your GitHub repository. See the [deployment documentation](./deploying.mdx) for more details.
+- [Navigating the Dashboard](/docs/mastra-cloud/dashboard)
 
 
 # Memory Processors
@@ -6803,6 +6835,8 @@ The context window is the total information visible to the language model at any
 
 In Mastra, context is broken up into three parts: system instructions and information about the user ([working memory](./working-memory.mdx)), recent messages ([message history](#conversation-history)), and older messages that are relevant to the user’s query ([semantic recall](./semantic-recall.mdx)).
 
+Working memory can persist at different scopes - either per conversation thread (default) or across all threads for the same user (resource-scoped), enabling persistent user profiles that remember context across conversations.
+
 In addition, we provide [memory processors](./memory-processors.mdx) to trim context or remove information if the context is too long.
 
 ## Quick Start
@@ -6863,6 +6897,8 @@ Mastra organizes memory into threads, which are records that identify specific c
 
 1.  **`threadId`**: A specific conversation id (e.g., `support_123`).
 2.  **`resourceId`**: The user or entity id that owns each thread (e.g., `user_123`, `org_456`).
+
+The `resourceId` is particularly important for [resource-scoped working memory](./working-memory.mdx#resource-scoped-memory), which allows memory to persist across all conversation threads for the same user.
 
 ```typescript {2,3}
 const response = await myMemoryAgent.stream("Hello, my name is Alice.", {
@@ -7082,11 +7118,18 @@ import YouTube from "@/components/youtube";
 # Working Memory
 [EN] Source: https://mastra.ai/en/docs/memory/working-memory
 
-While [conversation history](/docs/memory/overview#conversation-history) and [semantic recall](./semantic-recall.mdx) help agents remember conversations, working memory allows them to maintain persistent information about users across interactions within a thread.
+While [conversation history](/docs/memory/overview#conversation-history) and [semantic recall](./semantic-recall.mdx) help agents remember conversations, working memory allows them to maintain persistent information about users across interactions.
 
 Think of it as the agent's active thoughts or scratchpad – the key information they keep available about the user or task. It's similar to how a person would naturally remember someone's name, preferences, or important details during a conversation.
 
 This is useful for maintaining ongoing state that's always relevant and should always be available to the agent.
+
+Working memory can persist at two different scopes:
+- **Thread-scoped** (default): Memory is isolated per conversation thread
+- **Resource-scoped**: Memory persists across all conversation threads for the same user
+
+**Important:** Switching between scopes means the agent won't see memory from the other scope - thread-scoped memory is completely separate from resource-scoped memory.
+
 
 ## Quick Start
 
@@ -7117,6 +7160,85 @@ const agent = new Agent({
 Working memory is a block of Markdown text that the agent is able to update over time to store continuously relevant information:
 
 <YouTube id="ik-ld_XA96s" />
+
+## Memory Persistence Scopes
+
+Working memory can operate in two different scopes, allowing you to choose how memory persists across conversations:
+
+### Thread-Scoped Memory (Default)
+
+By default, working memory is scoped to individual conversation threads. Each thread maintains its own isolated memory:
+
+```typescript
+const memory = new Memory({
+  storage,
+  options: {
+    workingMemory: {
+      enabled: true,
+      scope: 'thread', // Default - memory is isolated per thread
+      template: `# User Profile
+- **Name**: 
+- **Interests**: 
+- **Current Goal**: 
+`,
+    },
+  },
+});
+```
+
+**Use cases:**
+- Different conversations about separate topics
+- Temporary or session-specific information
+- Workflows where each thread needs working memory but threads are ephemeral and not related to each other
+
+### Resource-Scoped Memory
+
+Resource-scoped memory persists across all conversation threads for the same user (resourceId), enabling persistent user memory:
+
+```typescript
+const memory = new Memory({
+  storage,
+  options: {
+    workingMemory: {
+      enabled: true,
+      scope: 'resource', // Memory persists across all user threads
+      template: `# User Profile
+- **Name**: 
+- **Location**: 
+- **Interests**: 
+- **Preferences**: 
+- **Long-term Goals**: 
+`,
+    },
+  },
+});
+```
+
+**Use cases:**
+- Personal assistants that remember user preferences
+- Customer service bots that maintain customer context
+- Educational applications that track student progress
+
+### Usage with Agents
+
+When using resource-scoped memory, make sure to pass the `resourceId` parameter:
+
+```typescript
+// Resource-scoped memory requires resourceId
+const response = await agent.generate("Hello!", {
+  threadId: "conversation-123",
+  resourceId: "user-alice-456" // Same user across different threads
+});
+```
+
+## Storage Adapter Support
+
+Resource-scoped working memory requires specific storage adapters that support the `mastra_resources` table:
+
+### ✅ Supported Storage Adapters
+- **LibSQL** (`@mastra/libsql`)
+- **PostgreSQL** (`@mastra/pg`)
+- **Upstash** (`@mastra/upstash`)
 
 ## Custom Templates
 
@@ -7202,6 +7324,61 @@ const paragraphMemory = new Memory({
 });
 ```
 
+## Structured Working Memory
+
+Working memory can also be defined using a structured schema instead of a Markdown template. This allows you to specify the exact fields and types that should be tracked, using a [Zod](https://zod.dev/) schema. When using a schema, the agent will see and update working memory as a JSON object matching your schema.
+
+**Important:** You must specify either `template` or `schema`, but not both.
+
+### Example: Schema-Based Working Memory
+
+```typescript
+import { z } from 'zod';
+import { Memory } from '@mastra/memory';
+
+const userProfileSchema = z.object({
+  name: z.string().optional(),
+  location: z.string().optional(),
+  timezone: z.string().optional(),
+  preferences: z.object({
+    communicationStyle: z.string().optional(),
+    projectGoal: z.string().optional(),
+    deadlines: z.array(z.string()).optional(),
+  }).optional(),
+});
+
+const memory = new Memory({
+  options: {
+    workingMemory: {
+      enabled: true,
+      schema: userProfileSchema,
+      // template: ... (do not set)
+    },
+  },
+});
+```
+
+When a schema is provided, the agent receives the working memory as a JSON object. For example:
+
+```json
+{
+  "name": "Sam",
+  "location": "Berlin",
+  "timezone": "CET",
+  "preferences": {
+    "communicationStyle": "Formal",
+    "projectGoal": "Launch MVP",
+    "deadlines": ["2025-07-01"]
+  }
+}
+```
+
+## Choosing Between Template and Schema
+
+- Use a **template** (Markdown) if you want the agent to maintain memory as a free-form text block, such as a user profile or scratchpad.
+- Use a **schema** if you need structured, type-safe data that can be validated and programmatically accessed as JSON.
+- Only one mode can be active at a time: setting both `template` and `schema` is not supported.
+
 ## Example: Multi-step Retention
 
 Below is a simplified view of how the `User Profile` template updates across a short user
@@ -7241,6 +7418,370 @@ instructions on _how_ and _when_ to use this template in your agent's `instructi
 
 - [Streaming working memory](/examples/memory/streaming-working-memory)
 - [Using a working memory template](/examples/memory/streaming-working-memory-advanced)
+- [Using a working memory schema](/examples/memory/streaming-working-memory-structured)
+- [Per-resource working memory](https://github.com/mastra-ai/mastra/tree/main/examples/memory-per-resource-example) - Complete example showing resource-scoped memory persistence
+
+
+## Complex tasks requiring multiple primitives
+[EN] Source: https://mastra.ai/en/docs/networks-vnext/complex-task-execution
+
+As an example, we have an AgentNetwork with 3 primitives at its disposal:
+
+- `agent1`: A general research agent that can do research on a given topic.
+- `agent2`: A general writing agent that can write a full report based on the researched material.
+- `workflow1`: A workflow that can research a given city and write a full report based on the researched material (using both agent1 and agent2).
+
+We use the `loop` method to create a task that requires multiple primitives. The AgentNetwork will, using memory, figure out which primitives to call and in which order, as well as when the task is complete.
+
+```typescript
+import { NewAgentNetwork } from '@mastra/core/network/vNext';
+import { Agent } from '@mastra/core/agent';
+import { createStep, createWorkflow } from '@mastra/core/workflows';
+import { Memory } from '@mastra/memory';
+import { openai } from '@ai-sdk/openai';
+import { LibSQLStore } from '@mastra/libsql';
+import { z } from 'zod';
+import { RuntimeContext } from '@mastra/core/runtime-context';
+
+const memory = new Memory({
+  storage: new LibSQLStore({
+    url: 'file:../mastra.db', // Or your database URL
+  }),
+});
+
+const agentStep1 = createStep({
+  id: 'agent-step',
+  description: 'This step is used to do research and text synthesis.',
+  inputSchema: z.object({
+    city: z.string().describe('The city to research'),
+  }),
+  outputSchema: z.object({
+    text: z.string(),
+  }),
+  execute: async ({ inputData }) => {
+    const resp = await agent1.generate(inputData.city, {
+      output: z.object({
+        text: z.string(),
+      }),
+    });
+
+    return { text: resp.object.text };
+  },
+});
+
+const agentStep2 = createStep({
+  id: 'agent-step-two',
+  description: 'This step is used to do research and text synthesis.',
+  inputSchema: z.object({
+    text: z.string().describe('The city to research'),
+  }),
+  outputSchema: z.object({
+    text: z.string(),
+  }),
+  execute: async ({ inputData }) => {
+    const resp = await agent2.generate(inputData.text, {
+      output: z.object({
+        text: z.string(),
+      }),
+    });
+
+    return { text: resp.object.text };
+  },
+});
+
+const workflow1 = createWorkflow({
+  id: 'workflow1',
+  description:
+    'This workflow is perfect for researching a specific city. It should be used when you have a city in mind to research.',
+  steps: [],
+  inputSchema: z.object({
+    city: z.string(),
+  }),
+  outputSchema: z.object({
+    text: z.string(),
+  }),
+})
+  .then(agentStep1)
+  .then(agentStep2)
+  .commit();
+
+const agent1 = new Agent({
+  name: 'agent1',
+  instructions:
+    'This agent is used to do research, but not create full responses. Answer in bullet points only and be concise.',
+  description:
+    'This agent is used to do research, but not create full responses. Answer in bullet points only and be concise.',
+  model: openai('gpt-4o'),
+});
+
+const agent2 = new Agent({
+  name: 'agent2',
+  description:
+    'This agent is used to do text synthesis on researched material. Write a full report based on the researched material. Writes reports in full paragraphs. Should be used to synthesize text from different sources together as a final report.',
+  instructions:
+    'This agent is used to do text synthesis on researched material. Write a full report based on the researched material. Do not use bullet points. Write full paragraphs. There should not be a single bullet point in the final report.',
+  model: openai('gpt-4o'),
+});
+
+const network = new NewAgentNetwork({
+  id: 'test-network',
+  name: 'Test Network',
+  instructions:
+    'You are a network of writers and researchers. The user will ask you to research a topic. You always need to answer with a full report. Bullet points are NOT a full report. WRITE FULL PARAGRAPHS like this is a blog post or something similar. You should not rely on partial information.',
+  model: openai('gpt-4o'),
+  agents: {
+    agent1,
+    agent2,
+  },
+  workflows: {
+    workflow1,
+  },
+  memory: memory,
+});
+
+const runtimeContext = new RuntimeContext();
+
+console.log(
+  // specifying the task, note that there is a mention here about using an agent for synthesis. This is because the routing agent can actually do some synthesis on results on its own, so this will force it to use agent2 instead
+  await network.loop(
+    'What are the biggest cities in France? Give me 3. How are they like? Find cities, then do thorough research on each city, and give me a final full report synthesizing all that information. Make sure to use an agent for synthesis.',
+    { runtimeContext },
+  ),
+);
+```
+
+For the given task (research 3 biggest cities in France and write a full report), the AgentNetwork will call the following primitives:
+
+1. `agent1` to find the 3 biggest cities in France.
+2. `workflow1` to research each city one by one. The workflow uses `memory` to figure out which cities have already been researched and makes sure it has researched all of them before proceeding.
+3. `agent2` to synthesize the final report.
+
+### How It Works
+
+- The underlying engine is a Mastra workflow that wraps the single call `generate` workflow.
+- The workflow will repeatedly call the network execution workflow with a `dountil` structure, until the routing model determines the task is complete. This check is used as the `dountil` condition.
+
+
+---
+title: "Handling Complex LLM Operations | Networks | Mastra"
+description: "Networks in Mastra help you execute individual or multiple Mastra primitives in a non-deterministic way using a single API."
+---
+
+# Mastra vNext Agent Network
+[EN] Source: https://mastra.ai/en/docs/networks-vnext/overview
+
+The vNext Agent Network module introduces a flexible, composable and non-deterministic way to orchestrate multiple specialized agents and workflows, enabling complex, reasoning and task completion.
+
+There are two main problem areas that this system is designed to solve:
+
+- Scenarios where a single agent is insufficient, and tasks require collaboration, routing, or sequential/parallel execution across multiple agents and workflows.
+- Scenarios where the task is not fully defined and is initiated with unstructured input. The AgentNetwork can figure out which primitive to call and turn unstructured input into a structured task.
+
+## Differences from Workflows
+
+- Workflows are linear or branched sequences of steps. This creates a deterministic flow of execution.
+- Agent Networks add a layer of non-deterministic LLM-based orchestration, allowing dynamic, multi-agent collaboration and routing. This creates a non-deterministic flow of execution.
+
+## Differences from current experimental implementation
+
+- The current implementation of AgentNetwork relies on tool calls to call other agents in the network. The vNext implementation is using Mastra workflows under the hood to break down the execution to individual tasks.
+- New methods, `.generate()` for a one-off "playbook"-like execution of a single primitive in the network, more suitable for a chat-based interface where you iterate on a solution. The `.loop()` method is still available for more complex tasks and operates much like the current implementation.
+
+## Important details
+
+- Providing memory to the AgentNetwork is _not_ optional when using the `loop` method, as it is required to store the task history. Memory is the core primitive used for any decisions on which primitives to run, as well as determine task completion.
+- Any available primitives (agents, workflows) are used based on their descriptions. The better the description, the better the routing agent will be able to select the right primitive. For workflows, the input schema is also used to determine which inputs to use when calling the workflow. More descriptive naming yields better results.
+- When primitives with overlapping capabilities are available, the routing agent will use the most specific primitive. For example, if both an agent and a workflow can do research, it will use the input schema of the worklfow to determine
+
+## Registering the network in Mastra
+
+```typescript
+const mastra = new Mastra({
+  vnext_networks: {
+    'test-network': network,
+  },
+});
+
+// using the network
+const network = mastra.vnext_getNetwork('test-network');
+
+if (!network) {
+  throw new Error('Network not found');
+}
+
+console.log(await network.generate('What are the biggest cities in France?', { runtimeContext }));
+```
+
+## Using @mastra/client-js
+
+You can use the `@mastra/client-js` package to run the network from the client side.
+
+```typescript
+import { MastraClient } from '@mastra/client-js';
+
+const client = new MastraClient();
+
+const network = client.getVNextNetwork('test-network');
+
+console.log(await network.generate('What are the biggest cities in France?', { runtimeContext }));
+```
+
+You can also stream the response
+
+```typescript
+const stream = await network.stream('What are the biggest cities in France?', { runtimeContext });
+
+for await (const chunk of stream) {
+  console.log(chunk);
+}
+```
+
+And for loops
+
+```typescript
+console.log(
+  // specifying the task, note that there is a mention here about using an agent for synthesis. This is because the routing agent can actually do some synthesis on results on its own, so this will force it to use agent2 instead
+  await network.loop(
+    'What are the biggest cities in France? Give me 3. How are they like? Find cities, then do thorough research on each city, and give me a final full report synthesizing all that information. Make sure to use an agent for synthesis.',
+    { runtimeContext },
+  ),
+);
+```
+
+
+
+## Unstructured input to structured task
+[EN] Source: https://mastra.ai/en/docs/networks-vnext/single-task-execution
+
+As an example, we have an AgentNetwork with 3 primitives at its disposal:
+
+- `agent1`: A general research agent that can do research on a given topic.
+- `agent2`: A general writing agent that can write a full report based on the researched material.
+- `workflow1`: A workflow that can research a given city and write a full report based on the researched material (using both agent1 and agent2).
+
+The AgentNetwork is able to route the task to the most appropriate primitive based on the task and the context.
+To ask the AgentNetwork to act on unstructured (text) input, we can use the `generate` method.
+
+```typescript
+import { NewAgentNetwork } from '@mastra/core/network/vNext';
+import { Agent } from '@mastra/core/agent';
+import { createStep, createWorkflow } from '@mastra/core/workflows';
+import { Memory } from '@mastra/memory';
+import { openai } from '@ai-sdk/openai';
+import { LibSQLStore } from '@mastra/libsql';
+import { z } from 'zod';
+import { RuntimeContext } from '@mastra/core/runtime-context';
+
+const memory = new Memory({
+  storage: new LibSQLStore({
+    url: 'file:../mastra.db', // Or your database URL
+  }),
+});
+
+const agent1 = new Agent({
+  name: 'agent1',
+  instructions:
+    'This agent is used to do research, but not create full responses. Answer in bullet points only and be concise.',
+  description:
+    'This agent is used to do research, but not create full responses. Answer in bullet points only and be concise.',
+  model: openai('gpt-4o'),
+});
+
+const agent2 = new Agent({
+  name: 'agent2',
+  description: 'This agent is used to do text synthesis on researched material. It writes articles in full paragraphs.',
+  instructions:
+    'This agent is used to do text synthesis on researched material. Write a full report based on the researched material. Do not use bullet points. Write full paragraphs. There should not be a single bullet point in the final report. You write articles.',
+  model: openai('gpt-4o'),
+});
+
+const agentStep1 = createStep({
+  id: 'agent-step',
+  description: 'This step is used to do research and text synthesis.',
+  inputSchema: z.object({
+    city: z.string().describe('The city to research'),
+  }),
+  outputSchema: z.object({
+    text: z.string(),
+  }),
+  execute: async ({ inputData }) => {
+    const resp = await agent1.generate(inputData.city, {
+      output: z.object({
+        text: z.string(),
+      }),
+    });
+
+    return { text: resp.object.text };
+  },
+});
+
+const agentStep2 = createStep({
+  id: 'agent-step-two',
+  description: 'This step is used to do research and text synthesis.',
+  inputSchema: z.object({
+    text: z.string().describe('The city to research'),
+  }),
+  outputSchema: z.object({
+    text: z.string(),
+  }),
+  execute: async ({ inputData }) => {
+    const resp = await agent2.generate(inputData.text, {
+      output: z.object({
+        text: z.string(),
+      }),
+    });
+
+    return { text: resp.object.text };
+  },
+});
+
+const workflow1 = createWorkflow({
+  id: 'workflow1',
+  description: 'This workflow is perfect for researching a specific city.',
+  steps: [],
+  inputSchema: z.object({
+    city: z.string(),
+  }),
+  outputSchema: z.object({
+    text: z.string(),
+  }),
+})
+  .then(agentStep1)
+  .then(agentStep2)
+  .commit();
+
+const network = new NewAgentNetwork({
+  id: 'test-network',
+  name: 'Test Network',
+  instructions:
+    'You can research cities. You can also synthesize research material. You can also write a full report based on the researched material.',
+  model: openai('gpt-4o'),
+  agents: {
+    agent1,
+    agent2,
+  },
+  workflows: {
+    workflow1,
+  },
+  memory: memory,
+});
+
+const runtimeContext = new RuntimeContext();
+
+// This will call agent1, as the workflow is meant to be used with individual cities. The best primitive according to the routing agent is thus agent1 which is a general research primitive.
+console.log(await network.generate('What are the biggest cities in France? How are they like?', { runtimeContext }));
+// This will call workflow1, as it is the most suitable primitive according to the routing agent when researching individual cities.
+console.log(await network.generate('Tell me more about Paris', { runtimeContext }));
+```
+
+The AgentNetwork will call the most appropriate primitive based on the task and the context. In the case of researching specific cities, it can figure out how to turn unstructured input into structured workflow inputs based on the workflow's input schema and description. It also knows, that for any other research topic, `agent1` is likely the most appropriate primitive.
+
+### How It Works
+
+- The underlying engine is a Mastra workflow.
+- As a first step, the network uses a **routing agent** to decide which agent or workflow should handle each step.
+- The routing agent will generate a prompt and or structured input for the selected primitive.
+- The next step in the workflow is a `.branch()` that will select the right primitive, calling either an agent step or a workflow step with the input generated by the routing agent.
 
 
 ---
@@ -7346,7 +7887,7 @@ npm install @opentelemetry/api langfuse-vercel
 import {
   NodeSDK,
   ATTR_SERVICE_NAME,
-  Resource,
+  resourceFromAttributes,
 } from "@mastra/core/telemetry/otel-vendor";
 import { LangfuseExporter } from "langfuse-vercel";
 
@@ -7356,7 +7897,7 @@ export function register() {
   });
 
   const sdk = new NodeSDK({
-    resource: new Resource({
+    resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: "ai",
     }),
     traceExporter: exporter,
@@ -8470,22 +9011,19 @@ await store.upsert({
   ```ts filename="vector-store.ts" showLineNumbers copy
   import { UpstashVector } from '@mastra/upstash'
 
+  // In upstash they refer to the store as an index
   const store = new UpstashVector({
     url: process.env.UPSTASH_URL,
     token: process.env.UPSTASH_TOKEN
   })
 
-  await store.createIndex({
-    indexName: "myCollection",
-    dimension: 1536,
-  });
-
+  // There is no store.createIndex call here, Upstash creates indexes (known as namespaces in Upstash) automatically
+  // when you upsert if that namespace does not exist yet.
   await store.upsert({
-    indexName: "myCollection",
+    indexName: "myCollection", // the namespace name in Upstash
     vectors: embeddings,
     metadata: chunks.map(chunk => ({ text: chunk.text })),
   });
-
 ```
 </Tabs.Tab>
 
@@ -8836,7 +9374,7 @@ Each tab includes detailed column information with types, constraints, and examp
 The data types include Messages, Threads, Workflows, Eval Datasets, and Traces.
 */}
 
-<Tabs items={['Messages', 'Threads', 'Workflows', 'Eval Datasets', 'Traces']}>
+<Tabs items={['Messages', 'Threads', 'Resources', 'Workflows', 'Eval Datasets', 'Traces']}>
   <Tabs.Tab>
 Stores conversation messages and their metadata. Each message belongs to a thread and contains the actual content along with metadata about the sender role and message type.
 
@@ -8992,6 +9530,55 @@ Groups related messages together and associates them with a resource. Contains m
     }
   ]}
 />
+
+</Tabs.Tab>
+  <Tabs.Tab>
+Stores user-specific data for resource-scoped working memory. Each resource represents a user or entity, allowing working memory to persist across all conversation threads for that user.
+
+<br />
+<SchemaTable
+  columns={[
+    {
+      name: "id",
+      type: "text",
+      description: "Resource identifier (user or entity ID) - same as resourceId used in threads and agent calls",
+      constraints: [
+        { type: "primaryKey" },
+        { type: "nullable", value: false }
+      ]
+    },
+    {
+      name: "workingMemory",
+      type: "text",
+      description: "Persistent working memory data as Markdown text. Contains user profile, preferences, and contextual information that persists across conversation threads.",
+      constraints: [{ type: "nullable", value: true }]
+    },
+    {
+      name: "metadata",
+      type: "jsonb",
+      description: "Additional resource metadata as JSON. Example:",
+      example: {
+        preferences: { language: "en", timezone: "UTC" },
+        tags: ["premium", "beta-user"]
+      },
+      constraints: [{ type: "nullable", value: true }]
+    },
+    {
+      name: "createdAt",
+      type: "timestamp",
+      description: "When the resource record was first created",
+      constraints: [{ type: "nullable", value: false }]
+    },
+    {
+      name: "updatedAt",
+      type: "timestamp",
+      description: "When the working memory was last updated",
+      constraints: [{ type: "nullable", value: false }]
+    }
+  ]}
+/>
+
+**Note**: This table is only created and used by storage adapters that support resource-scoped working memory (LibSQL, PostgreSQL, Upstash). Other storage adapters will provide helpful error messages if resource-scoped memory is attempted.
 
 </Tabs.Tab>
   <Tabs.Tab>
@@ -9814,6 +10401,58 @@ const server = new MCPServer({
 
 For an agent to be exposed as a tool, it must have a non-empty `description` string. Similarly, for a workflow to be exposed, its `description` must also be a non-empty string. If the description is missing or empty for either, `MCPServer` will throw an error during initialization.
 Workflows will use their `inputSchema` for the tool's input.
+
+### Tools with Structured Outputs
+
+You can define an `outputSchema` for your tools to enforce a specific structure for the tool's output. This is useful for ensuring that the tool returns data in a consistent and predictable format, which can then be validated by the client.
+
+When a tool includes an `outputSchema`, its `execute` function **must** return an object containing a `structuredContent` property. The value of `structuredContent` must conform to the `outputSchema`. Mastra will automatically validate this output on both the server and client sides.
+
+Here's an example of a tool with an `outputSchema`:
+
+```typescript filename="src/tools/structured-tool.ts"
+import { createTool } from '@mastra/core';
+import { z } from 'zod';
+
+export const structuredTool = createTool({
+  description: 'A test tool that returns structured data.',
+  parameters: z.object({
+    input: z.string().describe('Some input string.'),
+  }),
+  outputSchema: z.object({
+    processedInput: z.string().describe('The processed input string.'),
+    timestamp: z.string().describe('An ISO timestamp.'),
+  }),
+  execute: async ({ input }) => {
+    // When outputSchema is defined, you must return a structuredContent object
+    return {
+      structuredContent: {
+        processedInput: `processed: ${input}`,
+        timestamp: new Date().toISOString(),
+      },
+    };
+  },
+});
+```
+
+When this tool is called, the MCP client will receive both the structured data and a text representation of it.
+
+```
+Tool result
+
+{
+  "content": [
+    {
+      "type": "text",
+      "text": "{\"processedInput\": \"hello\", \"timestamp\": \"2025-06-19T16:53:16.472Z\"}"
+    }
+  ],
+  "structuredContent": {
+    "processedInput": "processed: hello",
+    "timestamp": "2025-06-19T16:53:16.472Z",
+  }
+}
+```
 
 For detailed usage and examples, see the [`MCPServer` reference documentation](/reference/tools/mcp-server).
 
@@ -11030,27 +11669,16 @@ When you build a workflow, you typically break down operations into smaller task
 
 Chain steps to execute in sequence using `.then()`:
 
-```typescript {18,19,20} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+```typescript {8-9} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 const step1 = createStep({...});
 const step2 = createStep({...});
-const step3 = createStep({...});
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.object({
-    number: z.number()
-  }),
-  outputSchema: z.object({
-    number: z.number()
-  })
-})
+export const testWorkflow = createWorkflow({...})
   .then(step1)
   .then(step2)
-  .then(step3)
   .commit();
 ```
 
@@ -11058,55 +11686,34 @@ export const testWorkflow = createWorkflow({
 
 Execute steps in parallel using `.parallel()`:
 
-
-```typescript {18} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+```typescript {8} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 const step1 = createStep({...});
 const step2 = createStep({...});
-const step3 = createStep({...});
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.object({
-    number: z.number()
-  }),
-  outputSchema: z.object({
-    number: z.number()
-  })
-})
+export const testWorkflow = createWorkflow({...})
   .parallel([step1, step2])
-  .then(step3)
   .commit();
 ```
 
 This executes all steps in the array concurrently, then continues to the next step after all parallel steps complete.
 
+> See [Parallel Execution with Steps](/examples/workflows/parallel-steps) for more information.
+
 ## Branch
 
 Create conditional branches using `.branch()`:
 
-```typescript {19-22} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+```typescript {8-11} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
-const step1 = createStep({...});
 const lessThanStep = createStep({...});
 const greaterThanStep = createStep({...});
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.object({
-    number: z.number()
-  }),
-  outputSchema: z.object({
-    number: z.number()
-  })
-})
-  .then(step1)
+export const testWorkflow = createWorkflow({...})
   .branch([
     [async ({ inputData: { some_value } }) => some_value <= 9, lessThanStep],
     [async ({ inputData: { some_value } }) => some_value >= 10, greaterThanStep]
@@ -11115,6 +11722,8 @@ export const testWorkflow = createWorkflow({
 ```
 
 Branch conditions are evaluated sequentially, but steps with matching conditions are executed in parallel.
+
+> See [Workflow with Conditional Branching](/examples/workflows/conditional-branching) for more information.
 
 ## Loops
 
@@ -11130,27 +11739,14 @@ To ensure compatibility, the loop’s initial input must either:
 
 Executes a step repeatedly while a condition is true.
 
-```typescript {19} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+```typescript {7} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
-const step1 = createStep({...});
 const counterStep = createStep({...});
-const finalStep = createStep({...});
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.object({
-    number: z.number()
-  }),
-  outputSchema: z.object({
-    number: z.number()
-  })
-})
-  .then(step1)
+export const testWorkflow = createWorkflow({...})
   .dowhile(counterStep, async ({ inputData: { number } }) => number < 10)
-  .then(finalStep)
   .commit();
 ```
 
@@ -11158,66 +11754,74 @@ export const testWorkflow = createWorkflow({
 
 Executes a step repeatedly until a condition becomes true.
 
-```typescript {19} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+```typescript {7} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
-const step1 = createStep({...});
 const counterStep = createStep({...});
-const finalStep = createStep({...});
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.object({
-    number: z.number()
-  }),
-  outputSchema: z.object({
-    number: z.number()
-  })
-})
-  .then(step1)
+export const testWorkflow = createWorkflow({...})
   .dountil(counterStep, async ({ inputData: { number } }) => number > 10)
-  .then(finalStep)
   .commit();
 ```
 
 
 ### Foreach
 
-Sequentially executes the same step for each item in the `inputData` array.
+Sequentially executes the same step for each item from the `inputSchema`.
 
-```typescript {27} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
-const mapStep = createStep({
-  id: "map-step",
-  description: "Adds 100 on the input number",
-  inputSchema: z.object({
-    number: z.number()
-  }),
-  outputSchema: z.object({
-    number: z.number()
-  }),
-  execute: async ({ inputData }) => {
-    const { number } = inputData;
+```typescript {7} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+import { createWorkflow, createStep } from "@mastra/core/workflows";
+import { z } from "zod";
 
-    return {
-      number: number + 100
-    };
-  }
-});
+const mapStep = createStep({...});
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.array(z.object({ number: z.number() })),
-  outputSchema: z.object({
-    number: z.number()
-  })
-})
+export const testWorkflow = createWorkflow({...})
   .foreach(mapStep)
   .commit();
 ```
 
+### Early exit
+
+You can bail out of a workflow execution successfully by calling `bail()` in a step. This returns whatever payload is passed to the `bail()` function as the result of the workflow.
+
+```typescript {7} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+import { createWorkflow, createStep } from "@mastra/core/workflows";
+import { z } from "zod";
+
+const step1 = createStep({
+  id: 'step1',
+  execute: async ({ bail, inputData }) => {
+    return bail({ result: 'bailed' });
+  },
+  inputSchema: z.object({ value: z.string() }),
+  outputSchema: z.object({ result: z.string() }),
+});
+
+export const testWorkflow = createWorkflow({...})
+  .then(step1)
+  .commit();
+```
+
+Unsuccessful bails happen through throwing an error in the step.
+
+```typescript {7} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+import { createWorkflow, createStep } from "@mastra/core/workflows";
+import { z } from "zod";
+
+const step1 = createStep({
+  id: 'step1',
+  execute: async ({ bail, inputData }) => {
+    throw new Error('bailed');
+  },
+  inputSchema: z.object({ value: z.string() }),
+  outputSchema: z.object({ result: z.string() }),
+});
+
+export const testWorkflow = createWorkflow({...})
+  .then(step1)
+  .commit();
+```
 #### Example Run Instance
 
 The following example demonstrates how to start a run with multiple inputs. Each input will pass through the `mapStep` sequentially.
@@ -11225,7 +11829,7 @@ The following example demonstrates how to start a run with multiple inputs. Each
 ```typescript {6} filename="src/test-workflow.ts" showLineNumbers copy
 import { mastra } from "./mastra";
 
-const run = mastra.getWorkflow("testWorkflow").createRun();
+const run = await mastra.getWorkflow("testWorkflow").createRunAsync();
 
 const result = await run.start({
   inputData: [{ number: 10 }, { number: 100 }, { number: 200 }]
@@ -11242,17 +11846,13 @@ npx tsx src/test-workflow.ts
 
 Optionally, using `concurrency` allows you to execute steps in parallel with a limit on the number of concurrent executions.
 
-```typescript {11} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+```typescript {7} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+import { createWorkflow, createStep } from "@mastra/core/workflows";
+import { z } from "zod";
+
 const mapStep = createStep({...})
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.array(z.object({ number: z.number() })),
-  outputSchema: z.object({
-    number: z.number()
-  })
-})
+export const testWorkflow = createWorkflow({...})
   .foreach(mapStep, { concurrency: 2 })
   .commit();
 ```
@@ -11261,26 +11861,15 @@ export const testWorkflow = createWorkflow({
 
 Workflows themselves can also be executed in parallel.
 
-```typescript {4,5,18} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+```typescript {4-5,8} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 const workflow1 = createWorkflow({...});
 const workflow2 = createWorkflow({...});
-const finalStep = createStep({...});
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.object({
-    number: z.number()
-  }),
-  outputSchema: z.object({
-    number: z.number()
-  })
-})
+export const testWorkflow = createWorkflow({...})
   .parallel([workflow1, workflow2])
-  .then(finalStep)
   .commit();
 ```
 
@@ -11291,35 +11880,13 @@ Parallel steps receive previous step results as input. Their outputs are passed 
 In the example below, `nestedWorkflow` is used as a step within `testWorkflow`. The `testWorkflow` uses `step1` whilst the `nestedWorkflow` composes `step2` and `step3`
 
 
-```typescript {5,29} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
-const step1 = createStep({...});
-const step2 = createStep({...});
-const step3 = createStep({...});
+```typescript {4,7} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+import { createWorkflow, createStep } from "@mastra/core/workflows";
+import { z } from "zod";
 
-export const nestedWorkflow = createWorkflow({
-  id: "nested-workflow",
-  inputSchema: z.object({
-    number: z.number()
-  }),
-  outputSchema: z.object({
-    number: z.number()
-  })
-})
-  .then(step2)
-  .then(step3)
-  .commit();
+export const nestedWorkflow = createWorkflow({...})
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.object({
-    number: z.number()
-  }),
-  outputSchema: z.object({
-    number: z.number()
-  })
-})
-  .then(step1)
+export const testWorkflow = createWorkflow({...})
   .then(nestedWorkflow)
   .commit();
 ```
@@ -11331,31 +11898,18 @@ When using `.branch()` or `.parallel()` to build more complex control flows, exe
 
 In the example below, `clonedWorkflow` is a clone of `workflow1` and is used as a step within `testWorkflow`. The `clonedWorkflow` is run sequentially after `step1`.
 
-```typescript {6,20} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
-import { createWorkflow, createStep } from "@mastra/core/workflows";
+```typescript {5,9} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+import { createWorkflow, createStep, cloneWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
 const step1 = createStep({...});
-const workflow1 = createWorkflow({...});
-const clonedWorkflow = cloneWorkflow(workflow1, { id: "cloned-workflow" });
-const finalStep = createStep({...});
+const clonedWorkflow = cloneWorkflow(step1, { id: "cloned-workflow" });
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.object({
-    number: z.number()
-  }),
-  outputSchema: z.object({
-    number: z.number()
-  })
-})
+export const testWorkflow = createWorkflow({...})
   .then(step1)
   .then(clonedWorkflow)
-  .then(finalStep)
   .commit();
 ```
-
 
 
 ---
@@ -11524,7 +12078,7 @@ export const mastra = new Mastra({
 ```sh
 docker run --rm -p 8288:8288 \
   inngest/inngest \
-  inngest dev -u http://host.docker.internal:4111/inngest/api
+  inngest dev -u http://host.docker.internal:4111/api/inngest
 ```
 
 > **Note:** The URL after `-u` tells the Inngest dev server where to find your Mastra `/api/inngest` endpoint.
@@ -11655,70 +12209,30 @@ Input data mapping allows explicit mapping of values for the inputs of the next 
 
 ## Map
 
-In this example the `output` from `cityCoordinatesStep` is transformed to match the `inputSchema` required for the `locationDetailsStep`. The values from the `cityCoordinatesStep` are available using the `inputData` parameter of the `.map` function.
+In this example the `output` from `step1` is transformed to match the `inputSchema` required for the `step2`. The value from `step1` is available using the `inputData` parameter of the `.map` function.
 
-```typescript {7-10,31,54,58} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
-const cityCoordinatesStep = createStep({
-  id: "city-step",
-  description: "Gets details about a city",
-  inputSchema: z.object({
-    city: z.string()
-  }),
-  outputSchema: z.object({
-    city_name: z.string(),
-    country_name: z.string(),
-    country_timezone: z.string()
-  }),
-  execute: async ({ inputData }) => {
-    const { city } = inputData;
-    const geocodingResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}`);
-    const geocodingData = await geocodingResponse.json();
-
-    const { name, country, timezone } = geocodingData.results[0];
-
-    return {
-      city_name: name,
-      country_name: country,
-      country_timezone: timezone
-    };
-  }
-});
-
-const locationDetailsStep = createStep({
-  id: "location-step",
-  description: "Display location details",
-  inputSchema: z.object({
-    details: z.string()
-  }),
-  outputSchema: z.object({
-    outcome: z.string()
-  }),
-  execute: async ({ inputData }) => {
-    const { details } = inputData;
-    return {
-      outcome: details
-    };
-  }
-});
+```typescript {18} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+const step1 = createStep({...});
+const step2 = createStep({...});
 
 export const testWorkflow = createWorkflow({
   id: "test-workflow",
   description: 'Test workflow',
   inputSchema: z.object({
-    city: z.string()
+    input: z.number()
   }),
   outputSchema: z.object({
-    outcome: z.string()
+    output: z.string()
   })
 })
-  .then(cityCoordinatesStep)
+  .then(step1)
   .map(({ inputData }) => {
-    const { city_name, country_name, country_timezone } = inputData;
+    const { value } = inputData;
     return {
-      details: `${city_name}, ${country_name}, ${country_timezone}`
+      output: `${value}`
     };
   })
-  .then(locationDetailsStep)
+  .then(step2)
   .commit();
 ```
 
@@ -11728,7 +12242,7 @@ Use `inputData` to access the full output of the previous step:
 
 ```typescript {2} showLineNumbers
   .map(({ inputData }) => {
-    const { city_name, country_name, country_timezone } = inputData;
+    const { value} = inputData;
     ...
   })
 ```
@@ -11738,21 +12252,11 @@ Use `inputData` to access the full output of the previous step:
 Use `getStepResult` to access the full output of a specific step by referencing the step's instance:
 
 ```typescript {3} showLineNumbers
-  .then(cityCoordinatesStep)
+  .then(step1)
   .map(({ getStepResult }) => {
-    console.log(getStepResult(cityCoordinatesStep));
+    console.log(getStepResult(step1));
     ...
   })
-```
-
-The above log would produce an output similar to the below:
-
-```typescript showLineNumbers
-{
-  city_name: 'London',
-  country_name: 'United Kingdom',
-  country_timezone: 'Europe/London'
-}
 ```
 
 ### getInitData
@@ -11760,38 +12264,27 @@ The above log would produce an output similar to the below:
 Use `getInitData` to access the initial input data provided to the workflow:
 
 ```typescript {3} showLineNumbers
-  .then(cityCoordinatesStep)
+  .then(step1)
   .map(({ getInitData }) => {
       console.log(getInitData());
     ...
   })
 ```
 
-The above log would produce an output similar to the below:
-
-```typescript showLineNumbers
-{ city: 'London' }
-```
 ## Renaming Outputs
 
 ### Step Outputs
 
-You can rename step outputs using the object syntax in `.map()`. In the example below, the `city_name` output from `cityCoordinatesStep` is renamed to `details`:
+You can rename step outputs using the object syntax in `.map()`. In the example below, the `value` output from `step1` is renamed to `details`:
 
 ```typescript {3} showLineNumbers
-  .then(cityCoordinatesStep)
+  .then(step)
   .map({
-    details: {
-      step: cityCoordinatesStep,
-      path: "city_name"
-    }
+    details: mapVariable({
+      step: step,
+      path: "value"
+    })
   })
-```
-
-The output would be similar to the below:
-
-```typescript showLineNumbers
-{ details: 'London' }
 ```
 
 ### Workflow Outputs
@@ -11803,27 +12296,21 @@ export const testWorkflow = createWorkflow({
   id: "test-workflow",
   description: 'Test workflow',
   inputSchema: z.object({
-    city: z.string()
+    input: z.string()
   }),
   outputSchema: z.object({
-    outcome: z.string()
+    output: z.string()
   })
 });
 
 testWorkflow
   .then(cityCoordinatesStep)
   .map({
-    details: {
+    details: mapVariable({
       initData: testWorkflow,
-      path: "city"
-    }
+      path: "value"
+    })
   })
-```
-
-The output would be similar to the below:
-
-```typescript showLineNumbers
-{ details: 'London' }
 ```
 
 
@@ -11863,59 +12350,37 @@ import { z } from "zod";
 
 Steps are the building blocks of workflows. Create a step using `createStep`:
 
-```typescript {1} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
-const cityCoordinatesStep = createStep({
-  id: "city-step",
-  description: "Gets coordinates for city",
-  inputSchema: z.object({
-    city: z.string()
-  }),
-  outputSchema: z.object({
-    city_name: z.string(),
-    city_latitude: z.number(),
-    city_longitude: z.number()
-  }),
-  execute: async ({ inputData }) => {
-    const { city } = inputData;
-    const geocodingResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}`);
-    const geocodingData = await geocodingResponse.json();
-
-    const { name, latitude, longitude } = geocodingData.results[0];
-
-    return {
-      city_name: name,
-      city_latitude: latitude,
-      city_longitude: longitude
-    };
-  }
-});
+```typescript filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+const step1 = createStep({...});
 ```
 
 > See [createStep](/reference/workflows/step) for more information.
 
 ### Create Workflow
 
-Create a workflow using `createWorkflow`. End a workflow using `.commit()`.
+Create a workflow using `createWorkflow` and complete it with `.commit()`.
 
 ```typescript {6,17} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
-const cityCoordinatesStep = createStep({...});
+const step1 = createStep({...});
 
 export const testWorkflow = createWorkflow({
   id: "test-workflow",
   description: 'Test workflow',
   inputSchema: z.object({
-    city: z.string()
+    input: z.string()
   }),
   outputSchema: z.object({
-    outcome: z.string()
+    output: z.string()
   })
 })
-  .then(cityCoordinatesStep)
+  .then(step1)
   .commit();
 ```
+
+> See [workflow](/reference/workflows/workflow) for more information.
 
 #### Composing Steps
 
@@ -11925,21 +12390,21 @@ Workflow steps can be composed and executed sequentially using `.then()`.
 import { createWorkflow, createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
-const cityCoordinatesStep = createStep({...});
-const cityWeatherStep = createStep({...});
+const step1 = createStep({...});
+const step2 = createStep({...});
 
 export const testWorkflow = createWorkflow({
   id: "test-workflow",
   description: 'Test workflow',
   inputSchema: z.object({
-    city: z.string()
+    input: z.string()
   }),
   outputSchema: z.object({
-    outcome: z.string()
+    output: z.string()
   })
 })
-  .then(cityCoordinatesStep)
-  .then(cityWeatherStep)
+  .then(step1)
+  .then(step2)
   .commit();
 ```
 
@@ -11951,26 +12416,26 @@ export const testWorkflow = createWorkflow({
 Workflow steps can be cloned using `cloneStep()`, and used with any workflow method.
 
 ```typescript {5,19} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
-import { createWorkflow, createStep } from "@mastra/core/workflows";
+import { createWorkflow, createStep, cloneStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
-const cityCoordinatesStep = createStep({...});
-const clonedStep = cloneStep(cityCoordinatesStep, { id: "cloned-step" });
-const cityWeatherStep = createStep({...});
+const step1 = createStep({...});
+const clonedStep = cloneStep(step1, { id: "cloned-step" });
+const step2 = createStep({...});
 
 export const testWorkflow = createWorkflow({
   id: "test-workflow",
   description: 'Test workflow',
   inputSchema: z.object({
-    city: z.string()
+    input: z.string()
   }),
   outputSchema: z.object({
-    outcome: z.string()
+    output: z.string()
   })
 })
-  .then(cityCoordinatesStep)
+  .then(step1)
   .then(clonedStep)
-  .then(cityWeatherStep)
+  .then(step2)
   .commit();
 ```
 
@@ -12009,12 +12474,12 @@ With the Mastra Dev Server running you can run the workflow from the Mastra Play
 
 #### Command line
 
-Create a run instance of any Mastra workflow using `createRun` and `start`:
+Create a run instance of any Mastra workflow using `createRunAsync` and `start`:
 
 ```typescript {3,5} filename="src/test-workflow.ts" showLineNumbers copy
 import { mastra } from "./mastra";
 
-const run = mastra.getWorkflow("testWorkflow").createRun();
+const run = await mastra.getWorkflow("testWorkflow").createRunAsync();
 
 const result = await run.start({
   inputData: {
@@ -12024,7 +12489,7 @@ const result = await run.start({
 
 console.log(JSON.stringify(result, null, 2));
 ```
-> see [createRun](/reference/workflows/create-run) and [start](/reference/workflows/start) for more information.
+> see [createRunAsync](/reference/workflows/create-run-async) and [start](/reference/workflows/start) for more information.
 
 To trigger this workflow, run the following:
 
@@ -12034,6 +12499,74 @@ npx tsx src/test-workflow.ts
 
 </Steps>
 
+#### Run Workflow Results
+
+The result of running a workflow using either `start()` or `resume()` will look like one of the following, depending on the outcome.
+
+##### Status success
+
+```json
+{
+  "status": "success",
+  "steps": {
+    // ...
+    "step-1": {
+      // ...
+      "status": "success",
+    }
+  },
+  "result": {
+    "output": "London + step-1"
+  }
+}
+```
+
+- **status**: Shows the final state of the workflow execution, either: `success`, `suspended`, or `error`
+- **steps**: Lists each step in the workflow, including inputs and outputs
+- **status**: Shows the outcome of each individual step
+- **result**: Includes the final output of the workflow, typed according to the `outputSchema`
+
+
+##### Status suspended
+
+```json
+{
+  "status": "suspended",
+  "steps": {
+    // ...
+    "step-1": {
+      // ...
+      "status": "suspended",
+    }
+  },
+  "suspended": [
+    [
+      "step-1"
+    ]
+  ]
+}
+```
+
+- **suspended**: An optional array listing any steps currently awaiting input before continuing
+
+##### Status failed
+
+```json
+{
+  "status": "failed",
+  "steps": {
+    // ...
+    "step-1": {
+      // ...
+      "status": "failed",
+      "error": "Test error",
+    }
+  },
+  "error": "Test error"
+}
+```
+- **error**: An optional field that includes the error message if the workflow fails
+
 ### Stream Workflow
 
 Similar to the run method shown above, workflows can also be streamed:
@@ -12041,7 +12574,7 @@ Similar to the run method shown above, workflows can also be streamed:
 ```typescript {5} filename="src/test-workflow.ts" showLineNumbers copy
 import { mastra } from "./mastra";
 
-const run = mastra.getWorkflow("testWorkflow").createRun();
+const run = await mastra.getWorkflow("testWorkflow").createRunAsync();
 
 const result = await run.stream({
   inputData: {
@@ -12054,7 +12587,7 @@ for await (const chunk of result.stream) {
 }
 ```
 
-> See [stream](/reference/workflows/stream) and [messages](reference/workflows/stream#messages) for more information.
+> See [stream](/reference/workflows/stream) and [messages](/reference/workflows/stream#messages) for more information.
 
 ### Watch Workflow
 
@@ -12063,7 +12596,7 @@ A workflow can also be watched, allowing you to inspect each event that is emitt
 ```typescript {5} filename="src/test-workflow.ts" showLineNumbers copy
 import { mastra } from "./mastra";
 
-const run = mastra.getWorkflow("testWorkflow").createRun();
+const run = await mastra.getWorkflow("testWorkflow").createRunAsync();
 
 run.watch((event) => {
   console.log(event);
@@ -12090,6 +12623,67 @@ const result = await run.start({
 
 
 
+---
+title: "Pausing Execution | Mastra Docs"
+description: "Pausing execution in Mastra workflows allows you to pause execution while waiting for external input or resources via .sleep(), .sleepUntil() and .waitForEvent()."
+---
+
+# Sleep & Events
+[EN] Source: https://mastra.ai/en/docs/workflows/pausing-execution
+
+Pausing execution in Mastra workflows allows you to pause execution while waiting for external input or resources via `sleep()`, `sleepUntil()` and `waitForEvent()`.
+
+This sets the workflow status to `waiting`.
+
+## sleep()
+
+`sleep()` pauses execution for a specified number of milliseconds.
+
+```typescript
+workflow
+    .then(step1)
+    .sleep(1000)
+    .then(step2)
+    .commit();
+```
+
+## sleepUntil()
+
+`sleepUntil()` pauses execution until a specified date.
+
+```typescript
+workflow
+    .then(step1)
+    .sleepUntil(new Date(Date.now() + 1000))
+    .then(step2)
+    .commit();
+```
+
+## waitForEvent()
+
+`waitForEvent()` pauses execution until an event is received. Events can be sent to the workflow using `run.sendEvent()`. The event name and the step to resume after the event is received are provided as arguments to `waitForEvent()`.
+
+`.sendEvent()` takes as arguments the event name and the event data. The event data is optional and can be any JSON-serializable value.
+
+```typescript
+workflow
+    .then(step1)
+    .waitForEvent('my-event-name', step2)
+    .then(step3)
+    .commit();
+
+const run = await workflow.createRunAsync()
+run.start({})
+
+setTimeout(() => {
+    run.sendEvent('my-event-name', {
+        data1: 'hello',
+        data2: {
+            anyData: 12
+        }
+    })
+}, 2e3)
+```
 
 ---
 title: "Suspend & Resume Workflows | Human-in-the-Loop | Mastra Docs"
@@ -12121,87 +12715,118 @@ When running a workflow, its `status` can be one of the following:
 
 ## Suspend
 
-When the state is `suspended`, you can identify any and all steps that have been suspended by looking at the `suspended` array of the workflow.
-
+When the state is `suspended`, you can identify any and all steps that have been suspended by looking at the `suspended` array of the workflow result output.
 
 ```typescript {17} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
-const cityCoordinatesStep = createStep({
-  id: "city-step",
-  description: "Gets details about a city",
+const step1 = createStep({
+  id: "step-1",
+  description: "Test suspend",
   inputSchema: z.object({
-    suggestions: z.array(z.string())
+    input: z.string()
   }),
+  outputSchema: z.object({
+    output: z.string()
+  }),
+  suspendSchema: z.object({}),
   resumeSchema: z.object({
     city: z.string()
   }),
-  outputSchema: z.object({
-    outcome: z.string()
-  }),
   execute: async ({ resumeData, suspend }) => {
-    const { city } = resumeData ?? {};
-
-    if (!city) {
+    if (!(resumeData ?? {}).city) {
       await suspend({});
-      return {
-        outcome: ""
-      };
+      return { output: "" };
     }
 
-    const geocodingResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}`);
-    const geocodingData = await geocodingResponse.json();
-
-    const { name, country, timezone } = geocodingData.results[0];
-
     return {
-      outcome: `${name} | ${country} | ${timezone}`
+      output: ""
     };
   }
 });
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.object({
-    suggestions: z.array(z.string()),
-  }),
-  outputSchema: z.object({
-    outcome: z.string(),
-  })
-})
-  .then(cityCoordinatesStep)
+export const testWorkflow = createWorkflow({})
+  .then(step1)
   .commit();
-
 ```
 
-## Resume
+> See [Define Suspendable workflow](/examples/workflows/human-in-the-loop#define-suspendable-workflow) for more information.
 
-A workflow can be resumed by calling `resume` and providing the required `resumeData`.
+### Identifying Suspended steps
 
-```typescript {6,12,13,14} filename="src/test-workflow.ts" showLineNumbers copy
+To resume a suspended workflow, inspect the `suspended` array in the result to determine which step needs input:
+
+```typescript {15} filename="src/test-workflow.ts" showLineNumbers copy
 import { mastra } from "./mastra";
 
-const run = mastra.getWorkflow("testWorkflow").createRun();
+const run = await mastra.getWorkflow("testWorkflow").createRunAsync();
 
 const result = await run.start({
-  inputData: { suggestions: ["London", "Paris", "New York"] }
+  inputData: {
+    city: "London"
+  }
 });
 
 console.log(JSON.stringify(result, null, 2));
 
 if (result.status === "suspended") {
   const resumedResult = await run.resume({
-    step: 'city-step',
-    resumeData: { city: "New York" }
+    step: result.suspended[0],
+    resumeData: {
+      city: "Berlin"
+    }
+  });
+}
+
+```
+
+In this case, the logic resumes the first step listed in the `suspended` array. A `step` can also be defined using it's `id`, for example: 'step-1'.
+
+```json
+{
+  "status": "suspended",
+  "steps": {
+    // ...
+    "step-1": {
+      // ...
+      "status": "suspended",
+    }
+  },
+  "suspended": [
+    [
+      "step-1"
+    ]
+  ]
+}
+```
+
+> See [Run Workflow Results](/workflows/overview#run-workflow-results) for more details.
+
+## Resume
+
+A workflow can be resumed by calling `resume` and providing the required `resumeData`.
+
+```typescript {16-18} filename="src/test-workflow.ts" showLineNumbers copy
+import { mastra } from "./mastra";
+
+const run = await mastra.getWorkflow("testWorkflow").createRunAsync();
+
+const result = await run.start({
+   inputData: {
+    city: "London"
+  }
+});
+
+console.log(JSON.stringify(result, null, 2));
+
+if (result.status === "suspended") {
+  const resumedResult = await run.resume({
+    step: 'step-1',
+    resumeData: {
+      city: "Berlin"
+    }
   });
 
   console.log(JSON.stringify(resumedResult, null, 2));
 }
-```
-
-To execute this run from your terminal:
-
-```bash copy
-npx tsx src/test-workflow.ts
 ```
 
 ### Nested Workflow
@@ -12209,10 +12834,40 @@ npx tsx src/test-workflow.ts
 To resume a suspended nested workflow pass the workflow instance to the `step` parameter of the `resume` function.
 
 ```typescript {3} filename="src/test-workflow.ts" showLineNumbers copy
+const dowhileWorkflow = createWorkflow({
+  id: 'dowhile-workflow',
+  inputSchema: z.object({ value: z.number() }),
+  outputSchema: z.object({ value: z.number() }),
+})
+  .dountil(
+    createWorkflow({
+      id: 'simple-resume-workflow',
+      inputSchema: z.object({ value: z.number() }),
+      outputSchema: z.object({ value: z.number() }),
+      steps: [incrementStep, resumeStep],
+    })
+      .then(incrementStep)
+      .then(resumeStep)
+      .commit(),
+    async ({ inputData }) => inputData.value >= 10,
+  )
+  .then(
+    createStep({
+      id: 'final',
+      inputSchema: z.object({ value: z.number() }),
+      outputSchema: z.object({ value: z.number() }),
+      execute: async ({ inputData }) => ({ value: inputData.value }),
+    }),
+  )
+  .commit();
+
+const run = await dowhileWorkflow.createRunAsync();
+const result = await run.start({ inputData: { value: 0 } });
+
 if (result.status === "suspended") {
-  const resumedResult = await workflowRun.resume({
-    step: [nestedWorkflow],
-    resumeData: { city: "New York" }
+  const resumedResult = await run.resume({
+    resumeData: { value: 2 },
+    step: ['simple-resume-workflow', 'resume'],
   });
 
   console.log(JSON.stringify(resumedResult, null, 2));
@@ -12224,28 +12879,24 @@ if (result.status === "suspended") {
 When using suspend/resume with `RuntimeContext`, you can create the instance yourself, and pass it to the `start` and `resume` functions.
 `RuntimeContext` is not automatically shared on a workflow run.
 
-```typescript {1,9,18} filename="src/test-workflow.ts" showLineNumbers copy
+```typescript {1,4,9,16} filename="src/test-workflow.ts" showLineNumbers copy
 import { RuntimeContext } from "@mastra/core/di";
 import { mastra } from "./mastra";
 
 const runtimeContext = new RuntimeContext();
-const run = mastra.getWorkflow("testWorkflow").createRun();
+const run = await mastra.getWorkflow("testWorkflow").createRunAsync();
 
 const result = await run.start({
   inputData: { suggestions: ["London", "Paris", "New York"] },
   runtimeContext
 });
 
-console.log(JSON.stringify(result, null, 2));
-
 if (result.status === "suspended") {
   const resumedResult = await run.resume({
-    step: 'city-step',
+    step: 'step-1',
     resumeData: { city: "New York" },
     runtimeContext
   });
-
-  console.log(JSON.stringify(resumedResult, null, 2));
 }
 ```
 
@@ -12281,144 +12932,82 @@ import { Agent } from "@mastra/core/agent";
 
 export const testAgent = new Agent({
   name: "test-agent",
-  description: "Create facts for input city, country and timezone",
-  instructions: `
-You are a helpful and factual assistant.
-
-You will be given a city, country, and timezone. Return exactly one interesting fact about each of the three values.
-
-Your response must follow this exact format:
-
-City Fact: <a short paragraph about the city>
-Country Fact: <a short paragraph about the country>
-Timezone Fact: <a short paragraph about the timezone>
-
-Only return the three facts in plain text, with each label clearly marked. No additional commentary or formatting.
-Ensure all facts are accurate and sourced from reputable references.
-`,
+  description: "Create facts for a country based on the city",
+  instructions: `Return an interesting fact about the country based on the city provided`,
   model: openai("gpt-4o")
 });
 ```
 
 ### Agents As Step
 
-In this example the `cityCoordinatesStep` performs a geocoding lookup using the provided `city`, then returns the resolved `city`, `country`, and `timezone`.
+In this example, `step1` uses the `testAgent` to generate an interesting fact about the country based on a given city.
 
-The `.map` function transforms the object output into a `prompt` string that can be used by the `testAgent`.
+The `.map` method transforms the workflow input into a `prompt` string compatible with the `testAgent`.
 
-The step is composed into the workflow using the sequential `.then()` method, allowing it to receive input from the workflow and return structured output.
+The step is composed into the workflow using `.then()`, allowing it to receive the mapped input and return the agent's structured output. The workflow is finalized with `.commit()`.
 
-```typescript {1,29,42,52} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+
+```typescript {3} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
 import { testAgent } from "../agents/test-agent";
 
-const cityCoordinatesStep = createStep({
-  id: "city-step",
-  description: "Gets details about a city",
-  inputSchema: z.object({
-    city: z.string()
-  }),
-  outputSchema: z.object({
-    city_name: z.string(),
-    country_name: z.string(),
-    country_timezone: z.string()
-  }),
-  execute: async ({ inputData }) => {
-    const { city } = inputData;
-    const geocodingResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}`);
-    const geocodingData = await geocodingResponse.json();
-
-    const { name, country, timezone } = geocodingData.results[0];
-
-    return {
-      city_name: name,
-      country_name: country,
-      country_timezone: timezone
-    };
-  }
-});
-
-const cityFactsStep = createStep(testAgent);
+const step1 = createStep(testAgent);
 
 export const testWorkflow = createWorkflow({
   id: "test-workflow",
   description: 'Test workflow',
   inputSchema: z.object({
-    city: z.string()
+    input: z.string()
   }),
   outputSchema: z.object({
-    outcome: z.string()
+    output: z.string()
   })
 })
-  .then(cityCoordinatesStep)
   .map(({ inputData }) => {
-    const { city_name, country_name, country_timezone } = inputData;
+    const { input } = inputData;
     return {
-      prompt: `
-        Provide facts about the city: ${city_name},
-        country: ${country_name}
-        and timezone: ${country_timezone}
-      `
+      prompt: `Provide facts about the city: ${input}`
     };
   })
-  .then(cityFactsStep)
+  .then(step1)
   .commit();
 ```
 
 ### Agent Generate
 
-In this example, the `cityFactsStep` performs a geocoding lookup using the provided `city`, then builds a prompt combining the resolved `city`, `country`, and `timezone`.
+In this example, the `step1` builds a prompt using the provided `input` and passes it to the `testAgent`, which returns a plain-text response containing facts about the city and its country.
 
-This prompt is passed to the `testAgent`, which generates a plain-text response with one fact for each.
+The step is added to the workflow using the sequential `.then()` method, allowing it to receive input from the workflow and return structured output. The workflow is finalized with `.commit()`.
 
-The step is composed into the workflow using the sequential `.then()` method, allowing it to receive input from the workflow and return structured output.
-
-```typescript {1,26,46} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+```typescript {1,18, 29} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
 import { testAgent } from "../agents/test-agent";
 
-const cityFactsStep = createStep({
-  id: "city-facts-step",
-  description: "Returns facts about city, country and timezone from the agent",
+const step1 = createStep({
+  id: "step-1",
+  description: "Create facts for a country based on the city",
   inputSchema: z.object({
-    city: z.string()
+    input: z.string()
   }),
   outputSchema: z.object({
-    outcome: z.string()
+    output: z.string()
   }),
 
   execute: async ({ inputData }) => {
-    const { city } = inputData;
-    const geocodingResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}`);
-    const geocodingData = await geocodingResponse.json();
+    const { input } = inputData;
 
-    const { name, country, timezone } = geocodingData.results[0];
-
-    const prompt = `
-      Provide facts about the city: ${city_name},
-      country: ${country_name}
-      and timezone: ${country_timezone}
-    `;
+    const  prompt = `Provide facts about the city: ${input}`
 
     const { text } = await testAgent.generate([
       { role: "user", content: prompt }
     ]);
 
     return {
-      outcome: text
+      output: text
     };
   }
 });
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.object({
-    city: z.string()
-  }),
-  outputSchema: z.object({
-    outcome: z.string()
-  })
-})
-  .then(cityFactsStep)
+export const testWorkflow = createWorkflow({...})
+  .then(step1)
   .commit();
 ```
 
@@ -12435,158 +13024,84 @@ import { createTool } from "@mastra/core";
 import { z } from "zod";
 
 export const testTool = createTool({
-  id: "city-tool",
-  description: "Gets coordinates for city",
+  id: "test-tool",
+  description: "Gets country for a city",
   inputSchema: z.object({
-    city: z.string()
+    input: z.string()
   }),
   outputSchema: z.object({
-    city_name: z.string(),
-    country_name: z.string(),
-    country_timezone: z.string()
+    country_name: z.string()
   }),
   execute: async ({ context }) => {
-    const { city } = context;
-    const geocodingResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}`);
+    const { input } = context;
+    const geocodingResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${input}`);
     const geocodingData = await geocodingResponse.json();
 
-    const { name, country, timezone } = geocodingData.results[0];
+    const { country } = geocodingData.results[0];
 
     return {
-      city_name: name,
-      country_name: country,
-      country_timezone: timezone
+      country_name: country
     };
   }
 });
 ```
 
 
-### Tools As Step
+### Tools as Step
 
-In this example, the `cityCoordinatesStep` uses the above example `testTool` which performs a geocoding lookup using the provided `city`, then returns the resolved `city`, `country`, and `timezone`.
+In this example, `step1` uses the `testTool`, which performs a geocoding lookup using the provided `city` and returns the resolved `country`.
 
+The step is added to the workflow using the sequential `.then()` method, allowing it to receive input from the workflow and return structured output. The workflow is finalized with `.commit()`.
 
-The `.map` function transforms the object output into a prompt string that can be used by the testAgent.
-
-The step is composed into the workflow using the sequential `.then()` method, allowing it to receive input from the workflow and return structured output.
-
-```typescript {2,4,40,51} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
-import { testAgent } from "../agents/test-agent";
+```typescript {1,3,6} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
 import { testTool } from "../tools/test-tool";
 
-const cityCoordinatesStep = createStep(testTool);
+const step1 = createStep(testTool);
 
-const cityFactsStep = createStep({
-  id: "city-facts-step",
-  description: "Returns facts about city, country and timezone from the agent",
-  inputSchema: z.object({
-    prompt: z.string()
-  }),
-  outputSchema: z.object({
-    outcome: z.string()
-  }),
-
-  execute: async ({ inputData }) => {
-    const { prompt } = inputData;
-
-    const { text } = await testAgent.generate([
-      { role: "user", content: prompt }
-    ]);
-
-    return {
-      outcome: text
-    };
-  }
-});
-
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: "Test workflow",
-  inputSchema: z.object({
-    city: z.string()
-  }),
-  outputSchema: z.object({
-    outcome: z.string()
-  })
-})
-  .then(cityCoordinatesStep)
-  .map(({ inputData }) => {
-    const { city_name, country_name, country_timezone } = inputData;
-
-    return {
-      prompt: `
-        Provide facts about the city: ${city_name},
-        country: ${country_name}
-        and timezone: ${country_timezone}
-      `
-    };
-  })
-  .then(cityFactsStep)
+export const testWorkflow = createWorkflow({...})
+  .then(step1)
   .commit();
 ```
 
 ### Tool Execute
 
-In this example, the `cityFactsStep` uses the above example `testTool` which performs a geocoding lookup using the provided `city`, then builds a prompt combining the resolved `city`, `country`, and `timezone`.
+In this example, `step1` directly invokes `testTool` using its `.execute()` method. The tool performs a geocoding lookup with the provided `city` and returns the corresponding `country`.
 
-This prompt is passed to the `testAgent`, which generates a plain-text response with one fact for each.
+The result is returned as structured output from the step. The step is composed into the workflow using `.then()`, enabling it to process workflow input and produce typed output. The workflow is finalized with `.commit()`
 
-The step is composed into the workflow using the sequential `.then()` method, allowing it to receive input from the workflow and return structured output.
-
-```typescript {4,21,33,52} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
+```typescript {3,20,32} filename="src/mastra/workflows/test-workflow.ts" showLineNumbers copy
 import { RuntimeContext } from "@mastra/core/di";
 
-import { testAgent } from "../agents/test-agent";
 import { testTool } from "../tools/test-tool";
 
 const runtimeContext = new RuntimeContext();
 
-const cityFactsStep = createStep({
-  id: "city-facts-step",
-  description: "Returns facts about city, country and timezone from the agent",
+const step1 = createStep({
+  id: "step-1",
+  description: "Gets country for a city",
   inputSchema: z.object({
-    city: z.string()
+    input: z.string()
   }),
   outputSchema: z.object({
-    outcome: z.string()
+    output: z.string()
   }),
 
   execute: async ({ inputData }) => {
-    const { city } = inputData;
+    const { input } = inputData;
 
-    const { city_name, country_name, country_timezone } = await testTool.execute({
-      context: { city },
+    const { country_name } = await testTool.execute({
+      context: { input },
       runtimeContext
     });
 
-    const prompt = `
-      Provide facts about the city: ${city_name},
-      country: ${country_name}
-      and timezone: ${country_timezone}
-    `;
-
-    const { text } = await testAgent.generate([
-      { role: "user", content: prompt }
-    ]);
-
     return {
-      outcome: text
+      output: country_name
     };
   }
 });
 
-export const testWorkflow = createWorkflow({
-  id: "test-workflow",
-  description: 'Test workflow',
-  inputSchema: z.object({
-    city: z.string()
-  }),
-  outputSchema: z.object({
-    outcome: z.string()
-  })
-})
-  .then(cityFactsStep)
+export const testWorkflow = createWorkflow({...})
+  .then(step1)
   .commit();
 ```
 
@@ -12627,7 +13142,7 @@ export const cityCoordinatesTool = createTool({
 
     const workflow = mastra?.getWorkflow("cityStringWorkflow");
 
-    const run = workflow?.createRun();
+    const run = await workflow?.createRunAsync();
 
     const { result } = await run?.start({
       inputData: {
@@ -15587,246 +16102,6 @@ async function convertToText(
 
 
 ---
-title: "Example: Calling Agentic Workflows | Agents | Mastra Docs"
-description: Example of creating AI workflows in Mastra, demonstrating integration of external APIs with LLM-powered planning.
----
-
-import { GithubLink } from "@/components/github-link";
-
-# Agentic Workflows
-[EN] Source: https://mastra.ai/en/examples/agents/agentic-workflows
-
-When building AI applications, you often need to coordinate multiple steps that depend on each other's outputs. This example shows how to create an AI workflow that fetches weather data and uses it to suggest activities, demonstrating how to integrate external APIs with LLM-powered planning.
-
-```ts showLineNumbers copy
-import { Mastra } from "@mastra/core";
-import { Agent } from "@mastra/core/agent";
-import { createStep, createWorkflow } from "@mastra/core/workflows";
-import { z } from "zod";
-import { openai } from "@ai-sdk/openai";
-
-const agent = new Agent({
-  name: "Weather Agent",
-  instructions: `
-        You are a local activities and travel expert who excels at weather-based planning. Analyze the weather data and provide practical activity recommendations.
-        For each day in the forecast, structure your response exactly as follows:
-        📅 [Day, Month Date, Year]
-        ═══════════════════════════
-        🌡️ WEATHER SUMMARY
-        • Conditions: [brief description]
-        • Temperature: [X°C/Y°F to A°C/B°F]
-        • Precipitation: [X% chance]
-        🌅 MORNING ACTIVITIES
-        Outdoor:
-        • [Activity Name] - [Brief description including specific location/route]
-          Best timing: [specific time range]
-          Note: [relevant weather consideration]
-        🌞 AFTERNOON ACTIVITIES
-        Outdoor:
-        • [Activity Name] - [Brief description including specific location/route]
-          Best timing: [specific time range]
-          Note: [relevant weather consideration]
-        🏠 INDOOR ALTERNATIVES
-        • [Activity Name] - [Brief description including specific venue]
-          Ideal for: [weather condition that would trigger this alternative]
-        ⚠️ SPECIAL CONSIDERATIONS
-        • [Any relevant weather warnings, UV index, wind conditions, etc.]
-        Guidelines:
-        - Suggest 2-3 time-specific outdoor activities per day
-        - Include 1-2 indoor backup options
-        - For precipitation >50%, lead with indoor activities
-        - All activities must be specific to the location
-        - Include specific venues, trails, or locations
-        - Consider activity intensity based on temperature
-        - Keep descriptions concise but informative
-        Maintain this exact formatting for consistency, using the emoji and section headers as shown.
-      `,
-  model: openai("gpt-4o-mini"),
-});
-```
-
-### Tool Definitions
-
-```ts
-const forecastSchema = z.object({
-  date: z.string(),
-  maxTemp: z.number(),
-  minTemp: z.number(),
-  precipitationChance: z.number(),
-  condition: z.string(),
-  location: z.string(),
-});
-
-function getWeatherCondition(code: number): string {
-  const conditions: Record<number, string> = {
-    0: "Clear sky",
-    1: "Mainly clear",
-    2: "Partly cloudy",
-    3: "Overcast",
-    45: "Foggy",
-    48: "Depositing rime fog",
-    51: "Light drizzle",
-    53: "Moderate drizzle",
-    55: "Dense drizzle",
-    61: "Slight rain",
-    63: "Moderate rain",
-    65: "Heavy rain",
-    71: "Slight snow fall",
-    73: "Moderate snow fall",
-    75: "Heavy snow fall",
-    95: "Thunderstorm",
-  };
-  return conditions[code] || "Unknown";
-}
-```
-
-### Workflow Steps
-
-```ts
-const fetchWeather = createStep({
-  id: "fetch-weather",
-  description: "Fetches weather forecast for a given city",
-  inputSchema: z.object({
-    city: z.string().describe("The city to get the weather for"),
-  }),
-  outputSchema: forecastSchema,
-  execute: async ({ inputData }) => {
-    if (!inputData) {
-      throw new Error("Input data not found");
-    }
-
-    const geocodingUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(inputData.city)}&count=1`;
-    const geocodingResponse = await fetch(geocodingUrl);
-    const geocodingData = (await geocodingResponse.json()) as {
-      results: { latitude: number; longitude: number; name: string }[];
-    };
-
-    if (!geocodingData.results?.[0]) {
-      throw new Error(`Location '${inputData.city}' not found`);
-    }
-
-    const { latitude, longitude, name } = geocodingData.results[0];
-
-    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=precipitation,weathercode&timezone=auto,&hourly=precipitation_probability,temperature_2m`;
-    const response = await fetch(weatherUrl);
-    const data = (await response.json()) as {
-      current: {
-        time: string;
-        precipitation: number;
-        weathercode: number;
-      };
-      hourly: {
-        precipitation_probability: number[];
-        temperature_2m: number[];
-      };
-    };
-
-    const forecast = {
-      date: new Date().toISOString(),
-      maxTemp: Math.max(...data.hourly.temperature_2m),
-      minTemp: Math.min(...data.hourly.temperature_2m),
-      condition: getWeatherCondition(data.current.weathercode),
-      precipitationChance: data.hourly.precipitation_probability.reduce(
-        (acc, curr) => Math.max(acc, curr),
-        0,
-      ),
-      location: inputData.city,
-    };
-
-    return forecast;
-  },
-});
-
-const planActivities = createStep({
-  id: "plan-activities",
-  description: "Suggests activities based on weather conditions",
-  inputSchema: forecastSchema,
-  outputSchema: z.object({
-    activities: z.string(),
-  }),
-  execute: async ({ inputData }) => {
-    const forecast = inputData;
-
-    if (!forecast) {
-      throw new Error("Forecast data not found");
-    }
-
-    const prompt = `Based on the following weather forecast for ${forecast.location}, suggest appropriate activities:
-      ${JSON.stringify(forecast, null, 2)}
-      `;
-
-    const response = await agent.stream([
-      {
-        role: "user",
-        content: prompt,
-      },
-    ]);
-
-    let activitiesText = "";
-
-    for await (const chunk of response.textStream) {
-      process.stdout.write(chunk);
-      activitiesText += chunk;
-    }
-
-    return {
-      activities: activitiesText,
-    };
-  },
-});
-```
-
-### Workflow Definition
-```ts
-const weatherWorkflow = createWorkflow({
-  id: "weather-workflow",
-  inputSchema: z.object({
-    city: z.string().describe("The city to get the weather for"),
-  }),
-  outputSchema: z.object({
-    activities: z.string(),
-  }),
-})
-  .then(fetchWeather)
-  .then(planActivities);
-
-weatherWorkflow.commit();
-
-const mastra = new Mastra({
-  workflows: {
-    weatherWorkflow,
-  },
-});
-```
-
-### Workflow Execution
-```ts
-async function main() {
-  const run = mastra.getWorkflow("weatherWorkflow").createRun();
-
-  const result = await run.start({
-    inputData: {
-      city: "London",
-    },
-  });
-
-  console.log("\n \n");
-  console.log(result);
-}
-
-main();
-```
-
-<br/>
-
-<GithubLink
-  link={
-    "https://github.com/mastra-ai/mastra/blob/main/examples/basics/agents/agentic-workflows"
-  }
-/>
-
-
----
 title: "Example: Categorizing Birds | Agents | Mastra Docs"
 description: Example of using a Mastra AI Agent to determine if an image from Unsplash depicts a bird.
 ---
@@ -16452,7 +16727,7 @@ const myWorkflow = createWorkflow({
 // Run steps sequentially.
 myWorkflow.then(copywriterStep).then(editorStep).commit();
 
-const run = myWorkflow.createRun();
+const run = await myWorkflow.createRunAsync();
 
 const res = await run.start({
   inputData: { topic: "React JavaScript frameworks" },
@@ -16697,6 +16972,220 @@ main();
 <GithubLink
   link={
     "https://github.com/mastra-ai/mastra/blob/main/examples/basics/agents/using-a-tool"
+  }
+/>
+
+
+---
+title: "Example: Workflow as Tools | Agents | Mastra Docs"
+description: Example of creating Agents in Mastra, demonstrating how to use workflows as tools. It shows how to suspend and resume workflows from an agent.
+---
+
+import { GithubLink } from "@/components/github-link";
+
+# Workflow as Tools
+[EN] Source: https://mastra.ai/en/examples/agents/workflow-as-tools
+
+When building AI applications, you often need to coordinate multiple steps that depend on each other's outputs. This example shows how to create an AI workflow that fetches weather data from a workflow. It also demonstrates how to handle suspend and resume of workflows from an agent.
+
+### Workflow Definition
+
+```ts showLineNumbers copy
+import { Mastra } from "@mastra/core";
+import { Agent } from "@mastra/core/agent";
+import { createStep, createWorkflow } from "@mastra/core/workflows";
+import { createTool } from '@mastra/core/tools';
+import { z } from "zod";
+import { openai } from "@ai-sdk/openai";
+
+const forecastSchema = z.object({
+  date: z.string(),
+  maxTemp: z.number(),
+  minTemp: z.number(),
+  precipitationChance: z.number(),
+  condition: z.string(),
+  location: z.string(),
+});
+
+function getWeatherCondition(code: number): string {
+  const conditions: Record<number, string> = {
+    0: 'Clear sky',
+    1: 'Mainly clear',
+    2: 'Partly cloudy',
+    3: 'Overcast',
+    45: 'Foggy',
+    48: 'Depositing rime fog',
+    51: 'Light drizzle',
+    53: 'Moderate drizzle',
+    55: 'Dense drizzle',
+    61: 'Slight rain',
+    63: 'Moderate rain',
+    65: 'Heavy rain',
+    71: 'Slight snow fall',
+    73: 'Moderate snow fall',
+    75: 'Heavy snow fall',
+    95: 'Thunderstorm',
+  };
+  return conditions[code] || 'Unknown';
+}
+
+const fetchWeatherWithSuspend = createStep({
+  id: 'fetch-weather',
+  description: 'Fetches weather forecast for a given city',
+  inputSchema: z.object({}),
+  resumeSchema: z.object({
+    city: z.string().describe('The city to get the weather for'),
+  }),
+  outputSchema: forecastSchema,
+  execute: async ({ resumeData, suspend }) => {
+    if (!resumeData) {
+      suspend({
+        message: 'Please enter the city to get the weather for',
+      });
+
+      return {};
+    }
+
+    const geocodingUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(resumeData.city)}&count=1`;
+    const geocodingResponse = await fetch(geocodingUrl);
+    const geocodingData = (await geocodingResponse.json()) as {
+      results: { latitude: number; longitude: number; name: string }[];
+    };
+
+    if (!geocodingData.results?.[0]) {
+      throw new Error(`Location '${resumeData.city}' not found`);
+    }
+
+    const { latitude, longitude, name } = geocodingData.results[0];
+
+    const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=precipitation,weathercode&timezone=auto,&hourly=precipitation_probability,temperature_2m`;
+    const response = await fetch(weatherUrl);
+    const data = (await response.json()) as {
+      current: {
+        time: string;
+        precipitation: number;
+        weathercode: number;
+      };
+      hourly: {
+        precipitation_probability: number[];
+        temperature_2m: number[];
+      };
+    };
+
+    const forecast = {
+      date: new Date().toISOString(),
+      maxTemp: Math.max(...data.hourly.temperature_2m),
+      minTemp: Math.min(...data.hourly.temperature_2m),
+      condition: getWeatherCondition(data.current.weathercode),
+      precipitationChance: data.hourly.precipitation_probability.reduce((acc, curr) => Math.max(acc, curr), 0),
+      location: resumeData.city,
+    };
+
+    return forecast;
+  },
+});
+
+const weatherWorkflowWithSuspend = createWorkflow({
+  id: 'weather-workflow-with-suspend',
+  inputSchema: z.object({}),
+  outputSchema: forecastSchema,
+})
+  .then(fetchWeatherWithSuspend)
+  .commit();
+```
+
+### Tool Definitions
+
+```ts
+export const startWeatherTool = createTool({
+  id: 'start-weather-tool',
+  description: 'Start the weather tool',
+  inputSchema: z.object({}),
+  outputSchema: z.object({
+    runId: z.string(),
+  }),
+  execute: async ({ context }) => {
+    const workflow = mastra.getWorkflow('weatherWorkflowWithSuspend');
+    const run = await workflow.createRunAsync();
+    await run.start({
+      inputData: {},
+    });
+
+    return {
+      runId: run.runId,
+    };
+  },
+});
+
+export const resumeWeatherTool = createTool({
+  id: 'resume-weather-tool',
+  description: 'Resume the weather tool',
+  inputSchema: z.object({
+    runId: z.string(),
+    city: z.string().describe('City name'),
+  }),
+  outputSchema: forecastSchema,
+  execute: async ({ context }) => {
+    const workflow = mastra.getWorkflow('weatherWorkflowWithSuspend');
+    const run = await workflow.createRunAsync({
+      runId: context.runId,
+    });
+    const result = await run.resume({
+      step: 'fetch-weather',
+      resumeData: {
+        city: context.city,
+      },
+    });
+    return result.result;
+  },
+});
+```
+
+### Agent Definition
+
+```ts
+export const weatherAgentWithWorkflow = new Agent({
+  name: 'Weather Agent with Workflow',
+  instructions: `You are a helpful weather assistant that provides accurate weather information.
+
+Your primary function is to help users get weather details for specific locations. When responding:
+- Always ask for a location if none is provided
+- If the location name isn’t in English, please translate it
+- If giving a location with multiple parts (e.g. "New York, NY"), use the most relevant part (e.g. "New York")
+- Include relevant details like humidity, wind conditions, and precipitation
+- Keep responses concise but informative
+
+Use the startWeatherTool to start the weather workflow. This will start and then suspend the workflow and return a runId.
+Use the resumeWeatherTool to resume the weather workflow. This takes the runId returned from the startWeatherTool and the city entered by the user. It will resume the workflow and return the result.
+The result will be the weather forecast for the city.`,
+  model: openai('gpt-4o'),
+  tools: { startWeatherTool, resumeWeatherTool },
+});
+```
+
+### Agent Execution
+```ts
+const mastra = new Mastra({
+  agents: { weatherAgentWithWorkflow },
+  workflows: { weatherWorkflowWithSuspend },
+});
+
+const agent = mastra.getAgent('weatherAgentWithWorkflow');
+const result = await agent.generate([
+  {
+    role: 'user',
+    content: 'London',
+  },
+]);
+
+console.log(result);
+```
+
+<br/>
+
+<GithubLink
+  link={
+    "https://github.com/mastra-ai/mastra/blob/main/examples/basics/agents/workflow-as-tools"
   }
 />
 
@@ -19910,8 +20399,8 @@ The Examples section is a short list of example projects demonstrating basic AI 
         href: "/examples/agents/system-prompt",
       },
       {
-        title: "Agentic Workflows",
-        href: "/examples/agents/agentic-workflows",
+        title: "Workflow as Tools",
+        href: "/examples/agents/workflow-as-tools",
       },
       {
         title: "Using a Tool",
@@ -20990,6 +21479,169 @@ The example demonstrates:
 Even with only one message in context (`lastMessages: 1`), the agent maintains the complete todo list in working memory. Each time the agent responds, it updates the working memory with the current state of the todo list, ensuring persistence across interactions.
 
 To learn more about agent memory, including other memory types and storage options, check out the [Memory documentation](/docs/agents/agent-memory) page.
+
+
+---
+title: Streaming Structured Working Memory
+description: Example of using structured working memory (schema) to maintain a todo list across conversations
+---
+
+# Streaming Structured Working Memory
+[EN] Source: https://mastra.ai/en/examples/memory/streaming-working-memory-structured
+
+This example demonstrates how to create an agent that maintains a todo list using structured working memory (schema-based), even with minimal context. For a Markdown-based version, see the [advanced working memory example](/examples/memory/streaming-working-memory-advanced).
+
+## Setup
+
+Let's break down how to create an agent with structured working memory. We'll build a todo list manager that remembers tasks as a JSON object.
+
+### 1. Setting up Structured Memory
+
+We'll configure the memory system with a short context window and provide a Zod schema for the todo list. For persistence, you can configure a storage provider like `@mastra/libsql`:
+
+```typescript
+import { Memory } from "@mastra/memory";
+import { LibSQLStore } from "@mastra/libsql";
+import { z } from "zod";
+
+// Define the schema for the todo list
+const todoListSchema = z.object({
+  items: z.array(
+    z.object({
+      description: z.string(),
+      due: z.string().optional(),
+      started: z.string().optional(),
+      status: z.enum(["active", "completed"]).default("active"),
+    })
+  ),
+});
+
+const memory = new Memory({
+  options: {
+    lastMessages: 1,
+    workingMemory: {
+      enabled: true,
+      schema: todoListSchema,
+    },
+  },
+  storage: new LibSQLStore({
+    url: "file:../mastra.db",
+  }),
+});
+```
+
+### 2. Creating the Todo List Agent
+
+We'll create an agent that uses this structured memory. The instructions should guide the agent to maintain the todo list as a JSON object matching the schema.
+
+```typescript
+import { openai } from "@ai-sdk/openai";
+import { Agent } from "@mastra/core/agent";
+
+const todoAgent = new Agent({
+  name: "TODO Agent",
+  instructions:
+    "You are a helpful todolist AI agent. Maintain the user's todo list as a JSON object according to the provided schema. Each item should include a description, status (active/completed), and optional due/started dates. When the user adds, completes, or updates a task, update the JSON accordingly. Always show the current todo list at the start of the chat.",
+  model: openai("gpt-4o-mini"),
+  memory,
+});
+```
+
+**Note:** When `workingMemory.schema` is set, a default system prompt is automatically injected to instruct the agent on how to use structured working memory. You can override or extend this prompt as needed.
+
+## Usage Example
+
+The agent's responses will contain `<working_memory>{...}</working_memory>` tags with the updated JSON. We'll look at two ways to handle this:
+
+### Basic Usage
+
+For simple cases, you can use `maskStreamTags` to hide the working memory updates from users:
+
+```typescript
+import { randomUUID } from "crypto";
+import { maskStreamTags } from "@mastra/core/utils";
+
+// Start a conversation
+const threadId = randomUUID();
+const resourceId = "SOME_USER_ID";
+
+// Add a new todo item
+const response = await todoAgent.stream(
+  "Add a task: Build a new feature for our app. It should take about 2 hours and needs to be done by next Friday.",
+  {
+    threadId,
+    resourceId,
+  },
+);
+
+// Process the stream, hiding working memory updates
+for await (const chunk of maskStreamTags(
+  response.textStream,
+  "working_memory",
+)) {
+  process.stdout.write(chunk);
+}
+```
+
+### Advanced Usage with UI Feedback
+
+For a better user experience, you can show loading states while working memory is being updated:
+
+```typescript
+// Add lifecycle hooks to provide UI feedback
+const maskedStream = maskStreamTags(response.textStream, "working_memory", {
+  // Called when a working_memory tag starts
+  onStart: () => showLoadingSpinner("Updating todo list..."),
+  // Called when a working_memory tag ends
+  onEnd: () => hideLoadingSpinner(),
+  // Called with the content that was masked
+  onMask: (chunk) => console.debug("Updated todo list:", chunk),
+});
+
+// Process the masked stream
+for await (const chunk of maskedStream) {
+  process.stdout.write(chunk);
+}
+```
+
+## Example: Structured Working Memory State
+
+After several interactions, the working memory might look like:
+
+```json
+{
+  "items": [
+    {
+      "description": "Buy groceries",
+      "due": "2025-07-01",
+      "started": "2025-06-24",
+      "status": "active"
+    },
+    {
+      "description": "Finish project report",
+      "due": "2025-07-05",
+      "status": "completed"
+    }
+  ]
+}
+```
+
+The agent can refer to or update this list directly in JSON, ensuring structured, type-safe memory retention across conversations.
+
+---
+
+**This example demonstrates:**
+
+- Setting up a memory system with structured working memory using a Zod schema
+- Creating an agent that manages a todo list as a JSON object
+- Using `maskStreamTags` to hide memory updates from users
+- Providing UI loading states during memory updates with lifecycle hooks
+- Maintaining persistent, structured memory even with a short context window
+
+Even with only one message in context (`lastMessages: 1`), the agent maintains the complete todo list in structured working memory. Each time the agent responds, it updates the JSON object, ensuring persistence across interactions.
+
+To learn more about agent memory, including other memory types and storage options, see the [Memory documentation](/docs/agents/agent-memory).
+
 
 
 ---
@@ -22544,13 +23196,10 @@ The providers include PgVector, Pinecone, Qdrant, Chroma, Astra DB, LibSQL, Upst
       token: process.env.UPSTASH_TOKEN,
     });
 
-    await upstash.createIndex({
-      indexName: 'test_collection',
-      dimension: 1536,
-    });
-
+    // There is no store.createIndex call here, Upstash creates indexes (known as namespaces in Upstash) automatically
+    // when you upsert if that namespace does not exist yet.
     await upstash.upsert({
-      indexName: 'test_collection',
+      indexName: 'test_collection', // the namespace name in Upstash
       vectors: embeddings,
       metadata: chunks?.map(chunk => ({ text: chunk.text })),
     });
@@ -23594,7 +24243,7 @@ const prompt = `
     Please base your answer only on the context provided in the tool. If the context doesn't contain enough information to fully answer the question, please state that explicitly.
     `;
 
-const { runId, start } = ragWorkflow.createRun();
+const { runId, start } = await ragWorkflow.createRunAsync();
 
 console.log("Run:", runId);
 
@@ -25704,7 +26353,7 @@ Here, we'll get the weather workflow from the mastra instance, then create a run
 import { mastra } from "./";
 
 const workflow = mastra.getWorkflow("weatherWorkflow");
-const run = workflow.createRun();
+const run = await workflow.createRunAsync();
 
 // Start the workflow with Lagos as the location
 const result = await run.start({ inputData: { location: "Lagos" } });
@@ -26031,7 +26680,7 @@ import { mastra } from "./";
 
 // GitHub repository to generate documentation for
 const ghRepoUrl = "https://github.com/mastra-ai/mastra";
-const run = mastra.getWorkflow("readmeGeneratorWorkflow").createRun();
+const run = await mastra.getWorkflow("readmeGeneratorWorkflow").createRunAsync();
 
 // Start the workflow with the repository URL as input
 const res = await run.start({ inputData: { repoUrl: ghRepoUrl } });
@@ -26361,7 +27010,7 @@ Here, we'll get the activity planning workflow from the mastra instance, then cr
 import { mastra } from "./";
 
 const workflow = mastra.getWorkflow("activityPlanningWorkflow");
-const run = workflow.createRun();
+const run = await workflow.createRunAsync();
 
 // Start the workflow with New York as the city input
 const result = await run.start({ inputData: { city: "New York" } });
@@ -26717,7 +27366,7 @@ Here, we'll get the activity planning workflow from the mastra instance, then cr
 import { mastra } from "./";
 
 const workflow = mastra.getWorkflow("activityPlanningWorkflow");
-const run = workflow.createRun();
+const run = await workflow.createRunAsync();
 
 // Start the workflow with a city
 // This will fetch weather and plan activities based on conditions
@@ -26861,7 +27510,7 @@ Here, we'll get the increment workflow from the mastra instance, then create a r
 import { mastra } from "./";
 
 const workflow = mastra.getWorkflow("incrementWorkflow");
-const run = workflow.createRun();
+const run = await workflow.createRunAsync();
 
 // Start the workflow with initial value 0
 // This will increment until reaching 10
@@ -26979,11 +27628,7 @@ const humanInputStep = createStep({
   }),
   execute: async ({ inputData, resumeData, suspend, getInitData }) => {
     if (!resumeData?.selection) {
-      await suspend({ suggestions: inputData?.suggestions });
-      return {
-        selection: "",
-        vacationDescription: inputData?.vacationDescription,
-      };
+      return suspend({ suggestions: inputData?.suggestions });
     }
 
     return {
@@ -27085,7 +27730,7 @@ import { select } from "@inquirer/prompts";
 import { humanInputStep } from "./workflows/human-in-the-loop-workflow";
 
 const workflow = mastra.getWorkflow("travelAgentWorkflow");
-const run = workflow.createRun({});
+const run = await workflow.createRunAsync();
 
 // Start the workflow with initial vacation description
 const result = await run.start({
@@ -27520,7 +28165,7 @@ const srv = serve({
 });
 
 const workflow = mastra.getWorkflow("activityPlanningWorkflow");
-const run = workflow.createRun({});
+const run = await workflow.createRunAsync();
 
 // Start the workflow with the required input data (city name)
 // This will trigger the workflow steps and stream the result to the console
@@ -27944,7 +28589,7 @@ Here, we'll get the weather workflow from the mastra instance, then create a run
 import { mastra } from "./";
 
 const workflow = mastra.getWorkflow("activityPlanningWorkflow");
-const run = workflow.createRun();
+const run = await workflow.createRunAsync();
 
 // Execute the workflow with a specific city
 // This will run through all steps and generate activity recommendations
@@ -30339,7 +30984,7 @@ const mastra = new Mastra({
 });
 
 (async () => {
-  const run = mastra.getWorkflow("candidateWorkflow").createRun();
+  const run = await mastra.getWorkflow("candidateWorkflow").createRunAsync();
 
   console.log("Run", run.runId);
 
@@ -30598,6 +31243,393 @@ curl -X POST http://localhost:4111/api/agents/chefAgent/generate \
 
 </Steps>
 
+
+---
+title: "MCP Server: Building a Notes MCP Server | Mastra Guide"
+description: "A step-by-step guide to creating a fully-featured MCP (Model Context Protocol) server for managing notes using the Mastra framework."
+---
+
+import { FileTree, Steps } from "nextra/components";
+
+# MCP Server Guide: Building a Notes MCP Server
+[EN] Source: https://mastra.ai/en/guides/guide/notes-mcp-server
+
+In this guide, you'll learn how to build a complete MCP (Model Context Protocol) server from scratch. This server will manage a collection of markdown notes, exposing tools to create and read them, and providing intelligent prompts to assist with note-taking.
+
+## Prerequisites
+
+- Node.js installed
+- A basic understanding of TypeScript
+
+---
+
+## The Plan
+
+We will build a `notes` server that can:
+1.  **List and Read Notes**: Allow clients to browse and view markdown files stored on the server.
+2.  **Write Notes**: Provide a tool for creating or updating notes.
+3.  **Offer Smart Prompts**: Generate contextual prompts, like creating a daily note template or summarizing existing content.
+
+<Steps>
+## Initialize a Mastra Project
+
+First, create a new Mastra project using the `create-mastra` CLI.
+
+```bash copy
+npx create-mastra@latest
+```
+
+Follow the prompts. When it's done, navigate into your new project directory.
+
+```bash copy
+cd "<your-project-name>"
+```
+
+The default scaffold includes agent, tools and workflow examples. Since we're focusing on an MCP server, let's clean up the project.
+
+```bash copy
+rm -rf src/mastra/agents src/mastra/workflows src/mastra/tools/weather-tool.ts
+```
+
+Let's also remove the components from those files that were registered in the Mastra instance at `src/mastra/index.ts`.
+Our file should now look like this:
+
+```typescript copy showLineNumbers filename="src/mastra/index.ts" {1-14}
+import { Mastra } from '@mastra/core/mastra';
+import { PinoLogger } from '@mastra/loggers';
+import { LibSQLStore } from '@mastra/libsql';
+
+export const mastra = new Mastra({
+  storage: new LibSQLStore({
+    // stores telemetry, evals, ... into memory storage, if it needs to persist, change to file:../mastra.db
+    url: ":memory:",
+  }),
+  logger: new PinoLogger({
+    name: 'Mastra',
+    level: 'info',
+  }),
+});
+```
+
+
+## Set Up the Directory Structure
+
+Create a dedicated directory for your MCP server's logic and a `notes` directory for your notes:
+
+```bash copy
+mkdir notes src/mastra/mcp
+```
+
+Create the following files:
+
+```bash copy
+touch src/mastra/mcp/{server,resources,prompts}.ts
+```
+- `server.ts`: Will contain the main MCP server configuration.
+- `resources.ts`: Will handle listing and reading note files.
+- `prompts.ts`: Will contain the logic for our smart prompts.
+
+The resulting directory structure should look like this:
+
+<FileTree>
+  <FileTree.Folder name="<your-project-name>" defaultOpen>
+    <FileTree.Folder name="notes" defaultOpen />
+    <FileTree.Folder name="src" defaultOpen>
+      <FileTree.Folder name="mastra" defaultOpen>
+        <FileTree.File name="index.ts" />
+        <FileTree.Folder name="mcp" defaultOpen>
+          <FileTree.File name="server.ts" />
+          <FileTree.File name="resources.ts" />
+          <FileTree.File name="prompts.ts" />
+        </FileTree.Folder>
+        <FileTree.Folder name="tools" defaultOpen />
+      </FileTree.Folder>
+    </FileTree.Folder>
+  </FileTree.Folder>
+</FileTree>
+
+## Create and Register the MCP Server
+
+Before we proceed, we need to install the `@mastra/mcp` package.
+
+```bash copy
+npm install @mastra/mcp
+```
+
+Now, let's define the MCP server instance in `src/mastra/mcp/server.ts`:
+
+```typescript copy showLineNumbers filename="src/mastra/mcp/server.ts" {1-7}
+import { MCPServer } from "@mastra/mcp";
+
+export const notes = new MCPServer({
+    name: "notes",
+    version: "0.1.0",
+    // we will add more configuration here later
+});
+```
+
+Now register this MCP server in your Mastra instance at `src/mastra/index.ts`. The key `notes` is the public identifier for your MCP server:
+
+```typescript copy showLineNumbers filename="src/mastra/index.ts" {4,15-17}
+import { Mastra } from "@mastra/core";
+import { PinoLogger } from '@mastra/loggers';
+import { LibSQLStore } from '@mastra/libsql';
+import { notes } from "./mcp/server";
+
+export const mastra = new Mastra({
+  storage: new LibSQLStore({
+    // stores telemetry, evals, ... into memory storage, if it needs to persist, change to file:../mastra.db
+    url: ":memory:",
+  }),
+  logger: new PinoLogger({
+    name: 'Mastra',
+    level: 'info',
+  }),
+  mcpServers: {
+    notes,
+  },
+})
+```
+
+## Implement and Register Resource Handlers
+
+Resource handlers allow clients to discover and read the content your server manages.
+Let's implement handlers in `src/mastra/mcp/resources.ts` to work with markdown files in the `notes` directory:
+
+```typescript copy showLineNumbers filename="src/mastra/mcp/resources.ts" {1-51}
+import fs from "fs/promises";
+import path from "path";
+import { fileURLToPath } from 'url';
+import type { MCPServerResources, Resource } from "@mastra/mcp";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const NOTES_DIR = path.resolve(__dirname, "../../notes"); // relative to the default output directory
+
+const listNoteFiles = async (): Promise<Resource[]> => {
+  try {
+    await fs.mkdir(NOTES_DIR, { recursive: true });
+    const files = await fs.readdir(NOTES_DIR);
+    return files
+      .filter(file => file.endsWith('.md'))
+      .map(file => {
+        const title = file.replace(".md", "");
+        return {
+          uri: `notes://${title}`,
+          name: title,
+          description: `A note about ${title}`,
+          mime_type: "text/markdown",
+        };
+      });
+  } catch (error) {
+    console.error("Error listing note resources:", error);
+    return [];
+  }
+};
+
+const readNoteFile = async (uri: string): Promise<string | null> => {
+  const title = uri.replace("notes://", "");
+  const notePath = path.join(NOTES_DIR, `${title}.md`);
+  try {
+    return await fs.readFile(notePath, "utf-8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      console.error(`Error reading resource ${uri}:`, error);
+    }
+    return null;
+  }
+};
+
+export const resourceHandlers: MCPServerResources = {
+  listResources: listNoteFiles,
+  getResourceContent: async ({ uri }: { uri: string }) => {
+    const content = await readNoteFile(uri);
+    if (content === null) return { text: "" };
+    return { text: content };
+  },
+};
+```
+
+Now register these resource handlers in `src/mastra/mcp/server.ts`:
+
+```typescript copy showLineNumbers filename="src/mastra/mcp/server.ts" {2,7}
+import { MCPServer } from "@mastra/mcp";
+import { resourceHandlers } from "./resources";
+
+export const notes = new MCPServer({
+    name: "notes",
+    version: "0.1.0",
+    resources: resourceHandlers,
+});
+```
+
+## Implement and Register a Tool
+
+Tools are the actions your server can perform. Let's create a `write` tool.
+First, define the tool in `src/mastra/tools/write-note.ts`:
+
+```typescript copy showLineNumbers filename="src/mastra/tools/write-note.ts" {1-30}
+import { createTool } from "@mastra/core/tools";
+import { z } from "zod";
+import { fileURLToPath } from "url";
+import path from "node:path";
+import fs from "fs/promises";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const NOTES_DIR = path.resolve(__dirname, "../../notes");
+
+export const writeNoteTool = createTool({
+  id: "write",
+  description: "Write a new note or overwrite an existing one.",
+  inputSchema: z.object({
+    title: z.string().nonempty().describe("The title of the note. This will be the filename."),
+    content: z.string().nonempty().describe("The markdown content of the note."),
+  }),
+  outputSchema: z.string().nonempty(),
+  execute: async ({ context }) => {
+    try {
+      const { title, content } = context;
+      const filePath = path.join(NOTES_DIR, `${title}.md`);
+      await fs.mkdir(NOTES_DIR, { recursive: true });
+      await fs.writeFile(filePath, content, "utf-8");
+      return `Successfully wrote to note \"${title}\".`;
+    } catch (error: any) {
+      return `Error writing note: ${error.message}`;
+    }
+  },
+});
+```
+
+Now register this tool in `src/mastra/mcp/server.ts`:
+
+```typescript copy showLineNumbers filename="src/mastra/mcp/server.ts" {3,9-11}
+import { MCPServer } from "@mastra/mcp";
+import { resourceHandlers } from "./resources";
+import { writeNoteTool } from "../tools/write-note";
+
+export const notes = new MCPServer({
+    name: "notes",
+    version: "0.1.0",
+    resources: resourceHandlers,
+    tools: {
+      write: writeNoteTool,
+    },
+});
+```
+
+## Implement and Register Prompts
+
+Prompt handlers provide ready-to-use prompts for clients. Let's implement three: one for a daily note, one to summarize a note, and one to brainstorm ideas. This requires a few markdown-parsing libraries.
+
+```bash copy
+npm i unified remark-parse gray-matter @types/unist
+```
+
+Now let's implement the prompts in `src/mastra/mcp/prompts.ts`:
+
+```typescript copy showLineNumbers filename="src/mastra/mcp/prompts.ts" {1-61}
+import type { MCPServerPrompts } from "@mastra/mcp";
+import { unified } from 'unified';
+import remarkParse from 'remark-parse';
+import matter from 'gray-matter';
+import type { Node } from 'unist';
+
+const prompts = [
+  { name: "new_daily_note", description: "Create a new daily note.", version: "1.0.0" },
+  { name: "summarize_note", description: "Give me a TL;DR of the note.", version: "1.0.0" },
+  { name: "brainstorm_ideas", description: "Brainstorm new ideas based on a note.", version: "1.0.0" }
+];
+
+function stringifyNode(node: Node): string {
+  if ('value' in node && typeof node.value === 'string') return node.value;
+  if ('children' in node && Array.isArray(node.children)) return node.children.map(stringifyNode).join('');
+  return '';
+}
+
+export async function analyzeMarkdown(md: string) {
+  const { content } = matter(md);
+  const tree = unified().use(remarkParse).parse(content);
+  const headings: string[] = [];
+  const wordCounts: Record<string, number> = {};
+  let currentHeading = 'untitled';
+  wordCounts[currentHeading] = 0;
+  tree.children.forEach((node) => {
+    if (node.type === 'heading' && node.depth === 2) {
+      currentHeading = stringifyNode(node);
+      headings.push(currentHeading);
+      wordCounts[currentHeading] = 0;
+    } else {
+      const textContent = stringifyNode(node);
+      if (textContent.trim()) {
+        wordCounts[currentHeading] = (wordCounts[currentHeading] || 0) + textContent.split(/\\s+/).length;
+      }
+    }
+  });
+  return { headings, wordCounts };
+}
+
+const getPromptMessages: MCPServerPrompts['getPromptMessages'] = async ({ name, args }) => {
+  switch (name) {
+    case "new_daily_note":
+      const today = new Date().toISOString().split('T')[0];
+      return [{ role: "user", content: { type: "text", text: `Create a new note titled \"${today}\" with sections: \"## Tasks\", \"## Meetings\", \"## Notes\".` } }];
+    case "summarize_note":
+      if (!args?.noteContent) throw new Error("No content provided");
+      const metaSum = await analyzeMarkdown(args.noteContent as string);
+      return [{ role: "user", content: { type: "text", text: `Summarize each section in ≤ 3 bullets.\\n\\n### Outline\\n${metaSum.headings.map(h => `- ${h} (${metaSum.wordCounts[h] || 0} words)`).join("\\n")}`.trim() } }];
+    case "brainstorm_ideas":
+      if (!args?.noteContent) throw new Error("No content provided");
+      const metaBrain = await analyzeMarkdown(args.noteContent as string);
+      return [{ role: "user", content: { type: "text", text: `Brainstorm 3 ideas for underdeveloped sections below ${args?.topic ? `on ${args.topic}` : '.'}\\n\\nUnderdeveloped sections:\\n${metaBrain.headings.length ? metaBrain.headings.map(h => `- ${h}`).join("\\n") : "- (none, pick any)"}` } }];
+    default: throw new Error(`Prompt \"${name}\" not found`);
+  }
+};
+
+export const promptHandlers: MCPServerPrompts = {
+  listPrompts: async () => prompts,
+  getPromptMessages,
+};
+```
+
+Now register these prompt handlers in `src/mastra/mcp/server.ts`:
+
+```typescript copy showLineNumbers filename="src/mastra/mcp/server.ts"  {4,10}
+import { MCPServer } from "@mastra/mcp";
+import { resourceHandlers } from "./resources";
+import { writeNoteTool } from "../tools/write-note";
+import { promptHandlers } from "./prompts";
+
+export const notesServer = new MCPServer({
+  name: "notes",
+  version: "0.1.0",
+  resources: resourceHandlers,
+  prompts: promptHandlers,
+  tools: {
+    write: writeNoteTool,
+  },
+});
+```
+
+## Run the Server
+
+We can now run the development server:
+
+```bash copy
+npm run dev
+```
+
+Navigate to the Mastra playground (typically at `http://localhost:4111`).
+In the "MCP Servers" section, you'll find your `notes` server.
+You can use the playground to:
+- Get the endpoints for your MCP server.
+- Get client configurations for MCP Clients like Cursor and Windsurf.
+- See a list of and test the tools available to the MCP server.
+</Steps>
+
+## Next Steps
+
+You can now use this MCP server with any MCP Client. For example, you can use it with Cursor or Windsurf to manage notes.
 
 ---
 title: "Building a Research Paper Assistant | Mastra RAG Guides"
@@ -31104,27 +32136,40 @@ title: "Overview"
 description: "Guides on building with Mastra"
 ---
 
+import { CardGrid, CardGridItem } from "@/components/cards/card-grid";
+
 # Guides
 [EN] Source: https://mastra.ai/en/guides
 
 While examples show quick implementations and docs explain specific features, these guides are a bit longer and designed to demonstrate core Mastra concepts:
 
-## [AI Recruiter](/guides/guide/ai-recruiter)
-
-Create a workflow that processes candidate resumes and conducts interviews, demonstrating branching logic and LLM integration in Mastra workflows.
-
-## [Chef Assistant](/guides/guide/chef-michel)
-
-Build an AI chef agent that helps users cook meals with available ingredients, showing how to create interactive agents with custom tools.
-
-## [Research Paper Assistant](/guides/guide/research-assistant)
-
-Develop an AI research assistant that analyzes academic papers using Retrieval Augmented Generation (RAG), demonstrating document processing and question answering.
-
-## [Stock Agent](/guides/guide/stock-agent)
-
-Implement a simple agent that fetches stock prices, illustrating the basics of creating tools and integrating them with Mastra agents.
-
+<CardGrid>
+    <CardGridItem
+      title="AI Recruiter"
+      description="Create a workflow that processes candidate resumes and conducts interviews, demonstrating branching logic and LLM integration in Mastra workflows."
+      href="./guides/guide/ai-recruiter"
+    />
+    <CardGridItem
+      title="Chef Assistant"
+      description="Build an AI chef agent that helps users cook meals with available ingredients, showing how to create interactive agents with custom tools."
+      href="./guides/guide/chef-michel"
+    />
+    <CardGridItem
+      title="Research Assistant"
+      description="Develop an AI research assistant that analyzes academic papers using Retrieval Augmented Generation (RAG), demonstrating document processing and question answering."
+      href="./guides/guide/research-assistant"
+    />
+    <CardGridItem
+      title="Stock Agent"
+      description="Implement a simple agent that fetches stock prices, illustrating the basics of creating tools and integrating them with Mastra agents."
+      href="./guides/guide/stock-agent"
+    />
+    <CardGridItem
+      title="Notes MCP Server"
+      description="Build an AI notes assistant that helps users manage their notes, showing how to create interactive agents with custom tools."
+      href="./guides/guide/notes-mcp-server"
+    />
+</CardGrid>
 
 ---
 title: "Reference: Agent | Agents | Mastra Docs"
@@ -31547,6 +32592,38 @@ An optional object that can include configuration for output structure, memory m
         "Defines the expected structure of the output. Can be a JSON Schema object or a Zod schema.",
     },
     {
+      name: "memory",
+      type: "object",
+      isOptional: true,
+      description: "Configuration for memory. This is the preferred way to manage memory.",
+      properties: [
+        {
+          parameters: [{
+              name: "thread",
+              type: "string | { id: string; metadata?: Record<string, any>, title?: string }",
+              isOptional: false,
+              description: "The conversation thread, as a string ID or an object with an `id` and optional `metadata`."
+          }]
+        },
+        {
+          parameters: [{
+              name: "resource",
+              type: "string",
+              isOptional: false,
+              description: "Identifier for the user or resource associated with the thread."
+          }]
+        },
+        {
+          parameters: [{
+              name: "options",
+              type: "MemoryConfig",
+              isOptional: true,
+              description: "Configuration for memory behavior, like message history and semantic recall. See `MemoryConfig` below."
+          }]
+        }
+      ]
+    },
+    {
       name: "maxSteps",
       type: "number",
       isOptional: true,
@@ -31565,7 +32642,7 @@ An optional object that can include configuration for output structure, memory m
       type: "MemoryConfig",
       isOptional: true,
       description:
-        "Configuration options for memory management. See MemoryConfig section below for details.",
+        "**Deprecated.** Use `memory.options` instead. Configuration options for memory management. See MemoryConfig section below for details.",
     },
     {
       name: "onStepFinish",
@@ -31579,7 +32656,7 @@ An optional object that can include configuration for output structure, memory m
       type: "string",
       isOptional: true,
       description:
-        "Identifier for the user or resource interacting with the agent. Must be provided if threadId is provided.",
+        "**Deprecated.** Use `memory.resource` instead. Identifier for the user or resource interacting with the agent. Must be provided if threadId is provided.",
     },
     {
       name: "telemetry",
@@ -31600,7 +32677,7 @@ An optional object that can include configuration for output structure, memory m
       type: "string",
       isOptional: true,
       description:
-        "Identifier for the conversation thread. Allows for maintaining context across multiple interactions. Must be provided if resourceId is provided.",
+        "**Deprecated.** Use `memory.thread` instead. Identifier for the conversation thread. Allows for maintaining context across multiple interactions. Must be provided if resourceId is provided.",
     },
     {
       name: "toolChoice",
@@ -32674,6 +33751,38 @@ An optional object that can include configuration for output structure, memory m
         "Custom instructions that override the agent's default instructions for this specific generation. Useful for dynamically modifying agent behavior without creating a new agent instance.",
     },
     {
+      name: "memory",
+      type: "object",
+      isOptional: true,
+      description: "Configuration for memory. This is the preferred way to manage memory.",
+      properties: [
+        {
+          parameters: [{
+              name: "thread",
+              type: "string | { id: string; metadata?: Record<string, any>, title?: string }",
+              isOptional: false,
+              description: "The conversation thread, as a string ID or an object with an `id` and optional `metadata`."
+          }]
+        },
+        {
+          parameters: [{
+              name: "resource",
+              type: "string",
+              isOptional: false,
+              description: "Identifier for the user or resource associated with the thread."
+          }]
+        },
+        {
+          parameters: [{
+              name: "options",
+              type: "MemoryConfig",
+              isOptional: true,
+              description: "Configuration for memory behavior, like message history and semantic recall. See `MemoryConfig` below."
+          }]
+        }
+      ]
+    },
+    {
       name: "maxSteps",
       type: "number",
       isOptional: true,
@@ -32692,7 +33801,7 @@ An optional object that can include configuration for output structure, memory m
       type: "MemoryConfig",
       isOptional: true,
       description:
-        "Configuration options for memory management. See MemoryConfig section below for details.",
+        "**Deprecated.** Use `memory.options` instead. Configuration options for memory management. See MemoryConfig section below for details.",
     },
     {
       name: "onFinish",
@@ -32719,7 +33828,7 @@ An optional object that can include configuration for output structure, memory m
       type: "string",
       isOptional: true,
       description:
-        "Identifier for the user or resource interacting with the agent. Must be provided if threadId is provided.",
+        "**Deprecated.** Use `memory.resource` instead. Identifier for the user or resource interacting with the agent. Must be provided if threadId is provided.",
     },
     {
       name: "telemetry",
@@ -32740,7 +33849,7 @@ An optional object that can include configuration for output structure, memory m
       type: "string",
       isOptional: true,
       description:
-        "Identifier for the conversation thread. Allows for maintaining context across multiple interactions. Must be provided if resourceId is provided.",
+        "**Deprecated.** Use `memory.thread` instead. Identifier for the conversation thread. Allows for maintaining context across multiple interactions. Must be provided if resourceId is provided.",
     },
     {
       name: "toolChoice",
@@ -33842,6 +34951,47 @@ while (true) {
 }
 ```
 
+### Client tools
+
+Client-side tools allow you to execute custom functions on the client side when the agent requests them.
+
+#### Basic Usage
+
+```typescript
+import { createTool } from '@mastra/core/tools';
+import { z } from 'zod';
+
+const colorChangeTool = createTool({
+  id: 'changeColor',
+  description: 'Changes the background color',
+  inputSchema: z.object({
+    color: z.string(),
+  }),
+  execute: async ({ context }) => {
+    document.body.style.backgroundColor = context.color;
+    return { success: true };
+  }
+})
+
+
+// Use with generate
+const response = await agent.generate({
+  messages: 'Change the background to blue',
+  clientTools: {colorChangeTool},
+});
+
+// Use with stream
+const response = await agent.stream({
+  messages: 'Change the background to green',
+  clientTools: {colorChangeTool},
+});
+
+response.processDataStream({
+  onTextPart: (text) => console.log(text),
+  onToolCallPart: (toolCall) => console.log('Tool called:', toolCall.toolName),
+});
+```
+
 ### Get Agent Tool
 
 Retrieve information about a specific tool available to the agent:
@@ -34031,6 +35181,8 @@ Delete a thread and its messages:
 await thread.delete();
 ```
 
+
+
 ## Message Operations
 
 ### Save Messages
@@ -34051,6 +35203,18 @@ const savedMessages = await client.saveMessageToMemory({
   ],
   agentId: "agent-1",
 });
+```
+
+### Retrieve Thread Messages
+
+Get messages associated with a memory thread:
+
+```typescript
+// Get all messages in the thread
+const { messages } = await thread.getMessages();
+
+// Limit the number of messages retrieved
+const { messages } = await thread.getMessages({ limit: 10 });
 ```
 
 ### Get Memory Status
@@ -34535,6 +35699,34 @@ try {
 }
 ```
 
+### Get Workflow Run result
+
+Get the result of a workflow run:
+
+```typescript
+try  {
+  const workflow = client.getWorkflow("testWorkflow");
+
+  const run = await workflow.createRun();
+
+  // start the workflow run
+  const startResult = await workflow.start({
+    runId: run.runId,
+    inputData: {
+      city: "New York",
+    },
+  });
+
+  const result = await workflow.runExecutionResult(run.runId);
+
+  console.log(result);
+} catch (e) {
+  console.error(e);
+}
+```
+
+This is useful when dealing with long running workflows. You can use this to poll the result of the workflow run.
+
 ### Workflow run result
 
 A workflow run result yields the following:
@@ -34849,15 +36041,22 @@ description: "Documentation for the CloudflareDeployer class, which deploys Mast
 # CloudflareDeployer
 [EN] Source: https://mastra.ai/en/reference/deployer/cloudflare
 
-The CloudflareDeployer deploys Mastra applications to Cloudflare Workers, handling configuration, environment variables, and route management. It extends the abstract Deployer class to provide Cloudflare-specific deployment functionality.
+The CloudflareDeployer deploys standalone Mastra applications to Cloudflare Workers, handling configuration, environment variables, and route management. It extends the abstract Deployer class to provide Cloudflare-specific deployment functionality.
+
+## Installation
+
+```bash copy
+npm install @mastra/deployer-cloudflare@latest
+```
 
 ## Usage Example
 
-```typescript
+```typescript filename="src/mastra/index.ts" showLineNumbers copy
 import { Mastra } from "@mastra/core";
 import { CloudflareDeployer } from "@mastra/deployer-cloudflare";
 
 const mastra = new Mastra({
+  // ...
   deployer: new CloudflareDeployer({
     scope: "your-account-id",
     projectName: "your-project-name",
@@ -34887,7 +36086,6 @@ const mastra = new Mastra({
       },
     ],
   }),
-  // ... other Mastra configuration options
 });
 ```
 
@@ -35163,7 +36361,7 @@ description: Documentation for the Deployer abstract class, which handles packag
 # Deployer
 [EN] Source: https://mastra.ai/en/reference/deployer/deployer
 
-The Deployer handles the deployment of Mastra applications by packaging code, managing environment files, and serving applications using the Hono framework. Concrete implementations must define the deploy method for specific deployment targets.
+The Deployer handles the deployment of standalone Mastra applications by packaging code, managing environment files, and serving applications using the Hono framework. Concrete implementations must define the deploy method for specific deployment targets.
 
 ## Usage Example
 
@@ -35331,59 +36529,25 @@ description: "Documentation for the NetlifyDeployer class, which deploys Mastra 
 # NetlifyDeployer
 [EN] Source: https://mastra.ai/en/reference/deployer/netlify
 
-The NetlifyDeployer deploys Mastra applications to Netlify Functions, handling site creation, configuration, and deployment processes. It extends the abstract Deployer class to provide Netlify-specific deployment functionality.
+The NetlifyDeployer deploys standalone Mastra applications to Netlify Functions, handling site creation, configuration, and deployment processes. It extends the abstract Deployer class to provide Netlify-specific deployment functionality.
+
+## Installation
+
+```bash copy
+npm install @mastra/deployer-netlify@latest
+```
 
 ## Usage Example
 
-```typescript
+```typescript filename="src/mastra/index.ts" showLineNumbers copy
 import { Mastra } from "@mastra/core";
 import { NetlifyDeployer } from "@mastra/deployer-netlify";
 
 const mastra = new Mastra({
-  deployer: new NetlifyDeployer({
-    scope: "your-team-slug",
-    projectName: "your-project-name",
-    token: "your-netlify-token",
-  }),
-  // ... other Mastra configuration options
+  // ...
+  deployer: new NetlifyDeployer()
 });
 ```
-
-## Parameters
-
-### Constructor Parameters
-
-<PropertiesTable
-  content={[
-    {
-      name: "scope",
-      type: "string",
-      description: "Your Netlify team slug or ID.",
-      isOptional: false,
-    },
-    {
-      name: "projectName",
-      type: "string",
-      description:
-        "Name of your Netlify site (will be created if it doesn't exist).",
-      isOptional: false,
-    },
-    {
-      name: "token",
-      type: "string",
-      description: "Your Netlify authentication token.",
-      isOptional: false,
-    },
-  ]}
-/>
-
-### Environment Variables
-
-The NetlifyDeployer handles environment variables from multiple sources:
-
-1. **Environment Files**: Variables from `.env.production` and `.env` files.
-2. **Configuration**: Variables passed through the Mastra configuration.
-3. **Netlify Dashboard**: Variables can also be managed through Netlify's web interface.
 
 ## Lint Mastra Project
 
@@ -35404,28 +36568,29 @@ npx mastra build
 The build process generates the following output structure in the `.mastra/output` directory:
 
 ```
-.mastra/output/
-├── netlify/
-│   └── functions/
-│       └── api/
-│           └── index.mjs    # Application entry point
-└── netlify.toml             # Netlify configuration
+.netlify/
+├── v1/
+    └── functions/
+    │   └── api/
+    │       └── index.mjs    # Application entry point
+    │ config.json            # Netlify configuration
 ```
 
 ### Netlify Configuration
 
-The NetlifyDeployer automatically generates a `netlify.toml` configuration file in `.mastra/output` with the following settings:
+The NetlifyDeployer automatically generates a `config.json` configuration file in `.netlify/v1` with the following settings:
 
-```toml
-[functions]
-node_bundler = "esbuild"
-directory = "netlify/functions"
-
-[[redirects]]
-force = true
-from = "/*"
-status = 200
-to = "/.netlify/functions/api/:splat"
+```json
+{
+  "redirects": [
+    {
+      "force": true,
+      "from": "/*",
+      "to": "/.netlify/functions/api/:splat",
+      "status": 200
+    }
+  ]
+}
 ```
 
 ## Deployment Options
@@ -35435,15 +36600,23 @@ After building, you can deploy your Mastra application `.mastra/output` to Netli
 1. **Netlify CLI**: Deploy directly using Netlify's official CLI tool
 
    - Install the CLI: `npm install -g netlify-cli`
-   - Navigate to the output directory: `cd .mastra/output`
-   - Deploy with functions directory specified: `netlify deploy --dir . --functions ./netlify/functions`
-   - For production deployment add `--prod` flag: `netlify deploy --prod --dir . --functions ./netlify/functions`
+   - Deploy with functions directory specified: `netlify deploy`
+   - For production deployment add `--prod` flag: `netlify deploy --prod`
 
 2. **Netlify Dashboard**: Connect your Git repository or drag-and-drop the build output through the Netlify dashboard
 
+  When connecting a Mastra project Git repository to Netlify, use these recommended build settings since Netlify resolves paths relative to the project root:
+
+   ```bash
+   # Build command
+   npm run build
+   ```
+
+
+
 3. **Netlify Dev**: Run your Mastra application locally with Netlify's development environment
 
-> You can also run `netlify dev` in your output directory `.mastra/output` to test your Mastra application locally.
+> You can also run `netlify dev` in your project root to test your Mastra application locally.
 
 ## Platform Documentation
 
@@ -35458,61 +36631,25 @@ description: "Documentation for the VercelDeployer class, which deploys Mastra a
 # VercelDeployer
 [EN] Source: https://mastra.ai/en/reference/deployer/vercel
 
-The VercelDeployer deploys Mastra applications to Vercel, handling configuration, environment variable synchronization, and deployment processes. It extends the abstract Deployer class to provide Vercel-specific deployment functionality.
+The VercelDeployer deploys standalone Mastra applications to Vercel, handling configuration, environment variable synchronization, and deployment processes. It extends the abstract Deployer class to provide Vercel-specific deployment functionality.
+
+## Installation
+
+```bash copy
+npm install @mastra/deployer-vercel@latest
+```
 
 ## Usage Example
 
-```typescript
+```typescript filename="src/mastra/index.ts" showLineNumbers copy
 import { Mastra } from "@mastra/core";
 import { VercelDeployer } from "@mastra/deployer-vercel";
 
 const mastra = new Mastra({
-  deployer: new VercelDeployer({
-    teamSlug: "your-team-slug",
-    projectName: "your-project-name",
-    token: "your-vercel-token",
-  }),
-  // ... other Mastra configuration options
+  // ...
+  deployer: new VercelDeployer()
 });
 ```
-
-## Parameters
-
-### Constructor Parameters
-
-<PropertiesTable
-  content={[
-    {
-      name: "teamSlug",
-      type: "string",
-      description: "Your Vercel team slug",
-      isOptional: false,
-    },
-    {
-      name: "projectName",
-      type: "string",
-      description:
-        "Name of your Vercel project (will be created if it doesn't exist).",
-      isOptional: false,
-    },
-    {
-      name: "token",
-      type: "string",
-      description: "Your Vercel authentication token.",
-      isOptional: false,
-    },
-  ]}
-/>
-
-### Environment Variables
-
-The VercelDeployer handles environment variables from multiple sources:
-
-1. **Environment Files**: Variables from `.env.production` and `.env` files.
-2. **Configuration**: Variables passed through the Mastra configuration.
-3. **Vercel Dashboard**: Variables can also be managed through Vercel's web interface.
-
-The deployer automatically synchronizes environment variables between your local development environment and Vercel's environment variable system, ensuring consistency across all deployment environments (production, preview, and development).
 
 ## Lint Mastra Project
 
@@ -35530,54 +36667,26 @@ To build your Mastra project for Vercel deployment:
 npx mastra build
 ```
 
-The build process generates the following output structure in the `.mastra/output` directory:
+The build process generates the following output structure in the `.vercel/output` directory:
 
 ```
-.mastra/output/
-├── vercel.json     # Vercel configuration
+.vercel/output/functions/index.func
 └── index.mjs       # Application entry point
-```
-
-### Vercel Configuration
-
-The VercelDeployer automatically generates a `vercel.json` configuration file in `.mastra/output` with the following settings:
-
-```json
-{
-  "version": 2,
-  "installCommand": "npm install --omit=dev",
-  "builds": [
-    {
-      "src": "index.mjs",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["**"]
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "index.mjs"
-    }
-  ]
-}
 ```
 
 ## Deployment Options
 
-After building, you can deploy your Mastra application `.mastra/output` to Vercel using any of these methods:
+After building, you can deploy your Mastra application to Vercel using any of these methods:
 
 1. **Vercel CLI**: Deploy directly using Vercel's official CLI tool
 
    - Install the CLI: `npm install -g vercel`
-   - Navigate to the output directory: `cd .mastra/output`
-   - Deploy to preview environment: `vercel`
-   - For production deployment: `vercel --prod`
+   - Deploy to preview environment: `vercel --prebuilt`
+   - For production deployment: `vercel --prod --prebuilt`
 
 2. **Vercel Dashboard**: Connect your Git repository or drag-and-drop the build output through the Vercel dashboard
 
-> You can also run `vercel dev` in your output directory `.mastra/output` to test your Mastra application locally.
+> You can also run `vercel dev` in your project directory to test your Mastra application locally. (Make sure you configured your dev command to `mastra dev`)
 
 ## Platform Documentation
 
@@ -49618,6 +50727,7 @@ The storage implementation handles schema creation and updates automatically. It
 
 - `threads`: Stores conversation threads
 - `messages`: Stores individual messages
+- `resources`: Stores user-specific data for resource-scoped working memory
 - `metadata`: Stores additional metadata for threads and messages
 
 
@@ -50965,6 +52075,145 @@ const { prompt, messages } = await mcpClient.prompts.get({
 });
 ```
 
+### `elicitation` Property
+
+The `MCPClient` instance has an `elicitation` property that provides access to elicitation-related operations. Elicitation allows MCP servers to request structured information from users.
+
+```typescript
+const mcpClient = new MCPClient({
+  /* ...servers configuration... */
+});
+
+// Set up elicitation handler
+mcpClient.elicitation.onRequest('serverName', async (request) => {
+  // Handle elicitation request from server
+  console.log('Server requests:', request.message);
+  console.log('Schema:', request.requestedSchema);
+  
+  // Return user response
+  return {
+    action: 'accept',
+    content: { name: 'John Doe', email: 'john@example.com' }
+  };
+});
+```
+
+#### `elicitation.onRequest(serverName: string, handler: ElicitationHandler)`
+
+Sets up a handler function that will be called when any connected MCP server sends an elicitation request. The handler receives the request and must return a response.
+
+**ElicitationHandler Function:**
+
+The handler function receives a request object with:
+- `message`: A human-readable message describing what information is needed
+- `requestedSchema`: A JSON schema defining the structure of the expected response
+
+The handler must return an `ElicitResult` with:
+- `action`: One of `'accept'`, `'reject'`, or `'cancel'`
+- `content`: The user's data (only when action is `'accept'`)
+
+**Example:**
+
+```typescript
+mcpClient.elicitation.onRequest('serverName', async (request) => {
+  console.log(`Server requests: ${request.message}`);
+  
+  // Example: Simple user input collection
+  if (request.requestedSchema.properties.name) {
+    // Simulate user accepting and providing data
+    return {
+      action: 'accept',
+      content: {
+        name: 'Alice Smith',
+        email: 'alice@example.com'
+      }
+    };
+  }
+  
+  // Simulate user rejecting the request
+  return { action: 'reject' };
+});
+```
+
+**Complete Interactive Example:**
+
+```typescript
+import { MCPClient } from '@mastra/mcp';
+import { createInterface } from 'readline';
+
+const readline = createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+function askQuestion(question: string): Promise<string> {
+  return new Promise(resolve => {
+    readline.question(question, answer => resolve(answer.trim()));
+  });
+}
+
+const mcpClient = new MCPClient({
+  servers: {
+    interactiveServer: {
+      url: new URL('http://localhost:3000/mcp'),
+    },
+  },
+});
+
+// Set up interactive elicitation handler
+await mcpClient.elicitation.onRequest('interactiveServer', async (request) => {
+  console.log(`\n📋 Server Request: ${request.message}`);
+  console.log('Required information:');
+  
+  const schema = request.requestedSchema;
+  const properties = schema.properties || {};
+  const required = schema.required || [];
+  const content: Record<string, any> = {};
+  
+  // Collect input for each field
+  for (const [fieldName, fieldSchema] of Object.entries(properties)) {
+    const field = fieldSchema as any;
+    const isRequired = required.includes(fieldName);
+    
+    let prompt = `${field.title || fieldName}`;
+    if (field.description) prompt += ` (${field.description})`;
+    if (isRequired) prompt += ' *required*';
+    prompt += ': ';
+    
+    const answer = await askQuestion(prompt);
+    
+    // Handle cancellation
+    if (answer.toLowerCase() === 'cancel') {
+      return { action: 'cancel' };
+    }
+    
+    // Validate required fields
+    if (answer === '' && isRequired) {
+      console.log(`❌ ${fieldName} is required`);
+      return { action: 'reject' };
+    }
+    
+    if (answer !== '') {
+      content[fieldName] = answer;
+    }
+  }
+  
+  // Confirm submission
+  console.log('\n📝 You provided:');
+  console.log(JSON.stringify(content, null, 2));
+  
+  const confirm = await askQuestion('\nSubmit this information? (yes/no/cancel): ');
+  
+  if (confirm.toLowerCase() === 'yes' || confirm.toLowerCase() === 'y') {
+    return { action: 'accept', content };
+  } else if (confirm.toLowerCase() === 'cancel') {
+    return { action: 'cancel' };
+  } else {
+    return { action: 'reject' };
+  }
+});
+```
+
 #### `prompts.list()`
 
 Retrieves all available prompts from all connected MCP servers, grouped by server name.
@@ -51029,6 +52278,111 @@ mcpClient.prompts.onListChanged("myWeatherServer", () => {
   // await mcpClient.prompts.list();
 });
 ```
+
+## Elicitation
+
+Elicitation is a feature that allows MCP servers to request structured information from users. When a server needs additional data, it can send an elicitation request that the client handles by prompting the user. A common example is during a tool call.
+
+### How Elicitation Works
+
+1. **Server Request**: An MCP server tool calls `server.elicitation.sendRequest()` with a message and schema
+2. **Client Handler**: Your elicitation handler function is called with the request
+3. **User Interaction**: Your handler collects user input (via UI, CLI, etc.)
+4. **Response**: Your handler returns the user's response (accept/reject/cancel)
+5. **Tool Continuation**: The server tool receives the response and continues execution
+
+### Setting Up Elicitation
+
+You must set up an elicitation handler before tools that use elicitation are called:
+
+```typescript
+import { MCPClient } from '@mastra/mcp';
+
+const mcpClient = new MCPClient({
+  servers: {
+    interactiveServer: {
+      url: new URL('http://localhost:3000/mcp'),
+    },
+  },
+});
+
+// Set up elicitation handler
+mcpClient.elicitation.onRequest('interactiveServer', async (request) => {
+  // Handle the server's request for user input
+  console.log(`Server needs: ${request.message}`);
+  
+  // Your logic to collect user input
+  const userData = await collectUserInput(request.requestedSchema);
+  
+  return {
+    action: 'accept',
+    content: userData
+  };
+});
+```
+
+### Response Types
+
+Your elicitation handler must return one of three response types:
+
+- **Accept**: User provided data and confirmed submission
+  ```typescript
+  return {
+    action: 'accept',
+    content: { name: 'John Doe', email: 'john@example.com' }
+  };
+  ```
+
+- **Reject**: User explicitly declined to provide the information
+  ```typescript
+  return { action: 'reject' };
+  ```
+
+- **Cancel**: User dismissed or cancelled the request
+  ```typescript
+  return { action: 'cancel' };
+  ```
+
+### Schema-Based Input Collection
+
+The `requestedSchema` provides structure for the data the server needs:
+
+```typescript
+await mcpClient.elicitation.onRequest('interactiveServer', async (request) => {
+  const { properties, required = [] } = request.requestedSchema;
+  const content: Record<string, any> = {};
+  
+  for (const [fieldName, fieldSchema] of Object.entries(properties || {})) {
+    const field = fieldSchema as any;
+    const isRequired = required.includes(fieldName);
+    
+    // Collect input based on field type and requirements
+    const value = await promptUser({
+      name: fieldName,
+      title: field.title,
+      description: field.description,
+      type: field.type,
+      required: isRequired,
+      format: field.format,
+      enum: field.enum,
+    });
+    
+    if (value !== null) {
+      content[fieldName] = value;
+    }
+  }
+  
+  return { action: 'accept', content };
+});
+```
+
+### Best Practices
+
+- **Always handle elicitation**: Set up your handler before calling tools that might use elicitation
+- **Validate input**: Check that required fields are provided
+- **Respect user choice**: Handle reject and cancel responses gracefully
+- **Clear UI**: Make it obvious what information is being requested and why
+- **Security**: Never auto-accept requests for sensitive information
 
 ## Examples
 
@@ -52079,6 +53433,192 @@ For practical examples of setting up and deploying an MCPServer, see the [Deploy
 
 The example at the beginning of this page also demonstrates how to instantiate `MCPServer` with both tools and agents.
 
+## Elicitation
+
+### What is Elicitation?
+
+Elicitation is a feature in the Model Context Protocol (MCP) that allows servers to request structured information from users. This enables interactive workflows where servers can collect additional data dynamically.
+
+The `MCPServer` class automatically includes elicitation capabilities. Tools receive an `options` parameter in their `execute` function that includes an `elicitation.sendRequest()` method for requesting user input.
+
+### Tool Execution Signature
+
+When tools are executed within an MCP server context, they receive an additional `options` parameter:
+
+```typescript
+execute: async ({ context }, options) => {
+  // context contains the tool's input parameters
+  // options contains server capabilities like elicitation
+  
+  const result = await options.elicitation.sendRequest({
+    message: "Please provide information",
+    requestedSchema: { /* schema */ }
+  });
+  
+  return result;
+}
+```
+
+### How Elicitation Works
+
+A common use case is during tool execution. When a tool needs user input, it can use the elicitation functionality provided through the tool's execution options:
+
+1. The tool calls `options.elicitation.sendRequest()` with a message and schema
+2. The request is sent to the connected MCP client
+3. The client presents the request to the user (via UI, command line, etc.)
+4. The user provides input, rejects, or cancels the request
+5. The client sends the response back to the server
+6. The tool receives the response and continues execution
+
+### Using Elicitation in Tools
+
+Here's an example of a tool that uses elicitation to collect user contact information:
+
+```typescript
+import { MCPServer } from "@mastra/mcp";
+import { createTool } from "@mastra/core/tools";
+import { z } from "zod";
+
+const server = new MCPServer({
+  name: "Interactive Server",
+  version: "1.0.0",
+  tools: {
+    collectContactInfo: createTool({
+      id: "collectContactInfo",
+      description: "Collects user contact information through elicitation",
+      inputSchema: z.object({
+        reason: z.string().optional().describe("Reason for collecting contact info"),
+      }),
+      execute: async ({ context }, options) => {
+        const { reason } = context;
+
+        try {
+          // Request user input via elicitation through the options parameter
+          const result = await options.elicitation.sendRequest({
+            message: reason 
+              ? `Please provide your contact information. ${reason}`
+              : 'Please provide your contact information',
+            requestedSchema: {
+              type: 'object',
+              properties: {
+                name: {
+                  type: 'string',
+                  title: 'Full Name',
+                  description: 'Your full name',
+                },
+                email: {
+                  type: 'string',
+                  title: 'Email Address', 
+                  description: 'Your email address',
+                  format: 'email',
+                },
+                phone: {
+                  type: 'string',
+                  title: 'Phone Number',
+                  description: 'Your phone number (optional)',
+                },
+              },
+              required: ['name', 'email'],
+            },
+          });
+
+          // Handle the user's response
+          if (result.action === 'accept') {
+            return `Contact information collected: ${JSON.stringify(result.content, null, 2)}`;
+          } else if (result.action === 'reject') {
+            return 'Contact information collection was declined by the user.';
+          } else {
+            return 'Contact information collection was cancelled by the user.';
+          }
+        } catch (error) {
+          return `Error collecting contact information: ${error}`;
+        }
+      },
+    }),
+  },
+});
+```
+
+### Elicitation Request Schema
+
+The `requestedSchema` must be a flat object with primitive properties only. Supported types include:
+
+- **String**: `{ type: 'string', title: 'Display Name', description: 'Help text' }`
+- **Number**: `{ type: 'number', minimum: 0, maximum: 100 }`
+- **Boolean**: `{ type: 'boolean', default: false }`
+- **Enum**: `{ type: 'string', enum: ['option1', 'option2'] }`
+
+Example schema:
+
+```typescript
+{
+  type: 'object',
+  properties: {
+    name: {
+      type: 'string',
+      title: 'Full Name',
+      description: 'Your complete name',
+    },
+    age: {
+      type: 'number',
+      title: 'Age',
+      minimum: 18,
+      maximum: 120,
+    },
+    newsletter: {
+      type: 'boolean',
+      title: 'Subscribe to Newsletter',
+      default: false,
+    },
+  },
+  required: ['name'],
+}
+```
+
+### Response Actions
+
+Users can respond to elicitation requests in three ways:
+
+1. **Accept** (`action: 'accept'`): User provided data and confirmed submission
+   - Contains `content` field with the submitted data
+2. **Reject** (`action: 'reject'`): User explicitly declined to provide information
+   - No content field
+3. **Cancel** (`action: 'cancel'`): User dismissed the request without deciding
+   - No content field
+
+Tools should handle all three response types appropriately.
+
+### Security Considerations
+
+- **Never request sensitive information** like passwords, SSNs, or credit card numbers
+- Validate all user input against the provided schema
+- Handle rejection and cancellation gracefully
+- Provide clear reasons for data collection
+- Respect user privacy and preferences
+
+### Tool Execution API
+
+The elicitation functionality is available through the `options` parameter in tool execution:
+
+```typescript
+// Within a tool's execute function
+options.elicitation.sendRequest({
+  message: string,           // Message to display to user
+  requestedSchema: object    // JSON schema defining expected response structure
+}): Promise<ElicitResult>
+```
+
+Note that elicitation is **session-aware** when using HTTP-based transports (SSE or HTTP). This means that when multiple clients are connected to the same server, elicitation requests are routed to the correct client session that initiated the tool execution.
+
+The `ElicitResult` type:
+
+```typescript
+type ElicitResult = {
+  action: 'accept' | 'reject' | 'cancel';
+  content?: any; // Only present when action is 'accept'
+}
+```
+
 ## Related Information
 
 - For connecting to MCP servers in Mastra, see the [MCPClient documentation](./mcp-client).
@@ -52626,6 +54166,7 @@ runtimeContext.set("filter", { category: "docs" });
 runtimeContext.set("databaseConfig", {
   pinecone: { namespace: "runtime-namespace" }
 });
+runtimeContext.set("model", openai.embedding("text-embedding-3-small"));
 
 const response = await agent.generate(
   "Find documentation from the knowledge base.",
@@ -57306,7 +58847,7 @@ const mastra = new Mastra({
   },
 });
 
-const run = mastra.getWorkflow("myWorkflow").createRun();
+const run = await mastra.getWorkflow("myWorkflow").createRunAsync();
 ```
 
 ## Parameters
@@ -57844,7 +59385,7 @@ The `.resume()` method resumes a suspended workflow run with new data, allowing 
 ## Usage
 
 ```typescript
-const run = counterWorkflow.createRun();
+const run = await counterWorkflow.createRunAsync();
 const result = await run.start({ inputData: { startValue: 0 } });
 
 if (result.status === "suspended") {
@@ -57905,6 +59446,98 @@ if (result.status === "suspended") {
 
 - [Suspend and resume](../../docs/workflows/suspend-and-resume.mdx)
 - [Human in the loop example](../../examples/workflows/human-in-the-loop.mdx)
+
+
+---
+title: "Reference: Workflow.sleep() | Building Workflows | Mastra Docs"
+description: Documentation for the `.sleep()` method in workflows, which pauses execution for a specified number of milliseconds.
+---
+
+# Workflow.sleep()
+[EN] Source: https://mastra.ai/en/reference/workflows/sleep
+
+The `.sleep()` method pauses execution for a specified number of milliseconds.
+
+## Usage
+
+```typescript
+workflow.sleep(1000);
+```
+
+## Parameters
+
+<PropertiesTable
+  content={[
+    {
+      name: "milliseconds",
+      type: "number",
+      description: "The number of milliseconds to pause execution",
+      isOptional: false,
+    },
+  ]}
+/>
+
+## Returns
+
+<PropertiesTable
+  content={[
+    {
+      name: "workflow",
+      type: "Workflow",
+      description: "The workflow instance for method chaining",
+    },
+  ]}
+/>
+
+## Related
+
+- [Sleep & Events](../../docs/workflows/pausing-execution.mdx)
+
+
+---
+title: "Reference: Workflow.sleepUntil() | Building Workflows | Mastra Docs"
+description: Documentation for the `.sleepUntil()` method in workflows, which pauses execution until a specified date.
+---
+
+# Workflow.sleepUntil()
+[EN] Source: https://mastra.ai/en/reference/workflows/sleepUntil
+
+The `.sleepUntil()` method pauses execution until a specified date.
+
+## Usage
+
+```typescript
+workflow.sleepUntil(new Date(Date.now() + 1000));
+```
+
+## Parameters
+
+<PropertiesTable
+  content={[
+    {
+      name: "date",
+      type: "Date",
+      description: "The date until which to pause execution",
+      isOptional: false,
+    },
+  ]}
+/>
+
+## Returns
+
+<PropertiesTable
+  content={[
+    {
+      name: "workflow",
+      type: "Workflow",
+      description: "The workflow instance for method chaining",
+    },
+  ]}
+/>
+
+## Related
+
+- [Sleep & Events](../../docs/workflows/pausing-execution.mdx)
 
 
 ---
@@ -58132,7 +59765,7 @@ The `.start()` method starts a workflow run with input data, allowing you to exe
 ## Usage
 
 ```typescript
-const run = myWorkflow.createRun();
+const run = await myWorkflow.createRunAsync();
 
 // Start the workflow with input data
 const result = await run.start({
@@ -58356,7 +59989,7 @@ The `.stream()` method allows you to monitor the execution of a workflow run, pr
 ## Usage
 
 ```typescript
-const run = myWorkflow.createRun();
+const run = await myWorkflow.createRunAsync();
 
 // Add a stream to monitor execution
 const result = run.stream({ inputData: {...} });
@@ -58628,6 +60261,58 @@ workflow.then(stepOne).then(stepTwo);
 
 
 ---
+title: "Reference: Workflow.waitForEvent() | Building Workflows | Mastra Docs"
+description: Documentation for the `.waitForEvent()` method in workflows, which pauses execution until an event is received.
+---
+
+# Workflow.waitForEvent()
+[EN] Source: https://mastra.ai/en/reference/workflows/waitForEvent
+
+The `.waitForEvent()` method pauses execution until an event is received.
+
+## Usage
+
+```typescript
+workflow.waitForEvent('my-event-name', step1);
+```
+
+## Parameters
+
+<PropertiesTable
+  content={[
+    {
+      name: "eventName",
+      type: "string",
+      description: "The name of the event to wait for",
+      isOptional: false,
+    },
+    {
+      name: "step",
+      type: "Step",
+      description: "The step to resume after the event is received",
+      isOptional: false,
+    },
+  ]}
+/>
+
+## Returns
+
+<PropertiesTable
+  content={[
+    {
+      name: "workflow",
+      type: "Workflow",
+      description: "The workflow instance for method chaining",
+    },
+  ]}
+/>
+
+## Related
+
+- [Sleep & Events](../../docs/workflows/pausing-execution.mdx)
+
+
+---
 title: "Reference: Workflow.watch() | Building Workflows | Mastra Docs"
 description: Documentation for the `.watch()` method in workflows, which allows you to monitor the execution of a workflow run.
 ---
@@ -58640,7 +60325,7 @@ The `.watch()` method allows you to monitor the execution of a workflow run, pro
 ## Usage
 
 ```typescript
-const run = myWorkflow.createRun();
+const run = await myWorkflow.createRunAsync();
 
 // Add a watcher to monitor execution
 run.watch(event => {
@@ -58720,7 +60405,7 @@ const mastra = new Mastra({
   },
 });
 
-const run = mastra.getWorkflow("myWorkflow").createRun();
+const run = await mastra.getWorkflow("myWorkflow").createRunAsync();
 ```
 
 ## API Reference
@@ -58788,7 +60473,11 @@ Validates and finalizes the workflow configuration. Must be called after adding 
 
 #### `createRun()`
 
-Creates a new workflow run instance, allowing you to execute the workflow with specific input data. Accepts optional run ID.
+Deprecated. Creates a new workflow run instance, allowing you to execute the workflow with specific input data. Accepts optional run ID.
+
+#### `createRunAsync()`
+
+Creates a new workflow run instance, allowing you to execute the workflow with specific input data. Accepts optional run ID. Stores a pending workflow run snapshot into storage.
 
 #### `execute()`
 
