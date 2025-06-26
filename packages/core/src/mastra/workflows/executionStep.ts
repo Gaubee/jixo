@@ -35,8 +35,7 @@ export const executionStep = createStep({
     try {
       await logManager.updateTask(task.id, {status: "Locked", executor: init.runnerId});
 
-      const result = await useExecutorAgent(mastra, {runtimeContext});
-      const executionResult = result.object;
+      const executionResult = await useExecutorAgent(mastra, {runtimeContext});
 
       if (executionResult.outcome === "failure") {
         throw new Error(executionResult.errorMessage ?? "Executor reported a failure without an error message.");

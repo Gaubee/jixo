@@ -7,7 +7,7 @@ import {Memory} from "@mastra/memory";
 import {commonModel} from "../llm/index.js";
 import {tools} from "../tools/index.js";
 import type {ExecutorRuntimeContextData} from "../workflows/schemas.js";
-import type {CreateAgentOptions} from "./common.js";
+import {agentGenerateStructuredOutput, type CreateAgentOptions} from "./common.js";
 import {ExecutionResultSchema} from "./schemas.js";
 
 export const createExecutorAgent = async ({jobDir, memoryStorage}: CreateAgentOptions) => {
@@ -107,8 +107,8 @@ ${
 ${gitCommitInstruction}
 `;
 
-  return mastra.getAgent("executorAgent").generate([{role: "user", content: userPrompt}], {
-    output: ExecutionResultSchema,
+  const result = await agentGenerateStructuredOutput(mastra.getAgent("executorAgent"), [{role: "user", content: userPrompt}], ExecutionResultSchema, {
     runtimeContext,
   });
+  return result;
 };

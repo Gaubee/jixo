@@ -5,7 +5,7 @@ import {Memory} from "@mastra/memory";
 import {thinkModel} from "../llm/index.js";
 import {tools} from "../tools/index.js";
 import type {ReviewerRuntimeContextData} from "../workflows/schemas.js";
-import type {CreateAgentOptions} from "./common.js";
+import {agentGenerateStructuredOutput, type CreateAgentOptions} from "./common.js";
 import {ReviewResultSchema} from "./schemas.js";
 
 export const createReviewerAgent = async ({jobDir, memoryStorage}: CreateAgentOptions) => {
@@ -71,8 +71,8 @@ ${recentLogs || "No specific logs for this task."}
 Please provide your review based on the information above. Use your file system tools to verify file-related checklist items.
 `;
 
-  return app.getAgent("reviewerAgent").generate(prompt, {
-    output: ReviewResultSchema,
+  const result = await agentGenerateStructuredOutput(app.getAgent("reviewerAgent"), [{role: "user", content: prompt}], ReviewResultSchema, {
     runtimeContext,
   });
+  return result;
 };

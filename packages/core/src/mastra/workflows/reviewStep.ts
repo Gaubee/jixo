@@ -38,8 +38,7 @@ export const reviewStep = createStep({
     ]);
 
     try {
-      const result = await useReviewerAgent(mastra, {runtimeContext});
-      const reviewResult = result.object;
+      const reviewResult = await useReviewerAgent(mastra, {runtimeContext});
 
       if (reviewResult.feedback?.startsWith("ABORT:")) {
         await logManager.addWorkLog({

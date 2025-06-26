@@ -53,9 +53,8 @@ export const planningStep = createStep({
       })
       .exhaustive();
 
-    const result = await usePlannerAgent(mastra, planningPrompt, {logManager});
+    const plans = await usePlannerAgent(mastra, planningPrompt, {logManager});
 
-    const plans = result.object;
     let summary: string[] = [];
     for (const plan of plans) {
       await match(plan)

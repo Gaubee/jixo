@@ -6,7 +6,7 @@ import {thinkModel} from "../llm/index.js";
 import {type LogManager} from "../services/logManager.js";
 import {tools} from "../tools/index.js";
 import {isJixoApp, ok} from "../utils.js";
-import type {CreateAgentOptions} from "./common.js";
+import {agentGenerateStructuredOutput, type CreateAgentOptions} from "./common.js";
 import {PlannerOutputSchema} from "./schemas.js";
 export const createPlannerAgent = async ({jobDir, memoryStorage}: CreateAgentOptions) => {
   const plannerAgent = new Agent({
@@ -48,7 +48,7 @@ Analyze the user's request carefully and provide a precise and actionable plan.`
 export type PlannerAgent = Awaited<ReturnType<typeof createPlannerAgent>>;
 
 const MD_CODE_WRAPPER = "```";
-export const usePlannerAgent = (mastra: Mastra, planningPrompt: string, args: {logManager: LogManager}) => {
+export const usePlannerAgent = async (mastra: Mastra, planningPrompt: string, args: {logManager: LogManager}) => {
   ok(isJixoApp(mastra));
   const {logManager} = args;
   const {
@@ -76,10 +76,10 @@ ${planningPrompt}
   // Dynamically create the toolset for this specific call
   const logToolset = tools.logTools(logManager);
 
-  return mastra.getAgent("plannerAgent").generate(finalPrompt, {
-    output: PlannerOutputSchema,
+  const result = await agentGenerateStructuredOutput(mastra.getAgent("plannerAgent"), [{role: "user", content: finalPrompt}], PlannerOutputSchema, {
     toolsets: {
       log: logToolset, // Correctly pass tools via the toolsets option
     },
   });
+  return result;
 };
