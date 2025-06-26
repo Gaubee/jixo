@@ -16,6 +16,14 @@ async function loadJixoConfig(dir: string) {
   return result?.config || {};
 }
 
+/**
+ * Manages all Jobs within a single workspace.
+ * It acts as a centralized factory and registry for `LogManager` instances,
+ * ensuring that each Job is managed by a single, consistent manager instance.
+ * This class is also responsible for performing "meta-operations" on Jobs,
+ * such as changing their working directory, which are considered sensitive
+ * and require coordinated file system and state updates.
+ */
 export class WorkspaceManager {
   private workspaceDir: string;
   private jixoDir: string;
@@ -87,6 +95,16 @@ export class WorkspaceManager {
     return this.getOrCreateJobManager(jobName, jobInfo);
   }
 
+  /**
+   * Updates the working directory of a job. This is a meta-operation that can either
+   * just change the `jobDir` pointer in the log file, or physically move the directory on disk.
+   * @param jobName The name of the job to update.
+   * @param newJobDir The new directory path (relative to the workspace).
+   * @param renameOriginDir If true, physically moves the old directory to the new location.
+   *                        This is a destructive action and should be used with caution.
+   *                        If false (default), only the `jobDir` metadata is updated.
+   * @returns The updated LogManager instance.
+   */
   public async updateJobDir(jobName: string, newJobDir: string, renameOriginDir: boolean = false): Promise<LogManager> {
     const logManager = await this.getJobLogManager(jobName);
     const oldJobDir = logManager.jobDir;
@@ -118,12 +136,22 @@ export class WorkspaceManager {
   }
 
   /**
-   * Resolves the working directory for a job based on the provided job name and directory setting.
+   * Resolves the working directory for a job, ensuring it's safely contained within the workspace.
+   * @param jobName The name of the job.
+   * @param jobDir The desired directory setting (boolean for job-name-as-dir, or a relative path).
+   * @returns The resolved, absolute path for the job directory.
    */
   resolveJobDir(jobName: string, jobDir: boolean | string = false): string {
     return match(jobDir)
       .with(true, () => path.join(this.workspaceDir, jobName))
-      .with(P.string, (dirname) => path.resolve(this.workspaceDir, dirname))
+      .with(P.string, (dirname) => {
+        const resolvedPath = path.resolve(this.workspaceDir, dirname);
+        // Security check to prevent path traversal
+        if (!resolvedPath.startsWith(this.workspaceDir)) {
+          throw new Error(`Job directory '${dirname}' is outside the workspace.`);
+        }
+        return resolvedPath;
+      })
       .otherwise(() => this.workspaceDir);
   }
 
@@ -153,8 +181,7 @@ export class WorkspaceManager {
     if (!fs.existsSync(logFilePath)) {
       throw new Error(`Job '${jobName}' not found.`);
     }
-    // Dummy goal, will be overwritten by reading the log file.
-    // The jobDir is set to workspaceDir because we don't know the logical jobDir until we parse the file.
+    // A dummy goal is provided; it will be overwritten by reading the log file.
     return this.getOrCreateJobManager(jobName, {jobName, jobGoal: "", jobDir: this.workspaceDir});
   }
 

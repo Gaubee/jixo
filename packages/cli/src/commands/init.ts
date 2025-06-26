@@ -39,7 +39,7 @@ const addRulesToGitIgnore = (gitignoreFilepath: string, rules: string[]) => {
   const existingRules = fs.existsSync(gitignoreFilepath) ? fs.readFileSync(gitignoreFilepath, "utf-8").split("\n") : [];
   let changed = false;
   const newRules = rules.filter((rule) => !existingRules.includes(rule));
-  
+
   if (newRules.length > 0) {
     fs.appendFileSync(gitignoreFilepath, "\n# JIXO\n" + newRules.join("\n") + "\n");
     changed = true;

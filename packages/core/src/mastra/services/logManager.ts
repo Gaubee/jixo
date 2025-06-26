@@ -21,7 +21,20 @@ export type NextActionableTaskResult = {
   task: RoadmapTaskNodeData | SubTaskData | null;
 };
 
+/**
+ * Represents the in-memory state of a single Job.
+ * It handles the reading, writing, and modification of the job's log file,
+ * which includes the roadmap and work log. It also emits lifecycle events
+ * for significant state changes.
+ */
 export class LogManager {
+  /**
+   * An event emitter for LogManager lifecycle events.
+   * Allows other parts of the system to react to changes in a Job's state.
+   *
+   * Example:
+   * `logManager.onJobDirChanged.watch(({ oldDir, newDir }) => { ... });`
+   */
   readonly onJobDirChanged = pureEvent<{oldDir: string; newDir: string}>();
   private _locks = new Map<string, boolean>();
   private parserAgent: Agent;
@@ -30,7 +43,7 @@ export class LogManager {
     private jobName: string,
     private logData: LogFileData,
     parserAgent: Agent,
-    private workspaceDir: string, // Added workspaceDir
+    private workspaceDir: string, // The root workspace dir, used for physical file ops.
   ) {
     this.parserAgent = parserAgent;
   }
@@ -54,7 +67,6 @@ export class LogManager {
     const validatedData = LogFileSchema.parse(this.logData);
     const markdownContent = serializeLogFile(validatedData);
     const hash = calcContentHash(markdownContent);
-    // Use workspaceDir for physical storage path
     const logFilePath = getLogFilePath(this.workspaceDir, this.jobName);
     const cachePath = getCacheFilePath(this.workspaceDir, hash);
     await fsp.writeFile(logFilePath, markdownContent, "utf-8");
@@ -62,7 +74,6 @@ export class LogManager {
   }
 
   public async reload(): Promise<void> {
-    // Use workspaceDir to read the log file
     const logFilePath = getLogFilePath(this.workspaceDir, this.jobName);
     const content = await fsp.readFile(logFilePath, "utf-8");
     const hash = calcContentHash(content);
@@ -87,6 +98,9 @@ export class LogManager {
   }
 
   /**
+   * Updates the job's metadata. This is an internal method.
+   * For changing the job directory, use `workspaceManager.updateJobDir` instead,
+   * as it handles the necessary file system operations.
    * @internal
    */
   public async updateJobInfo(updates: Partial<JobInfoData>): Promise<JobInfoData> {

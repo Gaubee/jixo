@@ -5,6 +5,12 @@ import {isJixoApp, ok} from "../utils.js";
 import type {JixoJobWorkflow} from "./jixoJobWorkflow.js";
 import {JixoMasterWorkflowInputSchema, JixoMasterWorkflowOutputSchema} from "./schemas.js";
 
+/**
+ * This step represents the main control loop for a JIXO job, acting as the "Supervisor" or "Central Nervous System".
+ * Its primary responsibility is to orchestrate the execution of the `jixoJobWorkflow` (the "AI Neuron").
+ * It manages the macro-level lifecycle of a job, handling retries, loop limits, and final status reporting,
+ * while delegating the core cognitive tasks of planning, executing, and reviewing to the `jixoJobWorkflow`.
+ */
 const masterLoopStep = createStep({
   id: "masterLoop",
   inputSchema: JixoMasterWorkflowInputSchema,

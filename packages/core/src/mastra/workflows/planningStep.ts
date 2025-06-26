@@ -4,11 +4,19 @@ import {usePlannerAgent} from "../agent/planner.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
 import {isJixoApp, ok} from "../utils.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriagePlanSchema} from "./schemas.js";
+
+/**
+ * The "Plan" phase of the P-E-R "AI Neuron".
+ * This step is responsible for creating or modifying the job's roadmap.
+ * It uses the PlannerAgent to analyze the job goal and current state,
+ * and then generates a series of tasks with detailed instructions (`details`)
+ * and acceptance criteria (`checklist`).
+ */
 export const planningStep = createStep({
   id: "planning",
   inputSchema: TriagePlanSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
-  async execute({inputData, mastra, getInitData, runtimeContext: parentRuntimeContext}) {
+  async execute({inputData, mastra, getInitData}) {
     ok(isJixoApp(mastra));
     const workspaceManager = mastra.workspaceManager;
 

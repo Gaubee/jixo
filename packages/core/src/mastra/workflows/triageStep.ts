@@ -27,11 +27,11 @@ export const triageStep = createStep({
   id: "triage",
   inputSchema: JixoJobWorkflowInputSchema,
   outputSchema: TriageOutputSchema,
-  async execute({inputData, mastra, runtimeContext}): Promise<TriageOutputData> {
+  async execute({inputData, mastra}): Promise<TriageOutputData> {
     ok(isJixoApp(mastra));
 
     const workspaceManager = mastra.workspaceManager;
-  
+
     const logManager = await workspaceManager.getOrCreateJobManager(inputData.jobName, inputData);
 
     // --- Stale Lock Handling ---

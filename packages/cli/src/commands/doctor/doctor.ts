@@ -1,9 +1,9 @@
 import {blue, cyan, green, red, spinner, yellow} from "@gaubee/nodekit";
+import {iter_map_not_null} from "@gaubee/util";
 import {execSync} from "node:child_process";
 import semver from "semver";
-import {iter_map_not_null} from "@gaubee/util";
-import type {DoctorConfig, DoctorReport, ToolCheckResult} from "./types.js";
 import {safeEnv} from "../../env.js";
+import type {DoctorConfig, DoctorReport, ToolCheckResult} from "./types.js";
 
 const CHECK_MARK = green("✔");
 const CROSS_MARK = red("✖");
@@ -33,7 +33,7 @@ async function checkServiceHealth(id: string, displayName: string, hint?: string
 
   const url = `${safeEnv.JIXO_CORE_URL}/jixo/v1/health`;
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(3000) });
+    const response = await fetch(url, {signal: AbortSignal.timeout(3000)});
     if (response.ok) {
       result.exists = true;
       result.meetsVersionRequirement = true;
@@ -46,7 +46,6 @@ async function checkServiceHealth(id: string, displayName: string, hint?: string
   }
   return result;
 }
-
 
 export async function runDoctor(config: DoctorConfig, enableLog: boolean = true): Promise<DoctorReport> {
   const LOG_TITLE = "Running Environment Doctor 🏥\n\n";
@@ -78,73 +77,71 @@ export async function runDoctor(config: DoctorConfig, enableLog: boolean = true)
 
     let result: ToolCheckResult;
 
-    if (!tool.versionCommand) { // Custom check logic for services
-        result = await checkServiceHealth(tool.id, tool.displayName, tool.installationHint);
-        if (result.exists) {
-            tool_log = [`${SUCCESS_MARK()} ${TOOL_LOG_TITLE}`, `  ${green(result.message)}`];
-        } else {
-            tool_log = [`${FAIL_MARK()} ${TOOL_LOG_TITLE}`, `  ${red(result.message)}`, tool.installationHint && `  ${yellow("Hint:")} ${tool.installationHint}`];
-        }
-    } else { // Original command-based check logic
-        result = {
-          id: tool.id,
-          displayName: tool.displayName,
-          exists: false,
-          meetsVersionRequirement: false,
-          isOptional: !!tool.optional,
-          message: "",
-          requiredVersion: tool.minVersion,
-          installationHint: tool.installationHint,
-        };
-        const execResult = await executeCommand(tool.versionCommand);
+    if (!tool.versionCommand) {
+      // Custom check logic for services
+      result = await checkServiceHealth(tool.id, tool.displayName, tool.installationHint);
+      if (result.exists) {
+        tool_log = [`${SUCCESS_MARK()} ${TOOL_LOG_TITLE}`, `  ${green(result.message)}`];
+      } else {
+        tool_log = [`${FAIL_MARK()} ${TOOL_LOG_TITLE}`, `  ${red(result.message)}`, tool.installationHint && `  ${yellow("Hint:")} ${tool.installationHint}`];
+      }
+    } else {
+      // Original command-based check logic
+      result = {
+        id: tool.id,
+        displayName: tool.displayName,
+        exists: false,
+        meetsVersionRequirement: false,
+        isOptional: !!tool.optional,
+        message: "",
+        requiredVersion: tool.minVersion,
+        installationHint: tool.installationHint,
+      };
+      const execResult = await executeCommand(tool.versionCommand);
 
-        if (execResult.error || execResult.stderr.includes("command not found") || execResult.stderr.includes("not recognized")) {
-          result.exists = false;
-          result.message = `'${tool.id}' command not found or failed to execute.`;
-          tool_log = [
-            `${FAIL_MARK()} ${TOOL_LOG_TITLE}`,
-            `  ${red(result.message)}`,
-            tool.installationHint && `  ${yellow("Hint:")} ${tool.installationHint}`,
-          ];
-        } else {
-          result.exists = true;
-          const output = execResult.stdout.trim();
-          const match = output.match(tool.versionParseRegex!);
+      if (execResult.error || execResult.stderr.includes("command not found") || execResult.stderr.includes("not recognized")) {
+        result.exists = false;
+        result.message = `'${tool.id}' command not found or failed to execute.`;
+        tool_log = [`${FAIL_MARK()} ${TOOL_LOG_TITLE}`, `  ${red(result.message)}`, tool.installationHint && `  ${yellow("Hint:")} ${tool.installationHint}`];
+      } else {
+        result.exists = true;
+        const output = execResult.stdout.trim();
+        const match = output.match(tool.versionParseRegex!);
 
-          if (match && match[1]) {
-            result.version = semver.clean(match[1]) || undefined;
-            if (result.version) {
-              if (tool.minVersion) {
-                if (semver.gte(result.version, tool.minVersion)) {
-                  result.meetsVersionRequirement = true;
-                  result.message = `Version ${result.version} satisfies >=${tool.minVersion}.`;
-                  tool_log.push(`${SUCCESS_MARK()} ${TOOL_LOG_TITLE} (v${result.version})`);
-                } else {
-                  result.meetsVersionRequirement = false;
-                  result.message = `Version ${result.version} is older than required >=${tool.minVersion}.`;
-                  tool_log.push(`${FAIL_MARK()} ${TOOL_LOG_TITLE} (v${result.version} - required: >=${tool.minVersion})`);
-                  if (tool.installationHint) {
-                    tool_log.push(`  ${yellow("Hint:")} ${tool.installationHint}`);
-                  }
-                }
-              } else {
+        if (match && match[1]) {
+          result.version = semver.clean(match[1]) || undefined;
+          if (result.version) {
+            if (tool.minVersion) {
+              if (semver.gte(result.version, tool.minVersion)) {
                 result.meetsVersionRequirement = true;
-                result.message = `Found version ${result.version}. No minimum version specified.`;
-                tool_log.push(`${SUCCESS_MARK()} ${TOOL_LOG_TITLE} (v${result.version} - existence check only)`);
+                result.message = `Version ${result.version} satisfies >=${tool.minVersion}.`;
+                tool_log.push(`${SUCCESS_MARK()} ${TOOL_LOG_TITLE} (v${result.version})`);
+              } else {
+                result.meetsVersionRequirement = false;
+                result.message = `Version ${result.version} is older than required >=${tool.minVersion}.`;
+                tool_log.push(`${FAIL_MARK()} ${TOOL_LOG_TITLE} (v${result.version} - required: >=${tool.minVersion})`);
+                if (tool.installationHint) {
+                  tool_log.push(`  ${yellow("Hint:")} ${tool.installationHint}`);
+                }
               }
             } else {
-              result.meetsVersionRequirement = false;
-              result.message = `Could not parse a valid version string from output: "${output}".`;
-              tool_log.push(`${FAIL_MARK()} ${TOOL_LOG_TITLE}`);
-              tool_log.push(`  ${red(result.message)}`);
+              result.meetsVersionRequirement = true;
+              result.message = `Found version ${result.version}. No minimum version specified.`;
+              tool_log.push(`${SUCCESS_MARK()} ${TOOL_LOG_TITLE} (v${result.version} - existence check only)`);
             }
           } else {
             result.meetsVersionRequirement = false;
-            result.message = `Could not parse version from output: "${output}".`;
+            result.message = `Could not parse a valid version string from output: "${output}".`;
             tool_log.push(`${FAIL_MARK()} ${TOOL_LOG_TITLE}`);
             tool_log.push(`  ${red(result.message)}`);
           }
+        } else {
+          result.meetsVersionRequirement = false;
+          result.message = `Could not parse version from output: "${output}".`;
+          tool_log.push(`${FAIL_MARK()} ${TOOL_LOG_TITLE}`);
+          tool_log.push(`  ${red(result.message)}`);
         }
+      }
     }
 
     setToolLog(() => tool_log);

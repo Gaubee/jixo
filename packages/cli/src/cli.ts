@@ -2,10 +2,10 @@ import {cwdResolver} from "@gaubee/node";
 import yargs from "yargs";
 import {hideBin} from "yargs/helpers";
 import packageJson from "../package.json" with {type: "json"};
+import {restartDaemon, startDaemon, statusDaemon, stopDaemon} from "./commands/daemon.js";
 import {doctor} from "./commands/doctor/index.js";
 import {init} from "./commands/init.js";
 import {run} from "./commands/tasks/run.js";
-import {startDaemon, stopDaemon, statusDaemon, restartDaemon} from "./commands/daemon.js";
 
 export const runCli = async (args: string[] = process.argv) => {
   const cli = await yargs(hideBin(args))
@@ -63,30 +63,34 @@ export const runCli = async (args: string[] = process.argv) => {
         });
       },
     )
-    .command("daemon <action>", "Manage the JIXO Core daemon", (yargs) => {
-      return yargs
-        .positional("action", {
+    .command(
+      "daemon <action>",
+      "Manage the JIXO Core daemon",
+      (yargs) => {
+        return yargs.positional("action", {
           describe: "The action to perform on the daemon",
           type: "string",
           choices: ["start", "stop", "status", "restart"],
           demandOption: true,
-        })
-    }, (argv) => {
+        });
+      },
+      (argv) => {
         switch (argv.action) {
-            case 'start':
-                startDaemon();
-                break;
-            case 'stop':
-                stopDaemon();
-                break;
-            case 'status':
-                statusDaemon();
-                break;
-            case 'restart':
-                restartDaemon();
-                break;
+          case "start":
+            startDaemon();
+            break;
+          case "stop":
+            stopDaemon();
+            break;
+          case "status":
+            statusDaemon();
+            break;
+          case "restart":
+            restartDaemon();
+            break;
         }
-    })
+      },
+    )
     .demandCommand(1, "You need at least one command before moving on")
     .strict()
     .help();

@@ -1,4 +1,4 @@
-import {red, green, cyan, yellow} from "@gaubee/nodekit";
+import {cyan, green, red, yellow} from "@gaubee/nodekit";
 import {safeEnv} from "../../env.js";
 
 interface RunOptions {
@@ -23,7 +23,7 @@ export const run = async (options: RunOptions) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         jobGoal,

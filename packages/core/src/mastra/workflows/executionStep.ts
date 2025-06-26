@@ -5,11 +5,18 @@ import {DELETE_FIELD_MARKER} from "../entities.js";
 import {isJixoApp, ok} from "../utils.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageExecuteSchema, type ExecutorRuntimeContextData} from "./schemas.js";
 
+/**
+ * The "Execute" phase of the P-E-R "AI Neuron".
+ * This step takes a single, well-defined task from the roadmap and uses the
+ * ExecutorAgent to carry it out. The agent's primary function is to call
+ * tools (e.g., file system operations, shell commands) to achieve the task's
+ * objectives as described in its `details`.
+ */
 export const executionStep = createStep({
   id: "execution",
   inputSchema: TriageExecuteSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
-  async execute({inputData, mastra, getInitData, runtimeContext: parentRuntimeContext}) {
+  async execute({inputData, mastra, getInitData}) {
     ok(isJixoApp(mastra));
     const workspaceManager = mastra.workspaceManager;
 

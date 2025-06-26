@@ -5,11 +5,20 @@ import {DELETE_FIELD_MARKER, type WorkLogEntryData} from "../entities.js";
 import {isJixoApp, ok} from "../utils.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, type ReviewerRuntimeContextData, TriageReviewSchema} from "./schemas.js";
 
+/**
+ * The "Review" phase of the P-E-R "AI Neuron".
+ * This step has a critical dual responsibility:
+ * 1.  **Quality Gate**: It verifies that the output of the `executionStep` meets
+ *     the acceptance criteria defined in the task's `checklist`.
+ * 2.  **Evolution Engine**: It generates metrics and feedback on the performance
+ *     of the P-E-R cycle. This data is the foundation for JIXO's future
+ *     self-improvement and learning capabilities ("fluid-intelligence" and "solid-intelligence").
+ */
 export const reviewStep = createStep({
   id: "review",
   inputSchema: TriageReviewSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
-  async execute({inputData, mastra, getInitData, runtimeContext: parentRuntimeContext}) {
+  async execute({inputData, mastra, getInitData}) {
     ok(isJixoApp(mastra));
     const workspaceManager = mastra.workspaceManager;
 
