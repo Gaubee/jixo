@@ -1,7 +1,7 @@
 import {createStep} from "@mastra/core/workflows";
 import {DELETE_FIELD_MARKER, type WorkLogEntryData} from "../entities.js";
 import {walkJobRoadmap} from "../services/logHelper.js";
-import {logManagerFactory} from "../services/logManagerFactory.js";
+import {isJixoApp, ok} from "../utils.js";
 import {JixoJobWorkflowInputSchema, TriageOutputSchema, type TriageOutputData} from "./schemas.js";
 
 /**
@@ -27,8 +27,12 @@ export const triageStep = createStep({
   id: "triage",
   inputSchema: JixoJobWorkflowInputSchema,
   outputSchema: TriageOutputSchema,
-  async execute({inputData}): Promise<TriageOutputData> {
-    const logManager = await logManagerFactory.getOrCreate(inputData.jobName, inputData);
+  async execute({inputData, mastra, runtimeContext}): Promise<TriageOutputData> {
+    ok(isJixoApp(mastra));
+
+    const workspaceManager = mastra.workspaceManager;
+  
+    const logManager = await workspaceManager.getOrCreateJobManager(inputData.jobName, inputData);
 
     // --- Stale Lock Handling ---
     let staleLocksFound = false;

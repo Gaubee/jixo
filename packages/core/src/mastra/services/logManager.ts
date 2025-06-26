@@ -1,4 +1,4 @@
-import {obj_props} from "@gaubee/util";
+import {obj_props, pureEvent} from "@gaubee/util";
 import {type Agent} from "@mastra/core/agent";
 import fsp from "node:fs/promises";
 import type {NewSubTaskData, NewTaskData} from "../agent/schemas.js";
@@ -22,6 +22,7 @@ export type NextActionableTaskResult = {
 };
 
 export class LogManager {
+  readonly onJobDirChanged = pureEvent<{oldDir: string; newDir: string}>();
   private _locks = new Map<string, boolean>();
   private parserAgent: Agent;
 
@@ -29,6 +30,7 @@ export class LogManager {
     private jobName: string,
     private logData: LogFileData,
     parserAgent: Agent,
+    private workspaceDir: string, // Added workspaceDir
   ) {
     this.parserAgent = parserAgent;
   }
@@ -44,25 +46,27 @@ export class LogManager {
     this._locks.set(this.jobName, false);
   }
 
-  get workDir(): string {
-    return this.logData.info.workDir;
+  get jobDir(): string {
+    return this.logData.info.jobDir;
   }
 
   private async _persist() {
     const validatedData = LogFileSchema.parse(this.logData);
     const markdownContent = serializeLogFile(validatedData);
     const hash = calcContentHash(markdownContent);
-    const logFilePath = getLogFilePath(this.workDir, this.jobName);
-    const cachePath = getCacheFilePath(this.workDir, hash);
+    // Use workspaceDir for physical storage path
+    const logFilePath = getLogFilePath(this.workspaceDir, this.jobName);
+    const cachePath = getCacheFilePath(this.workspaceDir, hash);
     await fsp.writeFile(logFilePath, markdownContent, "utf-8");
     await fsp.writeFile(cachePath, JSON.stringify(validatedData, null, 2), "utf-8");
   }
 
   public async reload(): Promise<void> {
-    const logFilePath = getLogFilePath(this.workDir, this.jobName);
+    // Use workspaceDir to read the log file
+    const logFilePath = getLogFilePath(this.workspaceDir, this.jobName);
     const content = await fsp.readFile(logFilePath, "utf-8");
     const hash = calcContentHash(content);
-    const cachePath = getCacheFilePath(this.workDir, hash);
+    const cachePath = getCacheFilePath(this.workspaceDir, hash);
 
     try {
       const cachedData = await fsp.readFile(cachePath, "utf-8");
@@ -82,11 +86,19 @@ export class LogManager {
     return structuredClone(this.logData.info);
   }
 
+  /**
+   * @internal
+   */
   public async updateJobInfo(updates: Partial<JobInfoData>): Promise<JobInfoData> {
     await this._lock();
+    const oldJobDir = this.logData.info.jobDir;
     try {
       this.logData.info = {...this.logData.info, ...updates};
       await this._persist();
+      const newJobDir = this.logData.info.jobDir;
+      if (oldJobDir !== newJobDir) {
+        this.onJobDirChanged.emit({oldDir: oldJobDir, newDir: newJobDir});
+      }
       return this.getJobInfo();
     } finally {
       this._unlock();
@@ -94,7 +106,6 @@ export class LogManager {
   }
 
   public findTask(predicate: (task: RoadmapTaskNodeData | SubTaskData) => boolean | undefined): RoadmapTaskNodeData | SubTaskData | null {
-    // Corrected argument order
     return findTask(predicate, this.logData.roadmap);
   }
 

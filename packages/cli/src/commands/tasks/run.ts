@@ -27,7 +27,7 @@ export const run = async (options: RunOptions) => {
       },
       body: JSON.stringify({
         jobGoal,
-        workDir,
+        workspaceDir: workDir, // Updated field name
         maxLoops,
         jobName,
         gitCommit,

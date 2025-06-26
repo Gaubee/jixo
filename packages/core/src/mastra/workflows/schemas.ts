@@ -5,7 +5,7 @@ import {LogManager} from "../services/logManager.js";
 export const JixoBaseWorkflowInputSchema = z.object({
   jobName: z.string().describe("The name of the job."),
   jobGoal: z.string().describe("The goal of the job."),
-  workDir: z.string().describe("The working directory for the job."),
+  jobDir: z.string().describe("The working directory for the job."),
   gitCommit: z.boolean().optional().describe("If true, a git commit will be performed after each successful execution step."),
 });
 

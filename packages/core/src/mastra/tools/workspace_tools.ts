@@ -1,6 +1,6 @@
 import {createTool} from "@mastra/core";
 import {z} from "zod";
-import {workspaceManager} from "../services/workspaceManager.js";
+import type {JixoApp} from "../app.js";
 import {assertJixoApp} from "../utils.js";
 import type {JixoMasterWorkflow} from "../workflows/jixoMasterWorkflow.js";
 import {JixoMasterWorkflowInputSchema} from "../workflows/schemas.js";
@@ -16,6 +16,7 @@ export const workspaceToolsets = {
     }),
     execute: async ({context, mastra}) => {
       const app = assertJixoApp(mastra);
+      const workspaceManager = (app as JixoApp).workspaceManager;
 
       // Use the workspaceManager to create the job, which also creates the log file.
       const jobManager = await workspaceManager.createJob(context.jobName, context.jobGoal);
@@ -24,7 +25,7 @@ export const workspaceToolsets = {
       const workflow = app.getWorkflow("jixoMasterWorkflow") as JixoMasterWorkflow;
       const run = await workflow.createRunAsync();
 
-      // Start job asynchronously. The master workflow will now run within the context of the job's workDir.
+      // Start job asynchronously. The master workflow will now run within the context of the job's jobDir.
       run
         .start({
           inputData: {
@@ -53,7 +54,9 @@ export const workspaceToolsets = {
         jobGoal: z.string().describe("The high-level goal of the job."),
       }),
     ),
-    execute: async () => {
+    execute: async ({mastra}) => {
+      const app = assertJixoApp(mastra);
+      const workspaceManager = (app as JixoApp).workspaceManager;
       return workspaceManager.listJobs();
     },
   }),
@@ -64,7 +67,9 @@ export const workspaceToolsets = {
       jobName: z.string().describe("The name of the job to inspect."),
     }),
     outputSchema: z.any().describe("The full content of the job's log file, including roadmap and work log."),
-    execute: async ({context}) => {
+    execute: async ({context, mastra}) => {
+      const app = assertJixoApp(mastra);
+      const workspaceManager = (app as JixoApp).workspaceManager;
       return workspaceManager.getJobLogFile(context.jobName);
     },
   }),

@@ -10,7 +10,7 @@ import type {ExecutorRuntimeContextData} from "../workflows/schemas.js";
 import type {CreateAgentOptions} from "./common.js";
 import {ExecutionResultSchema} from "./schemas.js";
 
-export const createExecutorAgent = async ({workDir, memoryStorage}: CreateAgentOptions) => {
+export const createExecutorAgent = async ({jobDir, memoryStorage}: CreateAgentOptions) => {
   const executorAgent = new Agent({
     name: "ExecutorAgent",
     instructions: `
@@ -33,9 +33,9 @@ Your final output MUST be a JSON object.`,
       },
     }),
     tools: {
-      ...(await tools.fileSystem(workDir)),
+      ...(await tools.fileSystem(jobDir)),
       ...(await tools.pnpm()),
-      ...(await tools.git(workDir)),
+      ...(await tools.git(jobDir)),
       ...tools.node,
     },
   });
@@ -52,7 +52,7 @@ export const useExecutorAgent = async (mastra: Mastra, args: {runtimeContext: Ru
   const recentWorkLog = runtimeContext.get("recentWorkLog");
   const gitCommit = runtimeContext.get("gitCommit");
   const jobInfo = logManager.getJobInfo();
-  const cwd = jobInfo.workDir;
+  const cwd = jobInfo.jobDir;
 
   const recentLogsText = [
     `### Recent Activity (for context):`,

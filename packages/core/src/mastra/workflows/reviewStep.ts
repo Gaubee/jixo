@@ -1,24 +1,25 @@
 import {RuntimeContext} from "@mastra/core/runtime-context";
 import {createStep} from "@mastra/core/workflows";
 import {useReviewerAgent} from "../agent/reviewer.js";
-import {DELETE_FIELD_MARKER} from "../entities.js";
-import {logManagerFactory} from "../services/logManagerFactory.js";
-import {ok, isJixoApp} from "../utils.js";
+import {DELETE_FIELD_MARKER, type WorkLogEntryData} from "../entities.js";
+import {isJixoApp, ok} from "../utils.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, type ReviewerRuntimeContextData, TriageReviewSchema} from "./schemas.js";
 
 export const reviewStep = createStep({
   id: "review",
   inputSchema: TriageReviewSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
-  async execute({inputData, mastra, getInitData}) {
+  async execute({inputData, mastra, getInitData, runtimeContext: parentRuntimeContext}) {
     ok(isJixoApp(mastra));
+    const workspaceManager = mastra.workspaceManager;
+
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const task = inputData.task!;
-    const logManager = await logManagerFactory.getOrCreate(init.jobName, init);
+    const logManager = await workspaceManager.getOrCreateJobManager(init.jobName, init);
     const currentLog = logManager.getLogFile();
 
-    const taskSpecificLogs = currentLog.workLog.filter((log) => log.objective.includes(`task ${task.id}`));
-    const executorSummary = taskSpecificLogs.find((log) => log.role === "Executor")?.summary || "No summary found.";
+    const taskSpecificLogs = currentLog.workLog.filter((log: WorkLogEntryData) => log.objective.includes(`task ${task.id}`));
+    const executorSummary = taskSpecificLogs.find((log: WorkLogEntryData) => log.role === "Executor")?.summary || "No summary found.";
 
     const runtimeContext = new RuntimeContext<ReviewerRuntimeContextData>([
       ["logManager", logManager],

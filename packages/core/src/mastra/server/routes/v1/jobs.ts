@@ -1,5 +1,5 @@
 import {registerApiRoute} from "@mastra/core/server";
-import {workspaceManager} from "../../../services/workspaceManager.js";
+import {type JixoApp} from "../../../app.js";
 import {assertJixoApp} from "../../../utils.js";
 import {JixoMasterWorkflowInputSchema} from "../../../workflows/schemas.js";
 
@@ -8,6 +8,8 @@ export const jobsApi = [
     method: "POST",
     handler: async (c) => {
       const mastra = assertJixoApp(c.get("mastra"));
+      const workspaceManager = (mastra as JixoApp).workspaceManager;
+
       const body = await c.req.json();
       const jobData = JixoMasterWorkflowInputSchema.parse(body);
 
@@ -28,6 +30,8 @@ export const jobsApi = [
   registerApiRoute("/jixo/v1/jobs", {
     method: "GET",
     handler: async (c) => {
+      const mastra = assertJixoApp(c.get("mastra"));
+      const workspaceManager = (mastra as JixoApp).workspaceManager;
       const jobs = await workspaceManager.listJobs();
       return c.json(jobs);
     },
@@ -35,6 +39,8 @@ export const jobsApi = [
   registerApiRoute("/jixo/v1/jobs/:jobName", {
     method: "GET",
     handler: async (c) => {
+      const mastra = assertJixoApp(c.get("mastra"));
+      const workspaceManager = (mastra as JixoApp).workspaceManager;
       const jobName = c.req.param("jobName");
       try {
         const logFile = await workspaceManager.getJobLogFile(jobName);

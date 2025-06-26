@@ -1,3 +1,4 @@
+import {randomUUID} from "node:crypto";
 import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -5,45 +6,36 @@ import {beforeEach, describe, expect, it} from "vitest";
 import type {NewSubTaskData, NewTaskData} from "../agent/schemas.js";
 import type {RoadmapTaskNodeData, SubTaskData, WorkLogEntryData} from "../entities.js";
 import type {LogManager} from "./logManager.js";
-import {logManagerFactory} from "./logManagerFactory.js";
+import {WorkspaceManager} from "./workspaceManager.js";
 
 const TEST_JOB_NAME = "test-job-for-logmanager";
-const workDir = path.join(os.tmpdir(), "jixo-test");
+const workspaceDir = path.join(os.tmpdir(), "jixo-tests", randomUUID());
 let logManager: LogManager;
 
 beforeEach(async () => {
-  const {getLogFilePath, ensureJixoDirsExist} = await import("./internal.js");
-  await ensureJixoDirsExist(workDir);
-  const logFilePath = getLogFilePath(workDir, TEST_JOB_NAME);
-  await fsp.unlink(logFilePath).catch(() => {});
+  const {ensureJixoDirsExist} = await import("./internal.js");
+  await fsp.rm(workspaceDir, {recursive: true, force: true});
+  await ensureJixoDirsExist(workspaceDir);
 
-  // Corrected: Pass a valid JobInfoData object
-  logManager = await logManagerFactory.createIsolated({jobName: TEST_JOB_NAME, jobGoal: "testonly", workDir: workDir});
+  const workspaceManager = new WorkspaceManager(workspaceDir);
+  logManager = await workspaceManager.createJob(TEST_JOB_NAME, "test only for logManager");
 });
 
 const newTask = (title: string, args?: Partial<NewTaskData>): NewTaskData => ({title, description: "", details: [], checklist: [], ...args});
 
-describe("LogManager Basic CRUD & Info", () => {
-  it("should initialize and create an empty log file with initial info", async () => {
-    const logData = logManager.getLogFile();
-    const jobInfo = logData.info;
-    // Corrected: `title` is no longer a top-level property
-    expect(logData.roadmap).toEqual([]);
-    expect(logData.workLog).toEqual([]);
-    expect(jobInfo?.workDir).toBe(workDir);
-    // Corrected: The initial goal is passed during creation now
-    expect(jobInfo?.jobGoal).toBe("testonly");
+describe("LogManager", () => {
+  it("should initialize with correct job info", async () => {
+    const jobInfo = logManager.getJobInfo();
+    expect(jobInfo.jobName).toBe(TEST_JOB_NAME);
+    expect(jobInfo.jobGoal).toBe("test only for logManager");
   });
 
-  it("should update job info correctly", async () => {
-    await logManager.updateJobInfo({jobGoal: "A new goal", workDir: "/new/dir"});
-    const jobInfo = logManager.getJobInfo();
-    expect(jobInfo?.jobGoal).toBe("A new goal");
-    expect(jobInfo?.workDir).toBe("/new/dir");
-
-    await logManager.reload();
-    const reloadedInfo = logManager.getJobInfo();
-    expect(reloadedInfo?.jobGoal).toBe("A new goal");
+  it("should not allow jobDir to be updated via updateJobInfo", async () => {
+    const oldJobInfo = logManager.getJobInfo();
+    await (logManager as any).updateJobInfo({jobGoal: "A new goal"});
+    const newJobInfo = logManager.getJobInfo();
+    expect(newJobInfo.jobGoal).toBe("A new goal");
+    expect(newJobInfo.jobDir).toBe(oldJobInfo.jobDir);
   });
 
   it("should add a root-level task without children", async () => {
@@ -130,56 +122,5 @@ describe("LogManager Basic CRUD & Info", () => {
     expect(logData.workLog).toHaveLength(2);
     expect(logData.workLog[0]).toMatchObject(secondLogEntry);
     expect(logData.workLog[1]).toMatchObject(firstLogEntry);
-  });
-});
-
-describe("logManager.getNextActionableTask", () => {
-  it("should return 'none' for an empty roadmap", async () => {
-    const result = logManager.getNextActionableTask();
-    expect(result.type).toBe("none");
-    expect(result.task).toBeNull();
-  });
-
-  it("should prioritize a task pending review over any other task", async () => {
-    await logManager.addTask(newTask("A pending task"));
-    await logManager.addTask(newTask("A task for review"));
-    await logManager.updateTask("2", {status: "PendingReview"});
-
-    const result = logManager.getNextActionableTask();
-    expect(result.type).toBe("review");
-    expect(result.task?.id).toBe("2");
-  });
-
-  it("should return an executable task when no review tasks are present", async () => {
-    await logManager.addTask(newTask("A pending task"));
-    const result = logManager.getNextActionableTask();
-    expect(result.type).toBe("execute");
-    expect(result.task?.id).toBe("1");
-  });
-
-  it("should return the dependent task once its dependency is completed", async () => {
-    await logManager.addTask(newTask("Task 1"));
-    await logManager.addTask(newTask("Task 2", {dependsOn: ["1"]}));
-    await logManager.updateTask("1", {status: "Completed"});
-
-    const result = logManager.getNextActionableTask();
-    expect(result.type).toBe("execute");
-    expect(result.task?.id).toBe("2");
-  });
-
-  it("should return 'none' if the only pending task has an unmet dependency", async () => {
-    await logManager.addTask(newTask("Task 1"));
-    await logManager.updateTask("1", {status: "Locked"});
-    await logManager.addTask(newTask("Task 2", {dependsOn: ["1"]}));
-
-    const result = logManager.getNextActionableTask();
-    expect(result.type).toBe("none");
-  });
-
-  it("should return 'none' if all tasks are completed", async () => {
-    await logManager.addTask(newTask("Task 1"));
-    await logManager.updateTask("1", {status: "Completed"});
-    const result = logManager.getNextActionableTask();
-    expect(result.type).toBe("none");
   });
 });

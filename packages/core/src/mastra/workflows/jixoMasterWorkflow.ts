@@ -1,7 +1,7 @@
 import {delay} from "@gaubee/util";
 import {createStep, createWorkflow} from "@mastra/core/workflows";
 import {z} from "zod";
-import {logManagerFactory} from "../services/logManagerFactory.js";
+import {isJixoApp, ok} from "../utils.js";
 import type {JixoJobWorkflow} from "./jixoJobWorkflow.js";
 import {JixoMasterWorkflowInputSchema, JixoMasterWorkflowOutputSchema} from "./schemas.js";
 
@@ -9,11 +9,14 @@ const masterLoopStep = createStep({
   id: "masterLoop",
   inputSchema: JixoMasterWorkflowInputSchema,
   outputSchema: JixoMasterWorkflowOutputSchema,
-  async execute({inputData, mastra}) {
+  async execute({inputData, mastra, runtimeContext}) {
+    ok(isJixoApp(mastra));
+    const workspaceManager = mastra.workspaceManager;
+
     let loopCount = 0;
     let consecutiveErrors = 0;
-    const {jobName, jobGoal, workDir = process.cwd(), maxLoops = 20} = inputData;
-    const logManager = await logManagerFactory.getOrCreate(jobName, {jobName, jobGoal, workDir});
+    const {jobName, jobGoal, jobDir = process.cwd(), maxLoops = 20} = inputData;
+    const logManager = await workspaceManager.getOrCreateJobManager(jobName, {jobName, jobGoal, jobDir});
 
     while (loopCount < maxLoops) {
       loopCount++;
@@ -28,7 +31,8 @@ const masterLoopStep = createStep({
 
       try {
         const jobRun = await (mastra.getWorkflow("jixoJobWorkflow") as JixoJobWorkflow).createRunAsync();
-        const result = await jobRun.start({inputData: {jobName, jobGoal, runnerId, otherRunners: [], workDir}});
+        // Pass the runtime context down to sub-workflows/steps
+        const result = await jobRun.start({inputData: {jobName, jobGoal, runnerId, otherRunners: [], jobDir}, runtimeContext});
 
         if (result.status === "failed") {
           consecutiveErrors++;

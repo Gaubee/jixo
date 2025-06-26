@@ -1,3 +1,3 @@
 import type {MastraStorage} from "@mastra/core";
 
-export type CreateAgentOptions = {workDir: string; memoryStorage: MastraStorage};
+export type CreateAgentOptions = {jobDir: string; memoryStorage: MastraStorage};

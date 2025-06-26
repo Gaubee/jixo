@@ -8,7 +8,7 @@ import type {ReviewerRuntimeContextData} from "../workflows/schemas.js";
 import type {CreateAgentOptions} from "./common.js";
 import {ReviewResultSchema} from "./schemas.js";
 
-export const createReviewerAgent = async ({workDir, memoryStorage}: CreateAgentOptions) => {
+export const createReviewerAgent = async ({jobDir, memoryStorage}: CreateAgentOptions) => {
   const reviewerAgent = new Agent({
     name: "ReviewerAgent",
     instructions: `You are a meticulous and skeptical QA engineer. Your job is to verify, not to trust.
@@ -31,8 +31,8 @@ Your final output **MUST** be a single, valid JSON object.`,
       },
     }),
     tools: {
-      ...(await tools.fileSystem(workDir)),
-      ...(await tools.git(workDir)),
+      ...(await tools.fileSystem(jobDir)),
+      ...(await tools.git(jobDir)),
     },
   });
   return reviewerAgent;

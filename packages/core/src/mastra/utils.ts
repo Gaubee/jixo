@@ -1,9 +1,8 @@
-import type {Mastra} from "@mastra/core";
-import type {JixoApp} from "./app.js";
+import {JixoApp} from "./app.js";
 
 export const isJixoApp = (app: unknown): app is JixoApp => {
   try {
-    return (app as any).getWorkflow("jixoJobWorkflow") != null;
+    return app instanceof JixoApp;
   } catch {
     return false;
   }
@@ -11,8 +10,9 @@ export const isJixoApp = (app: unknown): app is JixoApp => {
 
 export type Assert = (isJixo: boolean) => asserts isJixo;
 export const ok: Assert = (isJixo: boolean): asserts isJixo => {
-  if (!isJixo) { // Corrected logic: throw if it's NOT a Jixo app
-    throw new Error("App is not a Jixo app");
+  if (!isJixo) {
+    // Corrected logic: throw if it's NOT a Jixo app
+    throw new Error("App is not a JixoApp");
   }
 };
 

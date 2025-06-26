@@ -2,20 +2,20 @@ import {RuntimeContext} from "@mastra/core/runtime-context";
 import {createStep} from "@mastra/core/workflows";
 import {useExecutorAgent} from "../agent/executor.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
-import {logManagerFactory} from "../services/logManagerFactory.js";
-import {ok, isJixoApp} from "../utils.js";
+import {isJixoApp, ok} from "../utils.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriageExecuteSchema, type ExecutorRuntimeContextData} from "./schemas.js";
 
 export const executionStep = createStep({
   id: "execution",
   inputSchema: TriageExecuteSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
-  async execute({inputData, mastra, getInitData}) {
+  async execute({inputData, mastra, getInitData, runtimeContext: parentRuntimeContext}) {
     ok(isJixoApp(mastra));
+    const workspaceManager = mastra.workspaceManager;
 
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const task = inputData.task!;
-    const logManager = await logManagerFactory.getOrCreate(init.jobName, init);
+    const logManager = await workspaceManager.getOrCreateJobManager(init.jobName, init);
     const currentLog = logManager.getLogFile();
 
     const runtimeContext = new RuntimeContext<ExecutorRuntimeContextData>([

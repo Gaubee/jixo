@@ -4,7 +4,7 @@ import {commonModel} from "../llm/index.js";
 import {workspaceToolsets} from "../tools/workspace_tools.js";
 import type {CreateAgentOptions} from "./common.js";
 
-export const createConciergeAgent = async ({workDir, memoryStorage}: CreateAgentOptions) => {
+export const createConciergeAgent = async ({jobDir, memoryStorage}: CreateAgentOptions) => {
   const conciergeAgent = new Agent({
     name: "ConciergeAgent",
     instructions: `

@@ -8,7 +8,7 @@ import {tools} from "../tools/index.js";
 import {isJixoApp, ok} from "../utils.js";
 import type {CreateAgentOptions} from "./common.js";
 import {PlannerOutputSchema} from "./schemas.js";
-export const createPlannerAgent = async ({workDir, memoryStorage}: CreateAgentOptions) => {
+export const createPlannerAgent = async ({jobDir, memoryStorage}: CreateAgentOptions) => {
   const plannerAgent = new Agent({
     name: "PlannerAgent",
     instructions: `You are an expert project planner AI. Your job is to analyze the provided context (job goal, current roadmap, and specific planning scenario) and generate a set of instructions to modify the project roadmap.
@@ -53,13 +53,13 @@ export const usePlannerAgent = (mastra: Mastra, planningPrompt: string, args: {l
   const {logManager} = args;
   const {
     roadmap,
-    info: {workDir, jobGoal},
+    info: {jobDir, jobGoal},
   } = logManager.getLogFile();
 
   const roadmapMd = roadmap.length ? `${MD_CODE_WRAPPER}yaml\n${YAML.stringify(roadmap)}\n${MD_CODE_WRAPPER}` : "";
 
   const finalPrompt = `
-The project's working directory is: \`${workDir}\`. ALL file paths in your plan must be relative to this directory.
+The project's working directory is: \`${jobDir}\`. ALL file paths in your plan must be relative to this directory.
 
 ### Overall Job Goal
 ${jobGoal}

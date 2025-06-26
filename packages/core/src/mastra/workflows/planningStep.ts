@@ -2,19 +2,20 @@ import {createStep} from "@mastra/core/workflows";
 import {match} from "ts-pattern";
 import {usePlannerAgent} from "../agent/planner.js";
 import {DELETE_FIELD_MARKER} from "../entities.js";
-import {logManagerFactory} from "../services/logManagerFactory.js";
 import {isJixoApp, ok} from "../utils.js";
 import {JixoJobWorkflowExitInfoSchema, JixoJobWorkflowInputSchema, TriagePlanSchema} from "./schemas.js";
 export const planningStep = createStep({
   id: "planning",
   inputSchema: TriagePlanSchema,
   outputSchema: JixoJobWorkflowExitInfoSchema,
-  async execute({inputData, mastra, getInitData}) {
+  async execute({inputData, mastra, getInitData, runtimeContext: parentRuntimeContext}) {
     ok(isJixoApp(mastra));
+    const workspaceManager = mastra.workspaceManager;
+
     const init = getInitData<typeof JixoJobWorkflowInputSchema>();
     const {planningContext} = inputData;
-    const {jobName, runnerId, jobGoal, workDir} = init;
-    const logManager = await logManagerFactory.getOrCreate(jobName, {jobName, jobGoal, workDir});
+    const {jobName, runnerId, jobGoal, jobDir} = init;
+    const logManager = await workspaceManager.getOrCreateJobManager(jobName, {jobName, jobGoal, jobDir});
 
     let planningPrompt = "";
     let objective = "";
