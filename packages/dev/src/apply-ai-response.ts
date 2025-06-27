@@ -1,6 +1,6 @@
 process.removeAllListeners("warning");
 
-import {$, createResolverByRootFile, cyan, green, magenta, normalizeFilePath, prompts, red, yellow} from "@gaubee/nodekit";
+import {$, createResolver, cyan, green, magenta, normalizeFilePath, prompts, red, yellow, type PathResolver} from "@gaubee/nodekit";
 import {iter_map_not_null} from "@gaubee/util";
 import {parseArgs} from "@std/cli/parse-args";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
@@ -8,8 +8,6 @@ import fs from "node:fs";
 import path from "node:path";
 import {match} from "ts-pattern";
 const fsp = fs.promises;
-const rootResolver = createResolverByRootFile(process.cwd());
-const rootDirname = normalizeFilePath(rootResolver.dirname) + "/";
 
 // --- 日志记录器 ---
 const logger = {
@@ -21,17 +19,19 @@ const logger = {
   mode: (mode: DiffFileMode) =>
     match(mode)
       .with("add", () => green("❇️"))
-      .with("modify", () => yellow("♻️"))
+      .with("modify", () => yellow("✏️"))
       .with("delete", () => red("❌"))
-      .with("rename", () => red("🚚"))
+      .with("rename", () => red("🔄"))
+      .with("rename+modify", () => red("🔀"))
       .exhaustive(),
 };
 
-type DiffFileMode = "add" | "delete" | "modify" | "rename";
+type DiffFileMode = "add" | "delete" | "modify" | "rename" | "rename+modify";
 type DiffFiles = Array<{
   filePath: string;
   code: string;
-  fullFilepath: string;
+  fullSourcePath: string;
+  fullTargetPath: string;
   mode: DiffFileMode;
   safe: boolean;
 }>;
@@ -41,7 +41,7 @@ type DiffFiles = Array<{
  * @param markdownContent - 从文件中读取的 Markdown 全文。
  * @returns 一个包含文件路径和代码内容的对象数组。
  */
-function parseMarkdown(markdownContent: string): DiffFiles {
+function parseMarkdown(markdownContent: string, rootResolver: PathResolver): DiffFiles {
   // 正则表达式，用于匹配文件路径标题和对应的代码块
   // 匹配 `#### ` 开头，后面跟着路径，直到换行符
   // 然后非贪婪地匹配 ` ``` ` 代码块之间的所有内容
@@ -53,14 +53,15 @@ function parseMarkdown(markdownContent: string): DiffFiles {
   for (const match of markdownContent.matchAll(fileBlockRegex)) {
     const filePath = match[1].trim();
     let code = match[2].trim();
-    const fullFilepath = rootResolver(filePath);
+    const fullSourcePath = rootResolver(filePath);
+    let fullTargetPath = fullSourcePath;
     let mode: DiffFileMode | undefined;
     if (code === "$$DELETE_FILE$$") {
       mode = "delete";
     } else if (code.startsWith("$$RENAME_FILE$$")) {
-      code = rootResolver(code.replace("$$RENAME_FILE$$", ""));
+      fullTargetPath = rootResolver(code.replace("$$RENAME_FILE$$", ""));
       mode = "rename";
-    } else if (fs.existsSync(fullFilepath)) {
+    } else if (fs.existsSync(fullSourcePath)) {
       mode = "modify";
     } else {
       mode = "add";
@@ -71,12 +72,12 @@ function parseMarkdown(markdownContent: string): DiffFiles {
     }
     // --- 安全检查 ---
     // 确保目标路径在项目根目录内，防止路径遍历攻击
-    let safe = fullFilepath.startsWith(rootDirname);
+    let safe = normalizeFilePath(fullSourcePath).startsWith(rootResolver.dirname + "/");
     // if (!safe) {
     //   logger.error(`unsafe file path: ${logger.file(filePath)}.`);
     // }
 
-    matches.push({filePath, code, fullFilepath, mode, safe});
+    matches.push({filePath, code, fullSourcePath, fullTargetPath, mode, safe});
   }
 
   if (matches.length === 0) {
@@ -96,26 +97,34 @@ async function applyChanges(files: DiffFiles): Promise<void> {
   for (const file of files) {
     try {
       await match(file.mode)
-        .with("delete", async () => {
-          await fsp.rm(file.fullFilepath, {recursive: true, force: true});
-          logger.success(`Successfully deleted file: ${logger.file(file.filePath)}`);
-        })
-        .with("rename", async () => {
-          // 确保目标目录存在
-          const newFilepath = file.code;
-          const dirName = path.dirname(newFilepath);
-          await fsp.mkdir(dirName, {recursive: true});
-
-          await fsp.rename(file.fullFilepath, newFilepath);
-        })
         .with("add", "modify", async () => {
           // 确保目标目录存在
-          const dirName = path.dirname(file.fullFilepath);
+          const dirName = path.dirname(file.fullSourcePath);
           await fsp.mkdir(dirName, {recursive: true});
 
           // 写入文件
-          await fsp.writeFile(file.fullFilepath, file.code + "\n", "utf-8"); // 添加一个换行符以符合惯例
+          await fsp.writeFile(file.fullSourcePath, file.code + "\n", "utf-8"); // 添加一个换行符以符合惯例
           logger.success(`Successfully ${file.mode === "add" ? "writed" : "updated"} file: ${logger.file(file.filePath)}`);
+        })
+        .with("delete", async () => {
+          await fsp.rm(file.fullSourcePath, {recursive: true, force: true});
+          logger.success(`Successfully deleted file: ${logger.file(file.filePath)}`);
+        })
+        .with("rename", "rename+modify", async (mode) => {
+          // 确保目标目录存在
+          await fsp.mkdir(path.dirname(file.fullTargetPath), {recursive: true});
+
+          await fsp.rename(file.fullSourcePath, file.fullTargetPath);
+          const cwd = process.cwd();
+          const targetPath = path.relative(cwd, file.fullTargetPath);
+
+          if (mode.includes("modify")) {
+            // 写入文件
+            await fsp.writeFile(file.fullTargetPath, file.code, "utf-8"); // 添加一个换行符以符合惯例
+            logger.success(`Successfully renamed and updated file: ${logger.file(file.filePath)} => ${logger.file(targetPath)}`);
+          } else {
+            logger.success(`Successfully renamed file: ${logger.file(file.filePath)} => ${logger.file(targetPath)}`);
+          }
         })
         .exhaustive();
     } catch (error) {
@@ -127,7 +136,7 @@ async function applyChanges(files: DiffFiles): Promise<void> {
 /**
  * 提示用户确认操作。
  */
-async function confirmAction(filesToUpdate: DiffFiles): Promise<DiffFiles> {
+async function confirmAction(filesToUpdate: DiffFiles, allowUnsafe?: boolean): Promise<DiffFiles> {
   if (filesToUpdate.length === 0) {
     return [];
   }
@@ -136,9 +145,17 @@ async function confirmAction(filesToUpdate: DiffFiles): Promise<DiffFiles> {
   const selectedFiles = await prompts.checkbox({
     message: "The following files will be overwritten:",
     choices: filesToUpdate.map((file) => ({
-      name: logger.mode(file.mode) + "  " + logger.file(file.filePath),
+      name: [
+        //
+        logger.mode(file.mode),
+        file.safe ? null : "⚠️",
+        logger.file(file.filePath),
+      ]
+        .filter((v) => v)
+        .join("\t"),
+
       value: file.filePath,
-      checked: file.safe,
+      checked: file.safe || allowUnsafe,
     })),
     pageSize: process.stdout.rows || filesToUpdate.length,
   });
@@ -146,25 +163,37 @@ async function confirmAction(filesToUpdate: DiffFiles): Promise<DiffFiles> {
   return filesToUpdate.filter((file) => selectedFiles.includes(file.filePath));
 }
 
+interface ApplyAiResponseOptions {
+  yes?: boolean; // 是否跳过确认提示
+  cwd?: string; // 工作目录
+  unsafe?: boolean; // 是否允许不安全的文件操作
+}
 /**
  * 主执行函数。
  */
-async function main() {
-  const markdownFilePath = process.argv[2];
+export async function applyAiResponse(markdownFilePath?: string, {yes, cwd = process.cwd(), unsafe}: ApplyAiResponseOptions = {}) {
   if (!markdownFilePath) {
     logger.error("Usage: pnpm apply-ai-response <path_to_markdown_file>");
     process.exit(1);
   }
 
-  const absolutePath = path.resolve(markdownFilePath);
+  let absolutePath = path.resolve(markdownFilePath);
+  // 尝试自动补全 .md 文件后缀
+  if (!fs.existsSync(absolutePath) && !absolutePath.endsWith(".md")) {
+    if (fs.existsSync(absolutePath + ".md")) {
+      absolutePath += ".md";
+    }
+  }
+
+  const rootResolver = createResolver(cwd);
 
   try {
     logger.info(`Reading changes from: ${logger.file(absolutePath)}`);
     const markdownContent = await fsp.readFile(absolutePath, "utf-8");
-    let filesToUpdate = parseMarkdown(markdownContent);
+    let filesToUpdate = parseMarkdown(markdownContent, rootResolver);
 
     if (filesToUpdate.length > 0) {
-      filesToUpdate = await confirmAction(filesToUpdate);
+      filesToUpdate = yes ? filesToUpdate.filter((f) => f.safe || unsafe) : await confirmAction(filesToUpdate, unsafe);
       if (filesToUpdate.length > 0) {
         logger.info("Applying changes...");
         await applyChanges(filesToUpdate);
@@ -182,13 +211,18 @@ async function main() {
 
 if (import_meta_ponyfill(import.meta).main) {
   const args = parseArgs(process.argv.slice(2), {
-    boolean: ["format"],
+    boolean: ["format", "yes"],
+    string: ["cwd"],
     alias: {
       F: "format",
+      Y: "yes",
+      C: "cwd",
     },
   });
+
+  const markdownFilePath = args._.map((v) => v.toString()).shift();
   // 运行主函数
-  const filesToUpdate = await main();
+  const filesToUpdate = await applyAiResponse(markdownFilePath, args);
 
   if (args.format) {
     console.log(cyan("----Format----"));
@@ -196,7 +230,7 @@ if (import_meta_ponyfill(import.meta).main) {
       if (f.mode === "delete") {
         return;
       }
-      return f.fullFilepath;
+      return f.fullSourcePath;
     })}`;
   }
 }
