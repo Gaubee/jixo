@@ -13,10 +13,15 @@ export const copy_path_tool = registerTool(
     description: `
 Copies a file or a directory to a new location.
 
-**AI Decision Guidance**:
+**AI DECISION GUIDANCE**:
 - Use this tool to duplicate files or entire project structures.
 - To rename or move a file without duplicating it, use 'move_file' instead, which is more efficient.
 - This tool cannot be used to overwrite a file with itself.
+
+**USAGE PATTERNS**:
+- \`copy_path({ source: './src/main.js', destination: './src/main.bak.js' })\`
+- \`copy_path({ source: '$A/config.json', destination: '$B/config.json' })\`
+- \`copy_path({ source: './assets', destination: './assets_backup', recursive: true })\`
 
 **Usage Notes**:
 - **Directories**: To copy a directory and all its contents, you MUST set the 'recursive' parameter to 'true'. Failing to do so for a directory will result in an error.

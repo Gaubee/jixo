@@ -10,11 +10,15 @@ export const create_directory_tool = registerTool(
   "create_directory",
   {
     description: `
-Create a new directory. It will also create any necessary parent directories along the path.
+Creates a new directory. It will also create any necessary parent directories along the path.
 
-**AI Decision Guidance**:
+**AI DECISION GUIDANCE**:
 - Use this to set up the folder structure for a new project or component.
 - This tool is idempotent: if the directory already exists, the operation will succeed without making any changes.
+
+**USAGE PATTERNS**:
+- \`create_directory({ path: './new-component/src' })\`
+- \`create_directory({ path: '$A/assets/images' })\`
     `,
     inputSchema: s.CreateDirectoryArgsSchema,
     outputSuccessSchema: s.CreateDirectorySuccessSchema,

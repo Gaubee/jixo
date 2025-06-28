@@ -14,9 +14,13 @@ export const search_files_tool = registerTool(
     description: `
 Recursively search for files and directories whose names contain a given pattern, starting from a root path.
 
-**AI Decision Guidance**:
-- Use this tool when you need to find a file but don't know its exact location, or when you need to find all files of a certain type (e.g., all '.test.ts' files).
+**AI DECISION GUIDANCE**:
+- Use this when you need to find a file but don't know its exact location, or when you need to find all files of a certain type.
 - This is more efficient than using 'list_directory' recursively and then filtering the results yourself.
+
+**USAGE PATTERNS**:
+- \`search_files({ path: '.', pattern: 'test' })\`
+- \`search_files({ path: '$A', pattern: '.css', excludePatterns: ['node_modules'] })\`
 
 **Usage Notes**:
 - **Pattern**: The 'pattern' is a case-insensitive substring. It matches against the file or directory name, not the full path.

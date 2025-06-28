@@ -13,9 +13,13 @@ export const read_file_tool = registerTool(
     description: `
 Read the complete contents of a single file into a string.
 
-**AI Decision Guidance**:
+**AI DECISION GUIDANCE**:
 - This is the primary tool for inspecting the content of text-based files like source code, configuration files, or documents.
-- Before calling this, you might want to use 'list_directory' to confirm the file exists.
+- Before calling this, you might want to use 'list_directory' to confirm the file exists or 'get_file_info' to check its type.
+
+**USAGE PATTERNS**:
+- \`read_file({ path: './src/index.js' })\`
+- \`read_file({ path: '$A/package.json' })\`
     `,
     inputSchema: s.ReadFileArgsSchema,
     outputSuccessSchema: s.ReadFileOutputSuccessSchema,

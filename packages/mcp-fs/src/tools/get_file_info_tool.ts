@@ -10,11 +10,15 @@ export const get_file_info_tool = registerTool(
   "get_file_info",
   {
     description: `
-Retrieve detailed metadata about a specific file or directory, such as its size, type, modification date, and permissions.
+Retrieve detailed metadata about a specific file or directory.
 
-**AI Decision Guidance**:
-- Use this tool to check if a path exists and what it is (a file or a directory) before attempting an operation like 'read_file' or 'list_directory'.
+**AI DECISION GUIDANCE**:
+- Use this to check if a path exists and what it is (a file or a directory) before attempting an operation like 'read_file' or 'list_directory'.
 - Useful for getting the last modification date to see if a file is stale.
+
+**USAGE PATTERNS**:
+- \`get_file_info({ path: './package.json' })\`
+- \`get_file_info({ path: '$A/src' })\`
     `,
     inputSchema: s.GetFileInfoArgsSchema,
     outputSuccessSchema: s.FileInfoOutputSuccessSchema,

@@ -13,9 +13,13 @@ export const delete_path_tool = registerTool(
     description: `
 Deletes a file or directory.
 
-**AI Decision Guidance**:
+**AI DECISION GUIDANCE**:
 - This is a destructive operation. Be certain before using it.
 - To clear a directory's contents without deleting the directory itself, it is safer to 'list_directory', then 'delete_path' on each item.
+
+**USAGE PATTERNS**:
+- \`delete_path({ path: './temp/old-file.log' })\`
+- \`delete_path({ path: '$B/dist', recursive: true })\`
 
 **Usage Notes**:
 - **Non-Empty Directories**: To delete a directory that contains files or other directories, you MUST set the 'recursive' parameter to 'true'.
@@ -30,7 +34,7 @@ Deletes a file or directory.
 
       if (!fs.existsSync(validatedPath)) {
         const message = `Successfully deleted ${targetPath} (path did not exist).`;
-        return returnSuccess(message, {path: targetPath, message});
+        return returnSuccess(message, {path: validatedPath, message});
       }
 
       fs.rmSync(validatedPath, {recursive, force: true});

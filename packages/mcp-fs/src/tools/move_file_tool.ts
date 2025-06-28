@@ -12,10 +12,14 @@ export const move_file_tool = registerTool(
     description: `
 Move or rename a file or directory.
 
-**AI Decision Guidance**:
-- Use this tool for renaming a file/directory in its current location or for moving it to a different directory.
+**AI DECISION GUIDANCE**:
+- Use this for renaming a file/directory in its current location or for moving it to a different directory.
 - This is an efficient operation that just changes filesystem pointers.
 - To create a copy of a file, use 'copy_path' instead.
+
+**USAGE PATTERNS**:
+- \`move_file({ source: './old-name.txt', destination: './new-name.txt' })\`
+- \`move_file({ source: './file.txt', destination: './archive/' })\`
     `,
     inputSchema: s.MoveFileArgsSchema,
     outputSuccessSchema: s.MoveFileSuccessSchema,

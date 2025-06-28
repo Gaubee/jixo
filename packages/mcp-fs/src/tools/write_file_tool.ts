@@ -13,10 +13,14 @@ export const write_file_tool = registerTool(
     description: `
 Create a new file with specified content, or completely overwrite an existing file.
 
-**AI Decision Guidance**:
+**AI DECISION GUIDANCE**:
 - **DANGER**: This tool is destructive. If the file exists, its entire content will be replaced. There is no undo.
 - Use this for creating new files (e.g., 'index.html', 'new_component.tsx') or for resetting a file to a known state.
 - For making targeted changes to an existing file, it is MUCH SAFER to use the 'edit_file' tool.
+
+**USAGE PATTERNS**:
+- \`write_file({ path: './new-file.txt', content: 'Hello, World!' })\`
+- \`write_file({ path: '$A/config.json', content: '{ "key": "value" }' })\`
     `,
     inputSchema: s.WriteFileArgsSchema,
     outputSuccessSchema: s.WriteFileSuccessSchema,

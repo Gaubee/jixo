@@ -7,7 +7,8 @@ export const get_cwd_tool = registerTool(
   "readonly",
   "fs_get_cwd",
   {
-    description: "Returns the absolute path of the current working directory (CWD). Relative paths in other tool calls are resolved against this directory.",
+    description:
+      "Returns the absolute path of the current working directory (CWD). All relative paths in other tool calls (e.g., './src/index.js') are resolved from this directory. Use 'fs_set_cwd' to change it.",
     inputSchema: s.GetCwdArgsSchema,
     outputSuccessSchema: s.GetCwdOutputSuccessSchema,
   },

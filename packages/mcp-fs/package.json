@@ -1,6 +1,6 @@
 {
   "name": "@jixo/mcp-fs",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "",
   "main": "dist/cli.js",
   "type": "module",

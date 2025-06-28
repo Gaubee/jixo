@@ -11,7 +11,7 @@ export const set_cwd_tool = registerTool(
   "readwrite",
   "fs_set_cwd",
   {
-    description: "Sets the current working directory (CWD) to a new path. The path must be a directory.",
+    description: "Sets the current working directory (CWD) to a new path. The path must be a directory. All subsequent relative paths will be resolved from this new CWD.",
     inputSchema: s.SetCwdArgsSchema,
     outputSuccessSchema: s.SetCwdSuccessSchema,
   },

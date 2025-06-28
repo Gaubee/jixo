@@ -14,10 +14,13 @@ export const edit_file_tool = registerTool(
     description: `
 Performs one or more precise, atomic search-and-replace operations on a single text file. This is the preferred tool for modifying code or configuration.
 
-**AI Decision Guidance**:
-- Use this tool for targeted changes like refactoring a variable name, updating a dependency version, or adding a new configuration key.
+**AI DECISION GUIDANCE**:
+- Use this for targeted changes like refactoring a variable name, updating a dependency version, or adding a new configuration key.
 - For creating a new file from scratch or completely replacing its content, use 'write_file'.
 - **Conflict Avoidance**: This tool is designed to prevent accidental data loss. If the 'oldText' for any edit is not found, the entire operation will fail. This indicates the file's current content doesn't match what you expect. In this case, you should first use 'read_file' to get the latest content, then construct a new, valid edit operation.
+
+**USAGE PATTERNS**:
+- \`edit_file({ path: './config.json', edits: [{ oldText: '"version": "1.0"', newText: '"version": "1.1"' }] })\`
 
 **Usage Notes**:
 - **Edits**: The 'edits' parameter is an array, allowing multiple independent changes in a single, atomic transaction.

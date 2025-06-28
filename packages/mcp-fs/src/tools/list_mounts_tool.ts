@@ -7,7 +7,8 @@ export const list_mounts_tool = registerTool(
   "readonly",
   "fs_list_mounts",
   {
-    description: "Lists all configured mount points, including their drive letters, paths, and permissions. Also shows the current working directory (CWD).",
+    description:
+      "Lists all configured mount points, including their drive letters, paths, and permissions. Also shows the current working directory (CWD). This is the best tool to understand the file system environment.",
     inputSchema: s.ListMountsArgsSchema,
     outputSuccessSchema: s.ListMountsOutputSuccessSchema,
   },

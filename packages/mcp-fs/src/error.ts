@@ -6,7 +6,7 @@ import {McpToolError} from "@jixo/mcp-core";
 export class PermissionDeniedError extends McpToolError {
   override readonly name = "PermissionDeniedError";
   constructor(message: string) {
-    super(message);
+    super(message, [{tool_name: "fs_list_mounts", description: "The path may have incorrect permissions. Use 'fs_list_mounts' to check the permissions for all mounted paths."}]);
   }
 }
 /**
@@ -46,7 +46,9 @@ export class InvalidOperationError extends McpToolError {
 export class FileNotFoundError extends McpToolError {
   override readonly name = "FileNotFoundError";
   constructor(message: string) {
-    super(message);
+    super(message, [
+      {tool_name: "list_directory", description: "The file or directory was not found. Use 'list_directory' on the parent directory to check if the path is correct."},
+    ]);
   }
 }
 
@@ -56,7 +58,7 @@ export class FileNotFoundError extends McpToolError {
 export class NotADirectoryError extends McpToolError {
   override readonly name = "NotADirectoryError";
   constructor(message: string) {
-    super(message);
+    super(message, [{tool_name: "get_file_info", description: "The path points to a file, not a directory. Use 'get_file_info' to verify the path type."}]);
   }
 }
 
@@ -76,6 +78,11 @@ export class MountConflictError extends McpToolError {
 export class PathNotMountedError extends McpToolError {
   override readonly name = "PathNotMountedError";
   constructor(message: string) {
-    super(message);
+    super(message, [
+      {
+        tool_name: "fs_list_mounts",
+        description: "The path is outside of any mounted directory. Use 'fs_list_mounts' to see available mount points and the current working directory.",
+      },
+    ]);
   }
 }

@@ -20,10 +20,15 @@ export const list_directory_tool = registerTool(
     description: `
 Get a listing of files and subdirectories within a specified directory.
 
-**AI Decision Guidance**:
+**AI DECISION GUIDANCE**:
 - This is your primary tool for exploring the file system structure.
 - Use it to discover files before reading them or to understand a project's layout.
 - For finding files by name across a deep hierarchy, 'search_files' might be more efficient.
+
+**USAGE PATTERNS**:
+- \`list_directory({ path: '.' })\` (lists the current working directory)
+- \`list_directory({ path: '$A/src' })\`
+- \`list_directory({ path: './src', maxDepth: 3 })\` (lists recursively)
 
 **Usage Notes**:
 - **Recursion**: By default, this tool performs a flat listing (depth of 1). To get a nested tree structure, set the 'maxDepth' parameter to a value greater than 1. This is useful for quickly understanding the layout of an entire directory.
