@@ -2,7 +2,7 @@ import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
 import path from "node:path";
 import {NotADirectoryError} from "../error.js";
-import {validatePath} from "../fs-utils/path-validation.js";
+import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
 import {registerTool} from "./server.js";
@@ -33,9 +33,9 @@ Get a listing of files and subdirectories within a specified directory.
   },
   async ({path: rootPath, maxDepth = 1}) => {
     try {
-      const validPath = validatePath(rootPath);
+      const {validatedPath} = resolveAndValidatePath(rootPath, "read");
 
-      if (!fs.statSync(validPath).isDirectory()) {
+      if (!fs.statSync(validatedPath).isDirectory()) {
         throw new NotADirectoryError(`Path is not a directory: ${rootPath}`);
       }
 
@@ -74,20 +74,20 @@ Get a listing of files and subdirectories within a specified directory.
         return treeString;
       };
 
-      const structuredEntries = listRecursively(validPath, 0);
+      const structuredEntries = listRecursively(validatedPath, 0);
 
       if (structuredEntries.length === 0) {
         const message = `Directory '${rootPath}' is empty or could not be read.`;
-        return returnSuccess(message, {path: validPath, entries: []});
+        return returnSuccess(message, {path: validatedPath, entries: []});
       }
 
       const formattedText =
         maxDepth === 1
           ? structuredEntries.map((e) => e.name + (e.type === "directory" ? "/" : "")).join("\n")
-          : `${path.basename(validPath)}\n${formatTree(structuredEntries, "")}`;
+          : `${path.basename(validatedPath)}\n${formatTree(structuredEntries, "")}`;
 
       return {
-        ...returnSuccess(formattedText, {path: validPath, entries: structuredEntries}),
+        ...returnSuccess(formattedText, {path: validatedPath, entries: structuredEntries}),
         content: [{type: "text", text: formattedText}],
       };
     } catch (error: any) {

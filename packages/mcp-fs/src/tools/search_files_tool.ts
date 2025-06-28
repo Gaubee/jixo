@@ -2,7 +2,7 @@ import {returnSuccess} from "@jixo/mcp-core";
 import {minimatch} from "minimatch";
 import fs from "node:fs";
 import path from "node:path";
-import {validatePath} from "../fs-utils/path-validation.js";
+import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
 import {registerTool} from "./server.js";
@@ -27,7 +27,7 @@ Recursively search for files and directories whose names contain a given pattern
   },
   async ({path: rootPath, pattern, excludePatterns = []}) => {
     try {
-      const validRootPath = validatePath(rootPath);
+      const {validatedPath: validRootPath} = resolveAndValidatePath(rootPath, "read");
       const results: string[] = [];
       const searchQueue: string[] = [validRootPath];
 

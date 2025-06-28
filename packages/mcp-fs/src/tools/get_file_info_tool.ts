@@ -1,6 +1,6 @@
 import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
-import {validatePath} from "../fs-utils/path-validation.js";
+import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
 import {registerTool} from "./server.js";
@@ -21,10 +21,10 @@ Retrieve detailed metadata about a specific file or directory, such as its size,
   },
   async ({path}) => {
     try {
-      const validPath = validatePath(path);
-      const stats = fs.statSync(validPath);
+      const {validatedPath} = resolveAndValidatePath(path, "read");
+      const stats = fs.statSync(validatedPath);
       const info = {
-        path: validPath,
+        path: validatedPath,
         type: (stats.isDirectory() ? "directory" : stats.isFile() ? "file" : "other") as "file" | "directory" | "other",
         size: stats.size,
         permissions: (stats.mode & 0o777).toString(8),

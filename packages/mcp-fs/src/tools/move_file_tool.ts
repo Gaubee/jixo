@@ -1,6 +1,6 @@
 import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
-import {validatePath} from "../fs-utils/path-validation.js";
+import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
 import {registerTool} from "./server.js";
@@ -22,8 +22,9 @@ Move or rename a file or directory.
   },
   async ({source, destination}) => {
     try {
-      const validSource = validatePath(source);
-      const validDest = validatePath(destination);
+      // Moving requires write access to the source (to delete it) and the destination (to create it).
+      const {validatedPath: validSource} = resolveAndValidatePath(source, "write");
+      const {validatedPath: validDest} = resolveAndValidatePath(destination, "write");
       fs.renameSync(validSource, validDest);
       const message = `Successfully moved ${source} to ${destination}`;
       return returnSuccess(message, {source: validSource, destination: validDest, message});

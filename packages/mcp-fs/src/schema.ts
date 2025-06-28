@@ -11,13 +11,13 @@ const SinglePathSuccessSchema = {
 };
 
 // --- Input Schemas ---
-export const ReadFileArgsSchema = {path: z.string().describe("The full path to the file to read.")};
+export const ReadFileArgsSchema = {path: z.string().describe("The path to the file to read (can be relative, absolute, or use a drive letter like '$A/file.txt').")};
 export const WriteFileArgsSchema = {
-  path: z.string().describe("The full path to the file to write."),
+  path: z.string().describe("The path to the file to write (can be relative, absolute, or use a drive letter like '$A/file.txt')."),
   content: z.string().describe("The content to write to the file."),
 };
 export const EditFileArgsSchema = {
-  path: z.string().describe("The path to the file to edit."),
+  path: z.string().describe("The path to the file to edit (can be relative, absolute, or use a drive letter like '$A/file.txt')."),
   edits: z
     .array(z.object({oldText: z.string(), newText: z.string()}))
     .min(1)
@@ -30,10 +30,10 @@ export const EditFileArgsSchema = {
     .describe("Controls what content is returned after a successful edit. 'diff' (default) for a patch, 'full' for the new content, 'none' for just a success message."),
 };
 export const ListDirectoryArgsSchema = {
-  path: z.string().describe("The path to the directory to list."),
+  path: z.string().describe("The path to the directory to list (can be relative, absolute, or use a drive letter like '$A/dir')."),
   maxDepth: z.number().int().min(1).default(1).optional().describe("Maximum depth for listing. Default is 1 (flat listing). Values > 1 produce a recursive tree."),
 };
-export const CreateDirectoryArgsSchema = {path: z.string().describe("The path to the directory to create (recursively).")};
+export const CreateDirectoryArgsSchema = {path: z.string().describe("The path to the directory to create (recursively; can be relative, absolute, or use a drive letter).")};
 export const MoveFileArgsSchema = {
   source: z.string().describe("The source path of the file or directory to move."),
   destination: z.string().describe("The destination path."),
@@ -54,6 +54,9 @@ export const SearchFilesArgsSchema = {
 };
 export const GetFileInfoArgsSchema = {path: z.string().describe("The path to the file or directory to get info for.")};
 export const ListAllowedDirectoriesArgsSchema = {};
+export const GetCwdArgsSchema = {};
+export const SetCwdArgsSchema = {path: z.string().describe("The path to set as the new current working directory.")};
+export const ListMountsArgsSchema = {};
 
 // --- Output Schemas (for Success states) ---
 export const ReadFileOutputSuccessSchema = {
@@ -130,4 +133,24 @@ export const FileInfoOutputSuccessSchema = {
 
 export const ListAllowedDirectoriesOutputSuccessSchema = {
   directories: z.array(z.string()).describe("A list of absolute paths the server is allowed to access."),
+};
+
+export const GetCwdOutputSuccessSchema = {
+  cwd: z.string().describe("The absolute path of the current working directory."),
+};
+
+export const SetCwdSuccessSchema = {
+  ...BaseSuccessPayloadSchema,
+  newCwd: z.string().describe("The new absolute path of the current working directory."),
+};
+
+const MountPointSchema = z.object({
+  drive: z.string().optional().describe("The assigned drive letter (e.g., '$A', '$B')."),
+  path: z.string().describe("The real, absolute path of the mount point."),
+  permissions: z.string().describe("The assigned permissions ('R', 'W', 'RW')."),
+});
+
+export const ListMountsOutputSuccessSchema = {
+  mounts: z.array(MountPointSchema).describe("A list of all configured mount points."),
+  cwd: z.string().describe("The absolute path of the current working directory."),
 };

@@ -60,7 +60,12 @@ function parseMarkdown(markdownContent: string, rootResolver: PathResolver): Dif
       mode = "delete";
     } else if (code.startsWith("$$RENAME_FILE$$")) {
       fullTargetPath = rootResolver(code.replace("$$RENAME_FILE$$", ""));
-      mode = "rename";
+      code = code.slice(code.indexOf("\n") + 1);
+      if (code.length > 0) {
+        mode = "rename+modify";
+      } else {
+        mode = "rename";
+      }
     } else if (fs.existsSync(fullSourcePath)) {
       mode = "modify";
     } else {
@@ -72,7 +77,7 @@ function parseMarkdown(markdownContent: string, rootResolver: PathResolver): Dif
     }
     // --- 安全检查 ---
     // 确保目标路径在项目根目录内，防止路径遍历攻击
-    let safe = normalizeFilePath(fullSourcePath).startsWith(rootResolver.dirname + "/");
+    let safe = normalizeFilePath(fullSourcePath).startsWith(normalizeFilePath(rootResolver.dirname) + "/");
     // if (!safe) {
     //   logger.error(`unsafe file path: ${logger.file(filePath)}.`);
     // }
@@ -147,12 +152,9 @@ async function confirmAction(filesToUpdate: DiffFiles, allowUnsafe?: boolean): P
     choices: filesToUpdate.map((file) => ({
       name: [
         //
-        logger.mode(file.mode),
-        file.safe ? null : "⚠️",
+        logger.mode(file.mode) + (file.safe ? "" : "⚠️"),
         logger.file(file.filePath),
-      ]
-        .filter((v) => v)
-        .join("\t"),
+      ].join("\t"),
 
       value: file.filePath,
       checked: file.safe || allowUnsafe,

@@ -1,7 +1,7 @@
 import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
-import {DeleteNonEmptyDirectoryError, PermissionDeniedError} from "../error.js";
-import {validatePath} from "../fs-utils/path-validation.js";
+import {DeleteNonEmptyDirectoryError} from "../error.js";
+import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
 import {registerTool} from "./server.js";
@@ -26,25 +26,16 @@ Deletes a file or directory.
   },
   async ({path: targetPath, recursive = false}) => {
     try {
-      let validPath: string;
-      try {
-        // Validate the path exists and is accessible.
-        validPath = validatePath(targetPath);
-      } catch (error) {
-        // If permission is denied, re-throw immediately.
-        if (error instanceof PermissionDeniedError) {
-          throw error;
-        }
-        // For other errors (like file not found), we treat it as a success for idempotency.
-        // We must return a valid ToolResult object.
+      const {validatedPath} = resolveAndValidatePath(targetPath, "write");
+
+      if (!fs.existsSync(validatedPath)) {
         const message = `Successfully deleted ${targetPath} (path did not exist).`;
         return returnSuccess(message, {path: targetPath, message});
       }
 
-      // If validation succeeded, proceed with deletion.
-      fs.rmSync(validPath, {recursive, force: true});
+      fs.rmSync(validatedPath, {recursive, force: true});
       const message = `Successfully deleted ${targetPath}`;
-      return returnSuccess(message, {path: validPath, message});
+      return returnSuccess(message, {path: validatedPath, message});
     } catch (error: any) {
       if (error.code?.includes("ENOTEMPTY") || error.code?.includes("EISDIR")) {
         return handleToolError("delete_path", new DeleteNonEmptyDirectoryError(`Path '${targetPath}' is a non-empty directory. Use the 'recursive: true' option.`));

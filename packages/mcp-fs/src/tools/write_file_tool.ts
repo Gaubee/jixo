@@ -1,7 +1,7 @@
 import {logger, returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
 import {InvalidOperationError} from "../error.js";
-import {validatePath} from "../fs-utils/path-validation.js";
+import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
 import {registerTool} from "./server.js";
@@ -21,16 +21,16 @@ Create a new file with specified content, or completely overwrite an existing fi
     inputSchema: s.WriteFileArgsSchema,
     outputSuccessSchema: s.WriteFileSuccessSchema,
   },
-  async ({path, content}, extra) => {
+  async ({path, content}) => {
     try {
-      const validPath = validatePath(path);
-      fs.writeFileSync(validPath, content, "utf-8");
-      const message = `Successfully wrote to ${validPath}`;
+      const {validatedPath} = resolveAndValidatePath(path, "write");
+      fs.writeFileSync(validatedPath, content, "utf-8");
+      const message = `Successfully wrote to ${validatedPath}`;
       logger.log("write_file", message);
-      return returnSuccess(message, {path: validPath, message});
+      return returnSuccess(message, {path: validatedPath, message});
     } catch (error: any) {
       if (error.code === "EISDIR") {
-        return handleToolError("write_file", new InvalidOperationError(error.message));
+        return handleToolError("write_file", new InvalidOperationError(`Cannot write to '${path}', it is a directory.`));
       }
       return handleToolError("write_file", error);
     }

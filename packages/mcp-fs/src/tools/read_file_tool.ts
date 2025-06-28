@@ -1,7 +1,7 @@
 import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
 import {FileNotFoundError} from "../error.js";
-import {validatePath} from "../fs-utils/path-validation.js";
+import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
 import {registerTool} from "./server.js";
@@ -22,12 +22,12 @@ Read the complete contents of a single file into a string.
   },
   async ({path}) => {
     try {
-      const validPath = validatePath(path);
-      const content = fs.readFileSync(validPath, "utf-8");
-      return returnSuccess(content, {path: validPath, content});
+      const {validatedPath} = resolveAndValidatePath(path, "read");
+      const content = fs.readFileSync(validatedPath, "utf-8");
+      return returnSuccess(content, {path: validatedPath, content});
     } catch (error: any) {
       if (error.code === "ENOENT") {
-        return handleToolError("read_file", new FileNotFoundError(error.message));
+        return handleToolError("read_file", new FileNotFoundError(`File not found at path: ${path}`));
       }
       return handleToolError("read_file", error);
     }

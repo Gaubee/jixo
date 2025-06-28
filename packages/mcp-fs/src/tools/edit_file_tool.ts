@@ -2,7 +2,7 @@ import {logger, returnSuccess} from "@jixo/mcp-core";
 import {createTwoFilesPatch} from "diff";
 import fs from "node:fs";
 import {applyFileEdits} from "../fs-utils/apply-edits.js";
-import {validatePath} from "../fs-utils/path-validation.js";
+import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
 import {registerTool} from "./server.js";
@@ -31,20 +31,21 @@ Performs one or more precise, atomic search-and-replace operations on a single t
   },
   async ({path, edits, dryRun, returnStyle = "diff"}) => {
     try {
-      const validPath = validatePath(path);
-      const {originalContent, modifiedContent} = applyFileEdits(validPath, edits);
+      // Writing requires write permission, even if it's just an edit.
+      const {validatedPath} = resolveAndValidatePath(path, "write");
+      const {originalContent, modifiedContent} = applyFileEdits(validatedPath, edits);
       const changesApplied = originalContent !== modifiedContent;
       let diff: string | undefined;
       let statusMessage: string;
 
       if (!changesApplied) {
-        statusMessage = `No changes were made to the file '${validPath}'; content is identical.`;
+        statusMessage = `No changes were made to the file '${validatedPath}'; content is identical.`;
       } else {
         if (!dryRun) {
-          fs.writeFileSync(validPath, modifiedContent, "utf-8");
+          fs.writeFileSync(validatedPath, modifiedContent, "utf-8");
         }
-        statusMessage = dryRun ? `Dry run successful. Proposed changes for ${validPath}:` : `Successfully applied edits to ${validPath}.`;
-        diff = createTwoFilesPatch(validPath, validPath, originalContent, modifiedContent, "", "", {context: 3});
+        statusMessage = dryRun ? `Dry run successful. Proposed changes for ${validatedPath}:` : `Successfully applied edits to ${validatedPath}.`;
+        diff = createTwoFilesPatch(validatedPath, validatedPath, originalContent, modifiedContent, "", "", {context: 3});
       }
 
       let responseText = "";
@@ -62,7 +63,7 @@ Performs one or more precise, atomic search-and-replace operations on a single t
 
       return {
         ...returnSuccess(finalMessage, {
-          path: validPath,
+          path: validatedPath,
           changesApplied,
           diff,
           newContent: returnStyle === "full" ? modifiedContent : undefined,

@@ -1,7 +1,7 @@
 import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
 import {InvalidOperationError} from "../error.js";
-import {validatePath} from "../fs-utils/path-validation.js";
+import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
 import {registerTool} from "./server.js";
@@ -27,8 +27,8 @@ Copies a file or a directory to a new location.
   },
   async ({source, destination, recursive = false}) => {
     try {
-      const validSource = validatePath(source);
-      const validDest = validatePath(destination);
+      const {validatedPath: validSource} = resolveAndValidatePath(source, "read");
+      const {validatedPath: validDest} = resolveAndValidatePath(destination, "write");
       const stats = fs.statSync(validSource);
       if (stats.isDirectory() && !recursive) {
         throw new InvalidOperationError("Source is a directory, but 'recursive' option is not set to true. Aborting to prevent incomplete copy.");

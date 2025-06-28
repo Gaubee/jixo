@@ -8,6 +8,7 @@ export const list_allowed_directories_tool = registerTool(
   "list_allowed_directories",
   {
     description: `
+[DEPRECATED] Use 'fs_list_mounts' instead for more detailed information.
 Returns the list of root directories the server is sandboxed to. All file operations must be within these directories.
 
 **AI Decision Guidance**:

@@ -4,13 +4,16 @@ import {copy_path_tool} from "./tools/copy_path_tool.js";
 import {create_directory_tool} from "./tools/create_directory_tool.js";
 import {delete_path_tool} from "./tools/delete_path_tool.js";
 import {edit_file_tool} from "./tools/edit_file_tool.js";
+import {get_cwd_tool} from "./tools/get_cwd_tool.js";
 import {get_file_info_tool} from "./tools/get_file_info_tool.js";
 import {list_allowed_directories_tool} from "./tools/list_allowed_directories_tool.js";
 import {list_directory_tool} from "./tools/list_directory_tool.js";
+import {list_mounts_tool} from "./tools/list_mounts_tool.js";
 import {move_file_tool} from "./tools/move_file_tool.js";
 import {read_file_tool} from "./tools/read_file_tool.js";
 import {search_files_tool} from "./tools/search_files_tool.js";
 import {readOnlyServer, readWriteServer} from "./tools/server.js";
+import {set_cwd_tool} from "./tools/set_cwd_tool.js";
 import {write_file_tool} from "./tools/write_file_tool.js";
 import {readOnlyPermissions, type MountPoint} from "./types.js";
 
@@ -20,6 +23,8 @@ export const readonlyTools = {
   get_file_info: get_file_info_tool,
   search_files: search_files_tool,
   list_allowed_directories: list_allowed_directories_tool,
+  get_cwd: get_cwd_tool,
+  list_mounts: list_mounts_tool,
 };
 export const readwriteTools = {
   ...readonlyTools,
@@ -29,6 +34,7 @@ export const readwriteTools = {
   move_file: move_file_tool,
   copy_path: copy_path_tool,
   delete_path: delete_path_tool,
+  set_cwd: set_cwd_tool,
 };
 
 export async function startServer(mountPoints: MountPoint[], readOnly?: boolean) {
@@ -52,7 +58,7 @@ export async function startServer(mountPoints: MountPoint[], readOnly?: boolean)
     console.error("Mounted paths:");
     state.mountPoints.forEach((mp: MountPoint) => {
       const drive = mp.drive ? ` ($${mp.drive})` : "";
-      console.error(`- [${mp.permissions}]${drive}: ${mp.rawPath}`);
+      console.error(`- [${mp.permissions.flag}]${drive}: ${mp.rawPath}`);
     });
     console.error(`Current working directory (CWD): ${state.cwd}`);
   } else {

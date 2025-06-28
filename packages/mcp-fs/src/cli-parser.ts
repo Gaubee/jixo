@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import {MountConflictError} from "./error.js";
-import {expandHome} from "./fs-utils/path-validation.js";
+import {expandHome} from "./fs-utils/resolve-and-validate-path.js";
 import {readwritePermissions, type MountPoint, type Permissions} from "./types.js";
 
 const ARG_PATTERN = /^(?:(?:\$([A-Z]+))?(?:\[([^\[\]]*)\])?)?(?:=)?(.+)$/;
