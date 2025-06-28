@@ -26,16 +26,14 @@ function normalizePermissions(p: string) {
   return permissions;
 }
 
-export function parseCliArgs(args: string[]): {mountPoints: MountPoint[]; readOnly: boolean} {
+export function parseCliArgs(mountArgs: string[]): {mountPoints: MountPoint[]; readOnly: boolean} {
   const mountPoints: MountPoint[] = [];
   const usedDrives = new Map<string, string>(); // drive letter -> realPath
   let nextDriveCode = "A".charCodeAt(0);
 
-  const nonMountArgs = args.filter((arg) => !arg.startsWith("-") && arg.match(ARG_PATTERN));
-
-  for (const arg of nonMountArgs) {
+  for (const arg of mountArgs) {
     const match = arg.match(ARG_PATTERN);
-    if (!match) continue; // Should not happen due to filter, but for safety
+    if (!match) continue; // Should not happen, as yargs provides the args
 
     let [, drive, permissions, rawPath] = match;
 
