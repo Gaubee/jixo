@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import path from "node:path";
-import {afterEach, beforeEach, describe, test} from "node:test";
+import {afterEach, beforeEach, describe, test} from "vitest";
 import {PathNotMountedError, PermissionDeniedError} from "../error.js";
 import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {state} from "../state.js";

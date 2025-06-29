@@ -1,20 +1,17 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import {afterEach, beforeEach, describe, test} from "node:test";
+import {beforeEach, test} from "vitest";
 import {state} from "../state.js";
 import {readOnlyPermissions, readwritePermissions} from "../types.js";
-import {cleanupSandbox, getToolHandler, SANDBOX} from "./test-helper.js";
+import {createIsolatedTestSuite} from "./test-helper.js";
 
-const MOUNT_READONLY = path.join(SANDBOX, "readonly");
-const MOUNT_READWRITE = path.join(SANDBOX, "readwrite");
-const MOUNT_NESTED_READWRITE = path.join(MOUNT_READONLY, "nested-rw");
+createIsolatedTestSuite("Complex Permissions", (context) => {
+  const MOUNT_READONLY = path.join(context.sandboxPath, "readonly");
+  const MOUNT_READWRITE = path.join(context.sandboxPath, "readwrite");
+  const MOUNT_NESTED_READWRITE = path.join(MOUNT_READONLY, "nested-rw");
 
-describe("Complex Permissions", () => {
   beforeEach(() => {
-    // Manually setup sandbox and state for this specific suite
-    cleanupSandbox();
-    fs.mkdirSync(SANDBOX, {recursive: true});
     fs.mkdirSync(MOUNT_READONLY, {recursive: true});
     fs.mkdirSync(MOUNT_READWRITE, {recursive: true});
     fs.mkdirSync(MOUNT_NESTED_READWRITE, {recursive: true});
@@ -25,15 +22,11 @@ describe("Complex Permissions", () => {
       {rawPath: MOUNT_READWRITE, realPath: MOUNT_READWRITE, permissions: readwritePermissions, drive: "B"},
     ].sort((a, b) => b.realPath.length - a.realPath.length);
 
-    state.cwd = SANDBOX;
-  });
-
-  afterEach(() => {
-    cleanupSandbox();
+    state.cwd = context.sandboxPath;
   });
 
   test("should deny writing to a read-only parent mount", async () => {
-    const writeFile = getToolHandler("write_file");
+    const writeFile = context.getTool("write_file");
     const filePath = path.join(MOUNT_READONLY, "file.txt");
     const result = await writeFile({path: filePath, content: "test"});
 
@@ -42,7 +35,7 @@ describe("Complex Permissions", () => {
   });
 
   test("should allow writing to a read-write nested mount", async () => {
-    const writeFile = getToolHandler("write_file");
+    const writeFile = context.getTool("write_file");
     const filePath = path.join(MOUNT_NESTED_READWRITE, "file.txt");
     const result = await writeFile({path: filePath, content: "test"});
 
@@ -50,7 +43,7 @@ describe("Complex Permissions", () => {
   });
 
   test("should deny moving a file into a read-only mount", async () => {
-    const moveFile = getToolHandler("move_file");
+    const moveFile = context.getTool("move_file");
     const sourcePath = path.join(MOUNT_READWRITE, "source.txt");
     const destPath = path.join(MOUNT_READONLY, "dest.txt");
     fs.writeFileSync(sourcePath, "content");
@@ -61,7 +54,7 @@ describe("Complex Permissions", () => {
   });
 
   test("should allow copying from a read-only mount to a read-write mount", async () => {
-    const copyPath = getToolHandler("copy_path");
+    const copyPath = context.getTool("copy_path");
     const sourcePath = path.join(MOUNT_READONLY, "source.txt");
     const destPath = path.join(MOUNT_READWRITE, "dest.txt");
     fs.writeFileSync(sourcePath, "content");

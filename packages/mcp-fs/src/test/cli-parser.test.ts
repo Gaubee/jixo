@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
-import {before, describe, test} from "node:test";
+import {beforeAll, describe, test} from "vitest";
 import {parseCliArgs} from "../cli-parser.js";
 import {MountConflictError} from "../error.js";
 
@@ -10,7 +10,7 @@ const DIR_A = path.join(TEMP_DIR, "dirA");
 const DIR_B = path.join(TEMP_DIR, "dirB");
 
 describe("CLI Argument Parser", () => {
-  before(() => {
+  beforeAll(() => {
     fs.rmSync(TEMP_DIR, {recursive: true, force: true});
     fs.mkdirSync(DIR_A, {recursive: true});
     fs.mkdirSync(DIR_B, {recursive: true});

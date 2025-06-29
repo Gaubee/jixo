@@ -1,28 +1,21 @@
 import assert from "node:assert";
 import path from "node:path";
-import {afterEach, beforeEach, describe, test} from "node:test";
-import {cleanupSandbox, getToolHandler, SANDBOX, setupSandbox} from "./test-helper.js";
+import {test} from "vitest";
+import {createIsolatedTestSuite} from "./test-helper.js";
 
-describe("CWD Interaction", () => {
-  beforeEach(() => {
-    setupSandbox();
-  });
-
-  afterEach(() => {
-    cleanupSandbox();
-  });
-
+createIsolatedTestSuite("CWD Interaction", (context) => {
   test("should get and set CWD correctly", async () => {
-    const getCwd = getToolHandler("get_cwd");
-    const setCwd = getToolHandler("set_cwd");
-    const createDir = getToolHandler("create_directory");
+    const {sandboxPath, getTool} = context;
+    const getCwd = getTool("get_cwd");
+    const setCwd = getTool("set_cwd");
+    const createDir = getTool("create_directory");
 
     const initialCwdResult = await getCwd({});
     assert.ok(initialCwdResult.structuredContent.success);
-    assert.strictEqual(initialCwdResult.structuredContent.result.cwd, SANDBOX);
+    assert.strictEqual(initialCwdResult.structuredContent.result.cwd, sandboxPath);
 
-    const subDirPath = path.join(SANDBOX, "subdir");
-    await createDir({path: subDirPath});
+    const subDirPath = path.join(sandboxPath, "subdir");
+    await createDir({path: "subdir"}); // relative path
 
     const setCwdResult = await setCwd({path: subDirPath});
     assert.ok(setCwdResult.structuredContent.success);
@@ -34,16 +27,16 @@ describe("CWD Interaction", () => {
   });
 
   test("should resolve relative paths from the new CWD", async () => {
-    const setCwd = getToolHandler("set_cwd");
-    const createDir = getToolHandler("create_directory");
-    const writeFile = getToolHandler("write_file");
-    const readFile = getToolHandler("read_file");
+    const {getTool} = context;
+    const setCwd = getTool("set_cwd");
+    const createDir = getTool("create_directory");
+    const writeFile = getTool("write_file");
+    const readFile = getTool("read_file");
 
-    const subDirPath = path.join(SANDBOX, "app");
-    await createDir({path: subDirPath});
-    await setCwd({path: subDirPath});
+    const subDirPath = path.join(context.sandboxPath, "app");
+    await createDir({path: "app"});
+    await setCwd({path: "app"});
 
-    // Now, CWD is /app. Let's write a file to './src/index.js'
     await createDir({path: "./src"});
     await writeFile({path: "./src/index.js", content: "hello from subdir"});
 
@@ -53,10 +46,11 @@ describe("CWD Interaction", () => {
   });
 
   test("should fail to set CWD to a file", async () => {
-    const setCwd = getToolHandler("set_cwd");
-    const writeFile = getToolHandler("write_file");
-    const filePath = path.join(SANDBOX, "file.txt");
-    await writeFile({path: filePath, content: ""});
+    const {getTool} = context;
+    const setCwd = getTool("set_cwd");
+    const writeFile = getTool("write_file");
+    const filePath = path.join(context.sandboxPath, "file.txt");
+    await writeFile({path: "file.txt", content: ""});
 
     const result = await setCwd({path: filePath});
     assert.ok(!result.structuredContent.success);

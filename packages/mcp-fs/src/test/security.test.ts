@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import {describe, test} from "node:test";
+import {describe, test} from "vitest";
 import {readonlyTools, readwriteTools} from "../server.js";
 
 describe("MCP Filesystem Tools - Security", () => {
