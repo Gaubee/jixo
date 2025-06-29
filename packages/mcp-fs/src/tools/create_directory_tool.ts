@@ -1,5 +1,6 @@
 import {logger, returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
+import {NotADirectoryError} from "../error.js";
 import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
@@ -27,10 +28,13 @@ Creates a new directory. It will also create any necessary parent directories al
     try {
       const {validatedPath} = resolveAndValidatePath(path, "write");
       fs.mkdirSync(validatedPath, {recursive: true});
-      const message = `Successfully created directory ${path}`;
+      const message = `Successfully created directory ${validatedPath}`;
       logger.error("[SUCCESS]", "create_directory", message);
       return returnSuccess(message, {path: validatedPath, message});
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === "ENOTDIR") {
+        return handleToolError("create_directory", new NotADirectoryError(`A component of the path '${path}' is a file, not a directory.`));
+      }
       logger.error("[ERROR]", "create_directory", error);
       return handleToolError("create_directory", error);
     }

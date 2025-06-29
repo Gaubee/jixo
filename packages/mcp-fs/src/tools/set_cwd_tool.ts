@@ -1,6 +1,6 @@
 import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
-import {NotADirectoryError} from "../error.js";
+import {FileNotFoundError, NotADirectoryError} from "../error.js";
 import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
@@ -18,9 +18,16 @@ export const set_cwd_tool = registerTool(
   async ({path}) => {
     try {
       const {validatedPath} = resolveAndValidatePath(path, "read");
-      const stats = fs.statSync(validatedPath);
-      if (!stats.isDirectory()) {
-        throw new NotADirectoryError(`Path '${path}' is not a directory.`);
+      try {
+        const stats = fs.statSync(validatedPath);
+        if (!stats.isDirectory()) {
+          throw new NotADirectoryError(`Path '${path}' is not a directory.`);
+        }
+      } catch (e: any) {
+        if (e.code === "ENOENT") {
+          throw new FileNotFoundError(`Directory not found at path: ${path}`);
+        }
+        throw e;
       }
       state.cwd = validatedPath;
       const message = `Current working directory changed to: ${validatedPath}`;

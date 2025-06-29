@@ -1,4 +1,4 @@
-import {returnError} from "@jixo/mcp-core";
+import {returnError, type McpToolError} from "@jixo/mcp-core";
 
 /**
  * Centralized error handler for all tools.
@@ -15,5 +15,14 @@ export const handleToolError = (toolName: string, error: unknown) => {
   }
 
   console.error(`[ERROR in ${toolName}] ${errorObj.message}`);
-  return returnError(`Error in tool '${toolName}': ${errorObj.message}`, errorObj);
+
+  // Construct a plain object that strictly adheres to the genericErrorRawShape.
+  // This prevents extra properties like 'stack' from causing schema validation failures.
+  const errorPayload = {
+    name: errorObj.name,
+    message: errorObj.message,
+    remedy_tool_suggestions: (errorObj as McpToolError).remedy_tool_suggestions,
+  };
+
+  return returnError(`Error in tool '${toolName}': ${errorObj.message}`, errorPayload);
 };

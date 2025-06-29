@@ -1,5 +1,6 @@
 import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
+import {FileNotFoundError} from "../error.js";
 import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
@@ -32,7 +33,10 @@ Move or rename a file or directory.
       fs.renameSync(validSource, validDest);
       const message = `Successfully moved ${source} to ${destination}`;
       return returnSuccess(message, {source: validSource, destination: validDest, message});
-    } catch (error) {
+    } catch (error: any) {
+      if (error.code === "ENOENT") {
+        return handleToolError("move_file", new FileNotFoundError(`Source path not found: ${source}`));
+      }
       return handleToolError("move_file", error);
     }
   },

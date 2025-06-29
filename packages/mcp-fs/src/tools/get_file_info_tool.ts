@@ -1,5 +1,6 @@
 import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
+import {FileNotFoundError} from "../error.js";
 import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
@@ -26,7 +27,15 @@ Retrieve detailed metadata about a specific file or directory.
   async ({path}) => {
     try {
       const {validatedPath} = resolveAndValidatePath(path, "read");
-      const stats = fs.statSync(validatedPath);
+      let stats: fs.Stats;
+      try {
+        stats = fs.statSync(validatedPath);
+      } catch (e: any) {
+        if (e.code === "ENOENT") {
+          throw new FileNotFoundError(`File or directory not found at path: ${path}`);
+        }
+        throw e;
+      }
       const info = {
         path: validatedPath,
         type: (stats.isDirectory() ? "directory" : stats.isFile() ? "file" : "other") as "file" | "directory" | "other",

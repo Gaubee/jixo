@@ -2,6 +2,7 @@ import {returnSuccess} from "@jixo/mcp-core";
 import {minimatch} from "minimatch";
 import fs from "node:fs";
 import path from "node:path";
+import {FileNotFoundError} from "../error.js";
 import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
@@ -37,6 +38,7 @@ Recursively search for files and directories whose names contain a given pattern
 
       while (searchQueue.length > 0) {
         const currentPath = searchQueue.shift()!;
+        if (!fs.existsSync(currentPath)) continue;
         const entries = fs.readdirSync(currentPath, {withFileTypes: true});
 
         for (const entry of entries) {
@@ -56,8 +58,11 @@ Recursively search for files and directories whose names contain a given pattern
       }
       const message = results.length > 0 ? results.join("\n") : `No matches found for "${pattern}" in "${rootPath}".`;
       return returnSuccess(message, {path: rootPath, pattern, matches: results});
-    } catch (error) {
-      return handleToolError("search_files", error);
+    } catch (error: any) {
+      if (error instanceof FileNotFoundError) {
+        return handleToolError("search_files", error);
+      }
+      return handleToolError("search_files", new FileNotFoundError(`Search root path not found: ${rootPath}`));
     }
   },
 );

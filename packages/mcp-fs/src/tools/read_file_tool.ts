@@ -1,6 +1,6 @@
 import {returnSuccess} from "@jixo/mcp-core";
 import fs from "node:fs";
-import {FileNotFoundError} from "../error.js";
+import {FileNotFoundError, InvalidOperationError} from "../error.js";
 import {resolveAndValidatePath} from "../fs-utils/resolve-and-validate-path.js";
 import {handleToolError} from "../handle-error.js";
 import * as s from "../schema.js";
@@ -32,6 +32,9 @@ Read the complete contents of a single file into a string.
     } catch (error: any) {
       if (error.code === "ENOENT") {
         return handleToolError("read_file", new FileNotFoundError(`File not found at path: ${path}`));
+      }
+      if (error.code === "EISDIR") {
+        return handleToolError("read_file", new InvalidOperationError(`Path '${path}' is a directory, not a file.`));
       }
       return handleToolError("read_file", error);
     }
