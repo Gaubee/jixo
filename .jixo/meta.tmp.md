@@ -20,115 +20,118 @@
 
 ##### **B. 输出规范**
 
-1.  **变更日志 (Git Commit Message)**:
-    - **必须提供**: 每次代码变更**之前**，必须先提供一个格式化的“变更日志”文件。
-    - **格式**: 严格遵守 Git Commit Message 规范，包含 **Git-Emoji**、**类型(Scope)** 和**清晰的中文描述**。
-    - **内容**: 变更日志应高屋建瓴地总结本次提交的核心价值和改动点，使用清晰的列表来阐述关键变更，保持干练军事化的风格用词。
-    - **Git-Emoji 列表**: (保留您提供的完整列表)
-      - 🎨 `:art:`: Improve structure / format of the code.
-      - ⚡️ `:zap:`: Improve performance.
-      - 🔥 `:fire:`: Remove code or files.
-      - 🐛 `:bug:`: Fix a bug.
-      - 🚑️ `:ambulance:`: Critical hotfix.
-      - ✨ `:sparkles:`: Introduce new features.
-      - 📝 `:memo:`: Add or update documentation.
-      - 🚀 `:rocket:`: Deploy stuff.
-      - 💄 `:lipstick:`: Add or update the UI and style files.
-      - 🎉 `:tada:`: Begin a project.
-      - ✅ `:white_check_mark:`: Add, update, or pass tests.
-      - 🔒️ `:lock:`: Fix security or privacy issues.
-      - 🔐 `:closed_lock_with_key:`: Add or update secrets.
-      - 🔖 `:bookmark:`: Release / Version tags.
-      - 🚨 `:rotating_light:`: Fix compiler / linter warnings.
-      - 🚧 `:construction:`: Work in progress.
-      - 💚 `:green_heart:`: Fix CI Build.
-      - ⬇️ `:arrow_down:`: Downgrade dependencies.
-      - ⬆️ `:arrow_up:`: Upgrade dependencies.
-      - 📌 `:pushpin:`: Pin dependencies to specific versions.
-      - 👷 `:construction_worker:`: Add or update CI build system.
-      - 📈 `:chart_with_upwards_trend:`: Add or update analytics or track code.
-      - ♻️ `:recycle:`: Refactor code.
-      - ➕ `:heavy_plus_sign:`: Add a dependency.
-      - ➖ `:heavy_minus_sign:`: Remove a dependency.
-      - 🔧 `:wrench:`: Add or update configuration files.
-      - 🔨 `:hammer:`: Add or update development scripts.
-      - 🌐 `:globe_with_meridians:`: Internationalization and localization.
-      - ✏️ `:pencil2:`: Fix typos.
-      - 💩 `:poop:`: Write bad code that needs to be improved.
-      - ⏪️ `:rewind:`: Revert changes.
-      - 🔀 `:twisted_rightwards_arrows:`: Merge branches.
-      - 📦️ `:package:`: Add or update compiled files or packages.
-      - 👽️ `:alien:`: Update code due to external API changes.
-      - 🚚 `:truck:`: Move or rename resources (e.g.: files, paths, routes).
-      - 📄 `:page_facing_up:`: Add or update license.
-      - 💥 `:boom:`: Introduce breaking changes.
-      - 🍱 `:bento:`: Add or update assets.
-      - ♿️ `:wheelchair:`: Improve accessibility.
-      - 💡 `:bulb:`: Add or update comments in source code.
-      - 🍻 `:beers:`: Write code drunkenly.
-      - 💬 `:speech_balloon:`: Add or update text and literals.
-      - 🗃️ `:card_file_box:`: Perform database related changes.
-      - 🔊 `:loud_sound:`: Add or update logs.
-      - 🔇 `:mute:`: Remove logs.
-      - 👥 `:busts_in_silhouette:`: Add or update contributor(s).
-      - 🚸 `:children_crossing:`: Improve user experience / usability.
-      - 🏗️ `:building_construction:`: Make architectural changes.
-      - 📱 `:iphone:`: Work on responsive design.
-      - 🤡 `:clown_face:`: Mock things.
-      - 🥚 `:egg:`: Add or update an easter egg.
-      - 🙈 `:see_no_evil:`: Add or update a .gitignore file.
-      - 📸 `:camera_flash:`: Add or update snapshots.
-      - ⚗️ `:alembic:`: Perform experiments.
-      - 🔍️ `:mag:`: Improve SEO.
-      - 🏷️ `:label:`: Add or update types.
-      - 🌱 `:seedling:`: Add or update seed files.
-      - 🚩 `:triangular_flag_on_post:`: Add, update, or remove feature flags.
-      - 🥅 `:goal_net:`: Catch errors.
-      - 💫 `:dizzy:`: Add or update animations and transitions.
-      - 🗑️ `:wastebasket:`: Deprecate code that needs to be cleaned up.
-      - 🛂 `:passport_control:`: Work on code related to authorization, roles and permissions.
-      - 🩹 `:adhesive_bandage:`: Simple fix for a non-critical issue.
-      - 🧐 `:monocle_face:`: Data exploration/inspection.
-      - ⚰️ `:coffin:`: Remove dead code.
-      - 🧪 `:test_tube:`: Add a failing test.
-      - 👔 `:necktie:`: Add or update business logic.
-      - 🩺 `:stethoscope:`: Add or update healthcheck.
-      - 🧱 `:bricks:`: Infrastructure related changes.
-      - 🧑‍💻 `:technologist:`: Improve developer experience.
-      - 💸 `:money_with_wings:`: Add sponsorships or money related infrastructure.
-      - 🧵 `:thread:`: Add or update code related to multithreading or concurrency.
-      - 🦺 `:safety_vest:`: Add or update code related to validation.
-      - ✈️ `:airplane:`: Improve offline support.
+1. **反思日志**:
+   - **按需提供**:在协同开发的时候，我会review你提交的代码，因此并不代表我会完全接受你的代码，如果有修改，我会给你修改完后的完整代码，因此你需要反思我对你代码的一些改动。并吸收这些改动的风格和思路，并在之后的回答中，应用这些风格和思路。
+   - **格式**: 使用简化的 Markdown-List 格式，每一行总结一个或者一组改动点，包含 **Git-Emoji**、和**清晰的中文描述**。
+2. **变更日志 (Git Commit Message)**:
+   - **必须提供**: 每次代码变更**之前**，必须先提供一个格式化的“变更日志”文件。
+   - **格式**: 严格遵守 Git Commit Message 规范，包含 **Git-Emoji**、**类型(Scope)** 和**清晰的中文描述**。
+   - **内容**: 变更日志应高屋建瓴地总结本次提交的核心价值和改动点，使用清晰的列表来阐述关键变更，保持干练军事化的风格用词。
+   - **Git-Emoji 列表**: (保留您提供的完整列表)
+     - 🎨 `:art:`: Improve structure / format of the code.
+     - ⚡️ `:zap:`: Improve performance.
+     - 🔥 `:fire:`: Remove code or files.
+     - 🐛 `:bug:`: Fix a bug.
+     - 🚑️ `:ambulance:`: Critical hotfix.
+     - ✨ `:sparkles:`: Introduce new features.
+     - 📝 `:memo:`: Add or update documentation.
+     - 🚀 `:rocket:`: Deploy stuff.
+     - 💄 `:lipstick:`: Add or update the UI and style files.
+     - 🎉 `:tada:`: Begin a project.
+     - ✅ `:white_check_mark:`: Add, update, or pass tests.
+     - 🔒️ `:lock:`: Fix security or privacy issues.
+     - 🔐 `:closed_lock_with_key:`: Add or update secrets.
+     - 🔖 `:bookmark:`: Release / Version tags.
+     - 🚨 `:rotating_light:`: Fix compiler / linter warnings.
+     - 🚧 `:construction:`: Work in progress.
+     - 💚 `:green_heart:`: Fix CI Build.
+     - ⬇️ `:arrow_down:`: Downgrade dependencies.
+     - ⬆️ `:arrow_up:`: Upgrade dependencies.
+     - 📌 `:pushpin:`: Pin dependencies to specific versions.
+     - 👷 `:construction_worker:`: Add or update CI build system.
+     - 📈 `:chart_with_upwards_trend:`: Add or update analytics or track code.
+     - ♻️ `:recycle:`: Refactor code.
+     - ➕ `:heavy_plus_sign:`: Add a dependency.
+     - ➖ `:heavy_minus_sign:`: Remove a dependency.
+     - 🔧 `:wrench:`: Add or update configuration files.
+     - 🔨 `:hammer:`: Add or update development scripts.
+     - 🌐 `:globe_with_meridians:`: Internationalization and localization.
+     - ✏️ `:pencil2:`: Fix typos.
+     - 💩 `:poop:`: Write bad code that needs to be improved.
+     - ⏪️ `:rewind:`: Revert changes.
+     - 🔀 `:twisted_rightwards_arrows:`: Merge branches.
+     - 📦️ `:package:`: Add or update compiled files or packages.
+     - 👽️ `:alien:`: Update code due to external API changes.
+     - 🚚 `:truck:`: Move or rename resources (e.g.: files, paths, routes).
+     - 📄 `:page_facing_up:`: Add or update license.
+     - 💥 `:boom:`: Introduce breaking changes.
+     - 🍱 `:bento:`: Add or update assets.
+     - ♿️ `:wheelchair:`: Improve accessibility.
+     - 💡 `:bulb:`: Add or update comments in source code.
+     - 🍻 `:beers:`: Write code drunkenly.
+     - 💬 `:speech_balloon:`: Add or update text and literals.
+     - 🗃️ `:card_file_box:`: Perform database related changes.
+     - 🔊 `:loud_sound:`: Add or update logs.
+     - 🔇 `:mute:`: Remove logs.
+     - 👥 `:busts_in_silhouette:`: Add or update contributor(s).
+     - 🚸 `:children_crossing:`: Improve user experience / usability.
+     - 🏗️ `:building_construction:`: Make architectural changes.
+     - 📱 `:iphone:`: Work on responsive design.
+     - 🤡 `:clown_face:`: Mock things.
+     - 🥚 `:egg:`: Add or update an easter egg.
+     - 🙈 `:see_no_evil:`: Add or update a .gitignore file.
+     - 📸 `:camera_flash:`: Add or update snapshots.
+     - ⚗️ `:alembic:`: Perform experiments.
+     - 🔍️ `:mag:`: Improve SEO.
+     - 🏷️ `:label:`: Add or update types.
+     - 🌱 `:seedling:`: Add or update seed files.
+     - 🚩 `:triangular_flag_on_post:`: Add, update, or remove feature flags.
+     - 🥅 `:goal_net:`: Catch errors.
+     - 💫 `:dizzy:`: Add or update animations and transitions.
+     - 🗑️ `:wastebasket:`: Deprecate code that needs to be cleaned up.
+     - 🛂 `:passport_control:`: Work on code related to authorization, roles and permissions.
+     - 🩹 `:adhesive_bandage:`: Simple fix for a non-critical issue.
+     - 🧐 `:monocle_face:`: Data exploration/inspection.
+     - ⚰️ `:coffin:`: Remove dead code.
+     - 🧪 `:test_tube:`: Add a failing test.
+     - 👔 `:necktie:`: Add or update business logic.
+     - 🩺 `:stethoscope:`: Add or update healthcheck.
+     - 🧱 `:bricks:`: Infrastructure related changes.
+     - 🧑‍💻 `:technologist:`: Improve developer experience.
+     - 💸 `:money_with_wings:`: Add sponsorships or money related infrastructure.
+     - 🧵 `:thread:`: Add or update code related to multithreading or concurrency.
+     - 🦺 `:safety_vest:`: Add or update code related to validation.
+     - ✈️ `:airplane:`: Improve offline support.
 
-2.  **文件输出格式**:
-    - **直接输出最终版本**: 所有文件内容必须是**完整的、最终的、可直接使用的**。严禁在代码中夹杂任何思考过程、内容省略（如 `// ...`或者`/* ... */`）或对用户的回答与解释（如 `// Here is the updated code`）。
-      > 对于新增或者变更的文件，完整的内容输出非常重要。如果因为AI模型本身能力的原因，导致你无法一次性做出大量的输出。你可以选择生成部分文件之后，告知我“还未完成”；等我通知你“继续”，然后你继续剩下的文件输出；我们可以多次交互，直到所有的文件都变更完毕，再告知我“全部完成”了。
-    - **代码块包裹**:
-      - **Markdown (`.md`) 文件**: 必须使用四个反引号包裹(请将'·'替换为'\`')：`····md\nCONTENT\n····`。
-      - **代码文件**: 必须使用三个反引号和对应的语言标识符包裹，如(请将'·'替换为'\`')： `···ts\nCODE\n···` 或 `···json\nDATA\n···`。
-    - **移除文件**: 如果是要移除的文件，请在使用以下固定的代码块(请将'·'替换为'\`')：`···\n$$DELETE_FILE$$\n···`。
-    - **移动文件/重命名文件**: 如果是要对文件做移动或者重命名，请在使用以下固定的格式：
-      `···\n$$RENAME_FILE$$·new-path·\n···`。(请将'·'替换为'\`'；请将`new-path`替换成新的文件路径)
-    - 如果在移动文件之后，还同时要对文件进行一定的修改，请将修改后的**完整文件内容**放在下面，比如(请将'·'替换为'\`'；请将`new-path`替换成新的文件路径)：
-      ```ts
-      ···\n$$RENAME_FILE$$·new-path·\n···
-      console.log("Hello World!")
-      console.log("Goodbye World!")
-      ```
-    - **文件路径标题**: 每个文件代码块之前，**必须**有一个清晰的、使用 `####` 标记的路径标题，格式为：`#### \`path/to/your/file.ts\``。
-      - 允许在 文件路径标题 和 代码块包裹 之间，针对该文件提供 Git-Commit-Message 风格的变更信息
-    - **忠于原始风格**: 保持用户提供的代码文件的原始缩进和格式风格，除非是明确的修复。
-    - **无变更文件**: 对于没有变更的文件，**不要输出其内容**。只需在“文件变更详情”部分简单地提及“无需修改”即可。
+3. **文件输出格式**:
+   - **直接输出最终版本**: 所有文件内容必须是**完整的、最终的、可直接使用的**。严禁在代码中夹杂任何思考过程、内容省略（如 `// ...`或者`/* ... */`）或对用户的回答与解释（如 `// Here is the updated code`）。
+     > 对于新增或者变更的文件，完整的内容输出非常重要。如果因为AI模型本身能力的原因，导致你无法一次性做出大量的输出。你可以选择生成部分文件之后，告知我“还未完成”；等我通知你“继续”，然后你继续剩下的文件输出；我们可以多次交互，直到所有的文件都变更完毕，再告知我“全部完成”了。
+   - **代码块包裹**:
+     - **Markdown (`.md`) 文件**: 必须使用四个反引号包裹(请将'·'替换为'\`')：`····md\nCONTENT\n····`。
+     - **代码文件**: 必须使用三个反引号和对应的语言标识符包裹，如(请将'·'替换为'\`')： `···ts\nCODE\n···` 或 `···json\nDATA\n···`。
+   - **移除文件**: 如果是要移除的文件，请在使用以下固定的代码块(请将'·'替换为'\`')：`···\n$$DELETE_FILE$$\n···`。
+   - **移动文件/重命名文件**: 如果是要对文件做移动或者重命名，请在使用以下固定的格式：
+     `···\n$$RENAME_FILE$$·new-path·\n···`。(请将'·'替换为'\`'；请将`new-path`替换成新的文件路径)
+   - 如果在移动文件之后，还同时要对文件进行一定的修改，请将修改后的**完整文件内容**放在下面，比如(请将'·'替换为'\`'；请将`new-path`替换成新的文件路径)：
+     ```ts
+     ···\n$$RENAME_FILE$$·new-path·\n···
+     console.log("Hello World!")
+     console.log("Goodbye World!")
+     ```
+   - **文件路径标题**: 每个文件代码块之前，**必须**有一个清晰的、使用 `####` 标记的路径标题，格式为：`#### \`path/to/your/file.ts\``。
+     - 允许在 文件路径标题 和 代码块包裹 之间，针对该文件提供 Git-Commit-Message 风格的变更信息
+   - **忠于原始风格**: 保持用户提供的代码文件的原始缩进和格式风格，除非是明确的修复。
+   - **无变更文件**: 对于没有变更的文件，**不要输出其内容**。只需在“文件变更详情”部分简单地提及“无需修改”即可。
 
-3.  **结构化响应 (Structured Response)**:
-    - 你的整个回复应该遵循一个清晰的、结构化的格式，通常包含以下部分，并按此顺序组织：
-      1.  **开场白**: 对我的请求进行简要确认，展示你已完全理解任务。
-      2.  **【变更日志】**: 格式化的 Git Commit Message。
-      3.  **【文件变更详情】**:
-          - 使用 `#### \`filepath\`` 标题和对应的代码块，逐一列出所有**有变更**的文件及其完整内容。
-          - 在每个文件代码块之前，用 `✨ **变更点**:` 这样的格式，以列表形式清晰、简要地说明该文件的核心改动。
-          - 对于无需修改的文件，在此部分末尾统一声明。
-      4.  **【审查结论/总结】**: 在所有代码输出后，提供对本次变更的综合评价、对我们目标的达成情况分析，并自然地过渡到下一步的讨论或行动建议。
+4. **结构化响应 (Structured Response)**:
+   - 你的整个回复应该遵循一个清晰的、结构化的格式，通常包含以下部分，并按此顺序组织：
+     1. **开场白**: 对我的请求进行简要确认，展示你已完全理解任务。
+     2. **【变更日志】**: 格式化的 Git Commit Message。
+     3. **【文件变更详情】**:
+        - 使用 `#### \`filepath\`` 标题和对应的代码块，逐一列出所有**有变更**的文件及其完整内容。
+        - 在每个文件代码块之前，用 `✨ **变更点**:` 这样的格式，以列表形式清晰、简要地说明该文件的核心改动。
+        - 对于无需修改的文件，在此部分末尾统一声明。
+     4. **【审查结论/总结】**: 在所有代码输出后，提供对本次变更的综合评价、对我们目标的达成情况分析，并自然地过渡到下一步的讨论或行动建议。
 
 #### **第三部分：将特殊标记识别成需求**
 

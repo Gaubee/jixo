@@ -100,6 +100,9 @@ function parseMarkdown(markdownContent: string, rootResolver: PathResolver): Dif
  */
 async function applyChanges(files: DiffFiles): Promise<void> {
   for (const file of files) {
+    const writeFile = async (filepath = file.fullSourcePath, filecode: string = file.code) => {
+      await fsp.writeFile(filepath, filecode, "utf-8");
+    };
     try {
       await match(file.mode)
         .with("add", "modify", async () => {
@@ -108,7 +111,7 @@ async function applyChanges(files: DiffFiles): Promise<void> {
           await fsp.mkdir(dirName, {recursive: true});
 
           // 写入文件
-          await fsp.writeFile(file.fullSourcePath, file.code + "\n", "utf-8"); // 添加一个换行符以符合惯例
+          await writeFile();
           logger.success(`Successfully ${file.mode === "add" ? "writed" : "updated"} file: ${logger.file(file.filePath)}`);
         })
         .with("delete", async () => {
@@ -125,7 +128,7 @@ async function applyChanges(files: DiffFiles): Promise<void> {
 
           if (mode.includes("modify")) {
             // 写入文件
-            await fsp.writeFile(file.fullTargetPath, file.code, "utf-8"); // 添加一个换行符以符合惯例
+            await writeFile();
             logger.success(`Successfully renamed and updated file: ${logger.file(file.filePath)} => ${logger.file(targetPath)}`);
           } else {
             logger.success(`Successfully renamed file: ${logger.file(file.filePath)} => ${logger.file(targetPath)}`);
@@ -226,9 +229,9 @@ if (import_meta_ponyfill(import.meta).main) {
   // 运行主函数
   const filesToUpdate = await applyAiResponse(markdownFilePath, args);
 
-  if (args.format) {
+  if (args.format && filesToUpdate.length > 0) {
     console.log(cyan("----Format----"));
-    await $`pnpm prettier --write ${iter_map_not_null(filesToUpdate, (f) => {
+    await $`pnpm prettier --experimental-cli --write ${iter_map_not_null(filesToUpdate, (f) => {
       if (f.mode === "delete") {
         return;
       }
