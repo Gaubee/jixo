@@ -76,7 +76,7 @@ ${planningPrompt}
   // Dynamically create the toolset for this specific call
   const logToolset = tools.logTools(logManager);
 
-  const result = await agentGenerateStructuredOutput(mastra.getAgent("plannerAgent"), [{role: "user", content: finalPrompt}], PlannerOutputSchema, {
+  const result = await agentGenerateStructuredOutput(mastra.getAgent("plannerAgent"), finalPrompt, PlannerOutputSchema, {
     toolsets: {
       log: logToolset, // Correctly pass tools via the toolsets option
     },

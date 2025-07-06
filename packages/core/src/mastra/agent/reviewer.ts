@@ -71,7 +71,7 @@ ${recentLogs || "No specific logs for this task."}
 Please provide your review based on the information above. Use your file system tools to verify file-related checklist items.
 `;
 
-  const result = await agentGenerateStructuredOutput(app.getAgent("reviewerAgent"), [{role: "user", content: prompt}], ReviewResultSchema, {
+  const result = await agentGenerateStructuredOutput(app.getAgent("reviewerAgent"), prompt, ReviewResultSchema, {
     runtimeContext,
   });
   return result;

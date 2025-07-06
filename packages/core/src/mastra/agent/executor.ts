@@ -107,7 +107,7 @@ ${
 ${gitCommitInstruction}
 `;
 
-  const result = await agentGenerateStructuredOutput(mastra.getAgent("executorAgent"), [{role: "user", content: userPrompt}], ExecutionResultSchema, {
+  const result = await agentGenerateStructuredOutput(mastra.getAgent("executorAgent"), userPrompt, ExecutionResultSchema, {
     runtimeContext,
   });
   return result;

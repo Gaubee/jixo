@@ -35,7 +35,7 @@ Convert unstructured input text into precise JSON matching the EXACT structure a
 export type CreateAgentOptions = {jobDir: string; memoryStorage: MastraStorage};
 export const agentGenerateStructuredOutput = async <O extends ZodSchema>(
   agent: Agent<any, {}, {}>,
-  message: CoreMessage[],
+  message: string | CoreMessage[],
   output: O,
   opts: Pick<AgentGenerateOptions, "runtimeContext" | "toolsets">, // Omit< AgentGenerateOptions,'output'|'experimental_output'> ,
 ) => {
@@ -51,7 +51,6 @@ export const agentGenerateStructuredOutput = async <O extends ZodSchema>(
       output: output,
     });
 
-    console.log("QAQ", agent.name, result2.object);
     return result2.object;
   } else {
     const result2 = await agent.generate(message, {
