@@ -22,7 +22,8 @@
   ],
   "scripts": {
     "fmt": "prettier --write src",
-    "test": "vitest"
+    "test:watch": "vitest --watch",
+    "test": "vitest --run"
   },
   "keywords": [
     "dev",

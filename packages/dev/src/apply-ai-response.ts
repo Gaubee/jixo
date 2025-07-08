@@ -92,7 +92,7 @@ async function parseMarkdown(markdownContent: string, rootResolver: PathResolver
       mode = "delete";
     } else if (code.startsWith("$$RENAME_FILE$$")) {
       fullTargetPath = rootResolver(code.replace("$$RENAME_FILE$$", ""));
-      code = code.slice(code.indexOf("\n") + 1);
+      code = code.indexOf("\n") === -1 ? "" : code.slice(code.indexOf("\n") + 1);
       if (code.length > 0) {
         mode = "rename+modify";
       } else {
