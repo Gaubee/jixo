@@ -4,15 +4,16 @@ import path from "node:path";
 import {simpleGit, type SimpleGit} from "simple-git";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {gen_prompt} from "./gen-prompt.js"; // Assuming gen-prompt.js is the compiled output
+import { randomUUID } from "node:crypto";
 
-describe("gen_prompt GIT modes", () => {
+describe("gen_prompt GIT modes", (t) => {
   let tempDir: string;
   let git: SimpleGit;
   let mdFilePath: string;
 
   beforeEach(async () => {
     // Create a temporary directory for the Git repository and test files
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gen-prompt-git-test-"));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gen-prompt-git-test-"+randomUUID()));
     mdFilePath = path.join(tempDir, "test.md");
 
     // Initialize a new Git repository in the temporary directory
@@ -69,7 +70,7 @@ describe("gen_prompt GIT modes", () => {
     expect(outputContent).toContain("+added line 4");
   });
 
-  it("should generate file content for an unstaged file in GIT-FILES mode", async () => {
+  it("should generate file content for an unstaged file in GIT_FILE mode", async () => {
     // Setup: Create a file, commit it, then modify it without committing
     const testFilePath = "src/example.txt";
     await createAndCommitFile(testFilePath, "original content", "Initial commit");
@@ -77,11 +78,11 @@ describe("gen_prompt GIT modes", () => {
     const modifiedContent = "new content for the file";
     fs.writeFileSync(path.join(tempDir, testFilePath), modifiedContent, "utf-8");
 
-    // Create the markdown file with GIT-FILES placeholder
+    // Create the markdown file with GIT_FILE placeholder
     const mdContent = `
 # Test Prompt
 
-[\`${testFilePath}\`](@GIT-FILES)
+[\`${testFilePath}\`](@GIT_FILE)
     `;
     createMarkdownFile(mdContent);
 
@@ -97,7 +98,7 @@ describe("gen_prompt GIT modes", () => {
     expect(outputContent).toContain(modifiedContent);
   });
 
-  it("should generate file content from a specific commit in GIT-FILES mode with commitHash", async () => {
+  it("should generate file content from a specific commit in GIT_FILE mode with commitHash", async () => {
     const testFilePath = "src/version1.txt";
     const initialContent = "content from first commit";
     const updatedContent = "content from second commit";
@@ -117,11 +118,11 @@ describe("gen_prompt GIT modes", () => {
     // 3. Delete the file from the working directory to ensure it's read from history
     fs.unlinkSync(path.join(tempDir, testFilePath));
 
-    // Create the markdown file with GIT-FILES placeholder referencing the first commit
+    // Create the markdown file with GIT_FILE placeholder referencing the first commit
     const mdContent = `
 # Test Prompt
 
-[\`${firstCommitHash}:${testFilePath}\`](@GIT-FILES)
+[\`${firstCommitHash}:${testFilePath}\`](@GIT_FILE)
     `;
     createMarkdownFile(mdContent);
 
@@ -180,7 +181,7 @@ describe("gen_prompt GIT modes", () => {
     expect(outputContent).not.toContain(contentV2);
   });
 
-  it("should handle glob patterns with commitHash in GIT-FILES mode", async () => {
+  it("should handle glob patterns with commitHash in GIT_FILE mode", async () => {
     const file1Path = "src/module/file1.js";
     const file2Path = "src/module/file2.ts";
     const file3Path = "src/another/file3.js";
@@ -202,7 +203,7 @@ describe("gen_prompt GIT modes", () => {
     const mdContent = `
 # Test Prompt
 
-[\`${commitHash}:src/module/*.js\`](@GIT-FILES)
+[\`${commitHash}:src/module/*.js\`](@GIT_FILE)
     `;
     createMarkdownFile(mdContent);
 
@@ -218,7 +219,170 @@ describe("gen_prompt GIT modes", () => {
     expect(outputContent).not.toContain(content3);
   });
 
-  it("should handle edge case: file exists in working directory but not in commit (GIT-FILES)", async () => {
+  it("should generate file content for a tracked, unmodified file in GIT_FILE mode (working dir)", async () => {
+    const testFilePath = "src/tracked_unmodified.txt";
+    const content = "This is some content for a tracked file.";
+    await createAndCommitFile(testFilePath, content, "Tracked unmodified file");
+
+    const mdContent = `
+# Test Prompt
+
+[\`${testFilePath}\`](@GIT_FILE)
+    `;
+    createMarkdownFile(mdContent);
+
+    const outputFilePath = path.join(tempDir, "test.gen.md");
+    await gen_prompt(mdFilePath, true, outputFilePath);
+    const outputContent = fs.readFileSync(outputFilePath, "utf-8");
+
+    expect(outputContent).toContain(`<!-- No files found for pattern: ${testFilePath} in working directory -->`);
+    expect(outputContent).not.toContain(content);
+  });
+
+  it("should generate file content for a newly added, untracked file in GIT_FILE mode (working dir)", async () => {
+    const testFilePath = "src/new_untracked.txt";
+    const content = "Content of a brand new untracked file.";
+    const fullPath = path.join(tempDir, testFilePath);
+    fs.mkdirSync(path.dirname(fullPath), {recursive: true});
+    fs.writeFileSync(fullPath, content, "utf-8");
+
+    const mdContent = `
+# Test Prompt
+
+[\`${testFilePath}\`](@GIT_FILE)
+    `;
+    createMarkdownFile(mdContent);
+
+    const outputFilePath = path.join(tempDir, "test.gen.md");
+    await gen_prompt(mdFilePath, true, outputFilePath);
+    const outputContent = fs.readFileSync(outputFilePath, "utf-8");
+
+    expect(outputContent).toContain(testFilePath);
+    expect(outputContent).toContain("```txt");
+    expect(outputContent).toContain(content);
+  });
+
+  it("should NOT generate content for an ignored file in GIT_FILE mode (working dir)", async () => {
+    // Create .gitignore
+    fs.writeFileSync(path.join(tempDir, ".gitignore"), "*.log\n", "utf-8");
+    // Create an ignored file
+    const ignoredFilePath = "src/debug.log";
+    const ignoredContent = "This log should be ignored.";
+    const fullPathIgnored = path.join(tempDir, ignoredFilePath);
+    fs.mkdirSync(path.dirname(fullPathIgnored), {recursive: true});
+    fs.writeFileSync(fullPathIgnored, ignoredContent, "utf-8");
+
+    const mdContent = `
+# Test Prompt
+
+[\`${ignoredFilePath}\`](@GIT_FILE)
+    `;
+    createMarkdownFile(mdContent);
+
+    const outputFilePath = path.join(tempDir, "test.gen.md");
+    await gen_prompt(mdFilePath, true, outputFilePath);
+    const outputContent = fs.readFileSync(outputFilePath, "utf-8");
+
+    expect(outputContent).toContain(`<!-- No files found for pattern: ${ignoredFilePath} in working directory -->`);
+    expect(outputContent).not.toContain(ignoredContent);
+  });
+
+  it("should generate diff for a newly added, untracked file in GIT-DIFF mode (working dir)", async () => {
+    const testFilePath = "src/new_untracked_diff.txt";
+    const content = "This is a new file to be diffed.";
+    const fullPathDiff = path.join(tempDir, testFilePath);
+    fs.mkdirSync(path.dirname(fullPathDiff), {recursive: true});
+    fs.writeFileSync(fullPathDiff, content, "utf-8");
+
+    const mdContent = `
+# Test Prompt
+
+[\`${testFilePath}\`](@GIT-DIFF)
+    `;
+    createMarkdownFile(mdContent);
+
+    const outputFilePath = path.join(tempDir, "test.gen.md");
+    await gen_prompt(mdFilePath, true, outputFilePath);
+    const outputContent = fs.readFileSync(outputFilePath, "utf-8");
+
+    expect(outputContent).toContain("```diff");
+    expect(outputContent).toContain(`--- /dev/null`);
+    expect(outputContent).toContain(`+++ b/${testFilePath}`);
+    expect(outputContent).toContain(`+${content}`);
+  });
+
+  it("should generate diff for a deleted file in GIT-DIFF mode (working dir)", async () => {
+    const testFilePath = "src/deleted_file.txt";
+    const content = "Content of a file that will be deleted.";
+    await createAndCommitFile(testFilePath, content, "File to be deleted");
+
+    fs.unlinkSync(path.join(tempDir, testFilePath)); // Delete the file
+
+    const mdContent = `
+# Test Prompt
+
+[\`${testFilePath}\`](@GIT-DIFF)
+    `;
+    createMarkdownFile(mdContent);
+
+    const outputFilePath = path.join(tempDir, "test.gen.md");
+    await gen_prompt(mdFilePath, true, outputFilePath);
+    const outputContent = fs.readFileSync(outputFilePath, "utf-8");
+
+    expect(outputContent).toContain("```diff");
+    expect(outputContent).toContain(`--- a/${testFilePath}`);
+    expect(outputContent).toContain(`+++ /dev/null`);
+    expect(outputContent).toContain(`-${content}`);
+  });
+
+  it("should handle glob patterns for working directory files in GIT_FILE mode", async () => {
+    const file1Path = "src/data/report.csv";
+    const file2Path = "src/data/config.json";
+    const file3Path = "src/assets/image.png"; // Should not be included by glob
+    const content1 = "header1,header2\nvalue1,value2";
+    const content2 = '{"key": "value"}';
+    const content3 = "binary_image_data";
+
+    // Create and commit some files
+    await createAndCommitFile("src/existing.txt", "existing content", "Existing file");
+
+    // Create new untracked files
+    const fullPath1 = path.join(tempDir, file1Path);
+    fs.mkdirSync(path.dirname(fullPath1), {recursive: true});
+    fs.writeFileSync(fullPath1, content1, "utf-8");
+
+    const fullPath2 = path.join(tempDir, file2Path);
+    fs.mkdirSync(path.dirname(fullPath2), {recursive: true});
+    fs.writeFileSync(fullPath2, content2, "utf-8");
+
+    const fullPath3 = path.join(tempDir, file3Path);
+    fs.mkdirSync(path.dirname(fullPath3), {recursive: true});
+    fs.writeFileSync(fullPath3, content3, "utf-8");
+
+    const mdContent = `
+# Test Prompt
+
+[\`src/data/*\`](@GIT_FILE)
+    `;
+    createMarkdownFile(mdContent);
+
+    const outputFilePath = path.join(tempDir, "test.gen.md");
+    await gen_prompt(mdFilePath, true, outputFilePath);
+    const outputContent = fs.readFileSync(outputFilePath, "utf-8");
+
+    expect(outputContent).toContain(file1Path);
+    expect(outputContent).toContain("```csv");
+    expect(outputContent).toContain(content1);
+
+    expect(outputContent).toContain(file2Path);
+    expect(outputContent).toContain("```json");
+    expect(outputContent).toContain(content2);
+
+    expect(outputContent).not.toContain(file3Path); // Should not match the glob
+    expect(outputContent).not.toContain(content3);
+  });
+
+  it("should handle edge case: file exists in working directory but not in commit (GIT_FILE)", async () => {
     const testFilePath = "src/new_file.txt";
     const initialContent = "initial content";
     const uncommittedContent = "uncommitted content";
@@ -235,7 +399,7 @@ describe("gen_prompt GIT modes", () => {
     const mdContent = `
 # Test Prompt
 
-[\`${firstCommitHash}:${testFilePath}\`](@GIT-FILES)
+[\`${firstCommitHash}:${testFilePath}\`](@GIT_FILE)
     `;
     createMarkdownFile(mdContent);
 
@@ -279,7 +443,7 @@ describe("gen_prompt GIT modes", () => {
     expect(outputContent).not.toContain(uncommittedContent);
   });
 
-  it("should generate file content using HEAD~1 as commitHash in GIT-FILES mode", async () => {
+  it("should generate file content using HEAD~1 as commitHash in GIT_FILE mode", async () => {
     const testFilePath = "src/head_tilde_test.txt";
     const contentV1 = "content of version 1";
     const contentV2 = "content of version 2";
@@ -299,7 +463,7 @@ describe("gen_prompt GIT modes", () => {
     const mdContent = `
 # Test Prompt
 
-[\`HEAD~1:${testFilePath}\`](@GIT-FILES)
+[\`HEAD~1:${testFilePath}\`](@GIT_FILE)
     `;
     createMarkdownFile(mdContent);
 

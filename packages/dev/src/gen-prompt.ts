@@ -5,9 +5,10 @@ import parcelWatcher from "@parcel/watcher";
 import {parseArgs} from "@std/cli/parse-args";
 import {globbySync} from "globby";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
-import {readFileSync, statSync, watch, writeFileSync} from "node:fs";
-import path from "node:path";
 import micromatch from "micromatch"; // Import micromatch
+import {readFileSync, statSync, watch, writeFileSync} from "node:fs";
+import {cpus} from "node:os";
+import path from "node:path";
 import {Signal} from "signal-polyfill";
 import {effect} from "signal-utils/subtle/microtask-effect";
 import {simpleGit, type SimpleGit} from "simple-git";
@@ -91,11 +92,11 @@ const getFileContentFromGit = async (
 };
 
 /**
- * Processes a single replacement based on the mode (GIT_DIFF, GIT_FILES, FILE, INJECT).
+ * Processes a single replacement based on the mode (GIT_DIFF, GIT_FILE, FILE, INJECT).
  * This function is designed to be called for each regex match found in the input content.
  * @param _ The full matched string (e.g., "[./path/to/file](@GIT_DIFF)").
  * @param glob_or_filepath The path or glob pattern from the matched string.
- * @param mode The mode (e.g., "GIT_DIFF", "GIT_FILES", "FILE", "INJECT").
+ * @param mode The mode (e.g., "GIT_DIFF", "GIT_FILE", "FILE", "INJECT").
  * @param once Whether the processing should happen only once (for watcher logic).
  * @returns The replacement string for the matched placeholder.
  */
@@ -113,9 +114,9 @@ const processReplacement = async (
   glob_or_filepath = normalizeFilePath(glob_or_filepath);
   mode = mode.toUpperCase().replaceAll("-", "_").trim();
 
-  const git = simpleGit({baseDir}); // Initialize simpleGit with the correct base directory
+  const git = simpleGit({baseDir, maxConcurrentProcesses: cpus().length}); // Initialize simpleGit with the correct base directory
 
-  if (mode === "GIT_DIFF" || mode === "GIT_FILES") {
+  if (mode === "GIT_DIFF" || mode === "GIT_FILE") {
     let commitHash: string | undefined;
     let filePattern: string;
 
@@ -132,15 +133,15 @@ const processReplacement = async (
       let filesToProcess: string[] = [];
       if (commitHash) {
         // Get all files at the specified commit
-        const allFilesInCommit = (await git.raw(['ls-tree', '-r', '--name-only', commitHash]))
-          .split('\n')
-          .filter(Boolean); // Filter out empty strings
+        const allFilesInCommit = (await git.raw(["ls-tree", "-r", "--name-only", commitHash])).split("\n").filter(Boolean); // Filter out empty strings
 
         // Filter files based on the glob pattern using micromatch
         filesToProcess = micromatch.match(allFilesInCommit, filePattern);
       } else {
-        // Use globby to find files matching the pattern within the specified baseDir for working directory
-        filesToProcess = globbySync(filePattern, {cwd: baseDir});
+        // For both GIT_FILE and GIT_DIFF without commitHash, use git.status to list files
+        const statusResult = await git.status();
+        const uncommittedFiles = statusResult.files.filter((f) => f.index !== " " || f.working_dir !== " ").map((f) => f.path);
+        filesToProcess = micromatch.match(uncommittedFiles, filePattern);
       }
 
       if (filesToProcess.length === 0) {
@@ -156,8 +157,17 @@ const processReplacement = async (
             // Get diff between the specified commit and its parent for the given file
             diffContent = await git.diff([`${commitHash}~1`, commitHash, "--", filepath]);
           } else {
-            // Get diff for unstaged changes of a specific file in the working directory
-            diffContent = await git.diff(["--", filepath]);
+            // Get status of the file to determine if it's untracked
+            const statusResult = await git.status([filepath]);
+            const fileStatus = statusResult.files.find((f) => f.path === filepath);
+
+            if (fileStatus && fileStatus.working_dir === "?" && fileStatus.index === "?") {
+              // Untracked file: compare with /dev/null
+              diffContent = await git.raw(["diff", "--no-index", "/dev/null", filepath]);
+            } else {
+              // Tracked file (modified, deleted, etc.): get unstaged diff
+              diffContent = await git.diff(["--", filepath]);
+            }
           }
           if (diffContent) {
             lines.push(
@@ -170,7 +180,7 @@ const processReplacement = async (
           } else {
             lines.push(`<!-- No diff found for ${filepath} ${commitHash ? `at commit ${commitHash}` : "in working directory"} -->`);
           }
-        } else if (mode === "GIT_FILES") {
+        } else if (mode === "GIT_FILE") {
           // Retrieve the full file content from Git
           const fileContent = await getFileContentFromGit(git, filepath, baseDir, commitHash);
           if (fileContent !== null) {
@@ -194,7 +204,6 @@ const processReplacement = async (
       return `<!-- Error processing GIT mode for ${glob_or_filepath}: ${(error as Error).message} -->`;
     }
     const result = lines.join("\n");
-    console.log(`DEBUG: processReplacement (GIT mode) returning:\n${result}`);
     return result;
   }
 
@@ -229,7 +238,6 @@ const processReplacement = async (
     }
   }
   const result = lines.join("\n");
-  console.log(`DEBUG: processReplacement (FILE/INJECT mode) returning:\n${result}`);
   return result;
 };
 
@@ -238,7 +246,7 @@ export const gen_prompt = async (input: string, once: boolean, _output?: string)
   const output = _output ? cwdResolver(_output) : input.replace(/\.md$/, ".gen.md");
   let inputContent = getFileState(input, once).get();
 
-  const regex = /\[(.+?)\]\(@([\w-:]+)\)/g;
+  const regex = /\[(.+?)\]\(@([\w-_:]+)\)/g;
   const matches = [...inputContent.matchAll(regex)];
 
   // Create a root resolver based on the input file's directory
@@ -247,7 +255,7 @@ export const gen_prompt = async (input: string, once: boolean, _output?: string)
   // Collect all promises for replacements
   const replacementPromises = matches.map(async (match) => {
     const [, glob_or_filepath, mode] = match;
-    return processReplacement(match[0], glob_or_filepath, mode, once, currentRootResolver, path.dirname(input));
+    return processReplacement(match[0], glob_or_filepath, mode, once, currentRootResolver, currentRootResolver.dirname);
   });
 
   // Await all replacements
