@@ -251,17 +251,19 @@ export async function applyAiResponse(markdownFilePath?: string, {yes, cwd = pro
         logger.info("Operation cancelled by user.");
       }
     }
-    if (gitCommit) {
+    if (filesToUpdate.length > 0 && gitCommit) {
       const {gitCommitMessage} = aiResponse;
       if (gitCommitMessage == null) {
         logger.warn("No Git commit message provided. Skipping commit.");
       } else {
         const {title, detail} = gitCommitMessage;
         const git = simpleGit(cwd);
+        const changedFiles = [...new Set(filesToUpdate.map((f) => [f.fullSourcePath, f.fullTargetPath]).flat())];
+        await git.add(changedFiles);
         const commitRes = await git.commit(
           [title, detail],
           // 源文件和目标文件都提交了
-          filesToUpdate.map((f) => [f.fullSourcePath, f.fullTargetPath]).flat(),
+          changedFiles,
         );
 
         logger.success(`Changes committed successfully! ${blue(commitRes.commit)}`);
@@ -288,15 +290,5 @@ if (import_meta_ponyfill(import.meta).main) {
 
   const markdownFilePath = args._.map((v) => v.toString()).shift();
   // 运行主函数
-  const _filesToUpdate = await applyAiResponse(markdownFilePath, args);
-
-  // if (args.format && filesToUpdate.length > 0) {
-  //   console.log(cyan("----Format----"));
-  //   await $`pnpm prettier --experimental-cli --write ${iter_map_not_null(filesToUpdate, (f) => {
-  //     if (f.mode === "delete") {
-  //       return;
-  //     }
-  //     return f.fullSourcePath;
-  //   })}`;
-  // }
+  await applyAiResponse(markdownFilePath, args);
 }
