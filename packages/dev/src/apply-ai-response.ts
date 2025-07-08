@@ -1,6 +1,7 @@
 process.removeAllListeners("warning");
 
-import {blue, createResolver, cyan, green, magenta, normalizeFilePath, prompts, red, yellow, type PathResolver} from "@gaubee/nodekit";
+import {blue, bold, createResolver, cyan, green, italic, magenta, normalizeFilePath, prompts, red, underline, yellow, type PathResolver} from "@gaubee/nodekit";
+import {iter_map_not_null} from "@gaubee/util";
 import {parseArgs} from "@std/cli/parse-args";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import fs from "node:fs";
@@ -8,6 +9,7 @@ import path from "node:path";
 import prettier from "prettier";
 import {simpleGit} from "simple-git";
 import {match} from "ts-pattern";
+
 const fsp = fs.promises;
 
 // --- 日志记录器 ---
@@ -40,6 +42,7 @@ type DiffFiles = Array<{
 type GitCommitMessage = {
   title: string;
   detail: string;
+  all: string;
 };
 
 interface AiResponse {
@@ -52,8 +55,8 @@ interface AiResponse {
  * @param markdownContent - 从文件中读取的 Markdown 全文。
  * @returns 一个包含文件路径和代码内容的对象数组。
  */
-function parseMarkdown(markdownContent: string, rootResolver: PathResolver): AiResponse {
-  const gitCommitMessageRegex = /【变更日志】[\s\n]+`{3,4}\s*\n([\s\S]*?)\n`{3,4}/;
+async function parseMarkdown(markdownContent: string, rootResolver: PathResolver) {
+  const gitCommitMessageRegex = /【变更日志】[\s\n]+`{3,4}[\w]*\s*\n([\s\S]*?)\n`{3,4}/;
   const gitCommitMessageMatchRes = markdownContent.match(gitCommitMessageRegex);
   let gitCommitMessage: GitCommitMessage | null = null;
   if (gitCommitMessageMatchRes) {
@@ -62,7 +65,13 @@ function parseMarkdown(markdownContent: string, rootResolver: PathResolver): AiR
     gitCommitMessage = {
       title: title.trim(),
       detail: detailLines.join("\n").trim(),
+      all: "",
     };
+
+    gitCommitMessage.all = await prettier.format(`${gitCommitMessage.title}\n\n${gitCommitMessage.detail}\n`, {
+      ...prettier.resolveConfig(rootResolver.dirname),
+      parser: "markdown",
+    });
   }
 
   // 正则表达式，用于匹配文件路径标题和对应的代码块
@@ -114,7 +123,7 @@ function parseMarkdown(markdownContent: string, rootResolver: PathResolver): AiR
     logger.success(`Found ${diffFiles.length} file blocks to process.`);
   }
 
-  return {gitCommitMessage, diffFiles};
+  return {gitCommitMessage, diffFiles} satisfies AiResponse;
 }
 
 /**
@@ -185,14 +194,14 @@ async function applyChanges(files: DiffFiles, format?: boolean): Promise<void> {
 /**
  * 提示用户确认操作。
  */
-async function confirmAction(filesToUpdate: DiffFiles, allowUnsafe?: boolean): Promise<DiffFiles> {
+async function confirmAction(filesToUpdate: DiffFiles, options: {topMessage?: string | string[]; allowUnsafe?: boolean}): Promise<DiffFiles> {
   if (filesToUpdate.length === 0) {
     return [];
   }
 
   console.log("\n-----------------------------------------");
   const selectedFiles = await prompts.checkbox({
-    message: "The following files will be overwritten:",
+    message: iter_map_not_null([options.topMessage, "The following files will be overwritten:\n"].flat()).join("\n"),
     choices: filesToUpdate.map((file) => ({
       name: [
         //
@@ -201,7 +210,7 @@ async function confirmAction(filesToUpdate: DiffFiles, allowUnsafe?: boolean): P
       ].join("\t"),
 
       value: file.filePath,
-      checked: file.safe || allowUnsafe,
+      checked: file.safe || options.allowUnsafe,
     })),
     pageSize: process.stdout.rows || filesToUpdate.length,
   });
@@ -238,11 +247,31 @@ export async function applyAiResponse(markdownFilePath?: string, {yes, cwd = pro
   try {
     logger.info(`Reading changes from: ${logger.file(absolutePath)}`);
     const markdownContent = await fsp.readFile(absolutePath, "utf-8");
-    const aiResponse = parseMarkdown(markdownContent, rootResolver);
+    const aiResponse = await parseMarkdown(markdownContent, rootResolver);
+    const {gitCommitMessage} = aiResponse;
 
     let filesToUpdate = aiResponse.diffFiles;
     if (filesToUpdate.length > 0) {
-      filesToUpdate = yes ? filesToUpdate.filter((f) => f.safe || unsafe) : await confirmAction(filesToUpdate, unsafe);
+      filesToUpdate = yes
+        ? filesToUpdate.filter((f) => f.safe || unsafe)
+        : await confirmAction(filesToUpdate, {
+            topMessage: gitCommitMessage
+              ? [
+                  // render md to terminal
+                  underline(bold(gitCommitMessage.title)),
+                  "",
+                  gitCommitMessage.detail
+                    // simple format
+                    .replace(/\*\*(.+?)\*\*/g, (_, v) => bold(v))
+                    .replace(/__(.+?)__/g, (_, v) => italic(v))
+                    .replace(/`(.+?)`/g, (_, v) => yellow(v)),
+                  "_".repeat(process.stdout.columns || 40),
+                  "",
+                ]
+              : undefined,
+            allowUnsafe: unsafe,
+          });
+
       if (filesToUpdate.length > 0) {
         logger.info("Applying changes...");
         await applyChanges(filesToUpdate, format);
@@ -252,16 +281,14 @@ export async function applyAiResponse(markdownFilePath?: string, {yes, cwd = pro
       }
     }
     if (filesToUpdate.length > 0 && gitCommit) {
-      const {gitCommitMessage} = aiResponse;
       if (gitCommitMessage == null) {
         logger.warn("No Git commit message provided. Skipping commit.");
       } else {
-        const {title, detail} = gitCommitMessage;
         const git = simpleGit(cwd);
         const changedFiles = [...new Set(filesToUpdate.map((f) => [f.fullSourcePath, f.fullTargetPath]).flat())];
         await git.add(changedFiles);
         const commitRes = await git.commit(
-          [title, detail],
+          gitCommitMessage.all,
           // 源文件和目标文件都提交了
           changedFiles,
         );
