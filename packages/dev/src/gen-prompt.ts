@@ -7,6 +7,7 @@ import {globbySync} from "globby";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import {readFileSync, statSync, watch, writeFileSync} from "node:fs";
 import path from "node:path";
+import micromatch from "micromatch"; // Import micromatch
 import {Signal} from "signal-polyfill";
 import {effect} from "signal-utils/subtle/microtask-effect";
 import {simpleGit, type SimpleGit} from "simple-git";
@@ -128,25 +129,26 @@ const processReplacement = async (
 
     const lines: string[] = [];
     try {
-      /**
-       * @TODO
-       * 这里的代码 实现有问题，不该先进行 globbySync
-       *
-       * 而是应该先基于 commitHash，然后列出文件列表，再基于列出的文件列表，去做 glob 匹配。
-       */
-      // Use globby to find files matching the pattern within the specified baseDir
-      const filesToProcess = globbySync(filePattern, {cwd: baseDir});
+      let filesToProcess: string[] = [];
+      if (commitHash) {
+        // Get all files at the specified commit
+        const allFilesInCommit = (await git.raw(['ls-tree', '-r', '--name-only', commitHash]))
+          .split('\n')
+          .filter(Boolean); // Filter out empty strings
+
+        // Filter files based on the glob pattern using micromatch
+        filesToProcess = micromatch.match(allFilesInCommit, filePattern);
+      } else {
+        // Use globby to find files matching the pattern within the specified baseDir for working directory
+        filesToProcess = globbySync(filePattern, {cwd: baseDir});
+      }
 
       if (filesToProcess.length === 0) {
-        return `<!-- No files found for pattern: ${filePattern} -->`;
+        return `<!-- No files found for pattern: ${filePattern} ${commitHash ? `at commit ${commitHash}` : "in working directory"} -->`;
       }
 
       for (const filepath of filesToProcess) {
-        const fullFilepath = rootResolver(filepath);
-        // Ensure it's a file, not a directory
-        if (!statSync(fullFilepath).isFile()) {
-          continue;
-        }
+        const fullFilepath = rootResolver(filepath); // This might not be needed if only using git commands
 
         if (mode === "GIT_DIFF") {
           let diffContent: string;
