@@ -65,6 +65,30 @@ const gen_prompt = async (input: string, once: boolean, _output?: string) => {
       glob_or_filepath = normalizeFilePath(glob_or_filepath);
       mode = mode.toUpperCase().trim();
       console.log(blue("glob_or_filepath"), green(mode), glob_or_filepath);
+      if (mode === "GIT-DIFF" || mode === "GIT-FILES") {
+        /**
+         * @TODO 使用 simple-git 这个库来实现以下的功能：
+         *
+         * 这里的格式是：
+         * 1. [`./glob_or_filepath`](@GIT-DIFF)
+         *    > glob_or_filepath这个路径下，有变更的文件，使用diff格式展示变更内容
+         * 1. [`gitcommithash:./glob_or_filepath`](@GIT-DIFF)
+         *    > 在gitcommithash这次提交中，glob_or_filepath这个路径下，有变更的文件，使用diff格式展示变更内容
+         * 1. [`./glob_or_filepath`](@GIT-FILES)
+         *    > glob_or_filepath这个路径下，有变更的文件，直接输出整个文件内容
+         * 1. [`gitcommithash:./glob_or_filepath`](@GIT-FILES)
+         *    > 在gitcommithash这次提交中，glob_or_filepath这个路径下，有变更的文件，直接输出整个文件内容
+         *
+         * 首先区分 GIT-DIFF 和 GIT-FILES 的产出内容：
+         * 1. git-diff 顾名思义，就是插入 '```diff ... ```' 这样的内容。
+         * 2. 而 git-files 就是直接插入文件。同下文的FILE模式
+         *
+         * 然后说一下这里的 glob_or_filepath 的作用：
+         * 1. 如果有 gitcommithash，那么就是找到指定的hash的commit，然后取出它的变更文件列表。
+         * 2. 如果没有 gitcommithash，那么就是指当前的未提交的文件。
+         */
+      }
+
       const files = globbySync(glob_or_filepath);
       if (files.length === 0) {
         return _;
@@ -77,17 +101,6 @@ const gen_prompt = async (input: string, once: boolean, _output?: string) => {
         }
         const fileContent = getFileState(fullFilepath, once).get();
         if (mode === "FILE") {
-          // const split = "````"; //fileContent.includes("```") ? "````" : "```";
-          // lines.push(
-          //   //
-          //   `<FILE path="${filepath}">`,
-          //   "<CONTENT>",
-          //   split + path.parse(filepath).ext.slice(1),
-          //   fileContent,
-          //   split,
-          //   "</CONTENT>",
-          //   "</FILE>\n",
-          // );
           const split = fileContent.includes("```") ? "````" : "```";
           lines.push(
             //
