@@ -322,6 +322,9 @@ importers:
       signal-utils:
         specifier: ^0.21.1
         version: 0.21.1(signal-polyfill@0.2.2)
+      simple-git:
+        specifier: ^3.28.0
+        version: 3.28.0
       ts-pattern:
         specifier: ^5.7.1
         version: 5.7.1

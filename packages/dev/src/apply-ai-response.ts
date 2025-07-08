@@ -1,11 +1,12 @@
 process.removeAllListeners("warning");
 
-import {$, createResolver, cyan, green, magenta, normalizeFilePath, prompts, red, yellow, type PathResolver} from "@gaubee/nodekit";
-import {iter_map_not_null} from "@gaubee/util";
+import {blue, createResolver, cyan, green, magenta, normalizeFilePath, prompts, red, yellow, type PathResolver} from "@gaubee/nodekit";
 import {parseArgs} from "@std/cli/parse-args";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import fs from "node:fs";
 import path from "node:path";
+import prettier from "prettier";
+import {simpleGit} from "simple-git";
 import {match} from "ts-pattern";
 const fsp = fs.promises;
 
@@ -36,17 +37,39 @@ type DiffFiles = Array<{
   safe: boolean;
 }>;
 
+type GitCommitMessage = {
+  title: string;
+  detail: string;
+};
+
+interface AiResponse {
+  gitCommitMessage: GitCommitMessage | null;
+  diffFiles: DiffFiles;
+}
+
 /**
  * 解析包含多个文件代码块的 Markdown 文本。
  * @param markdownContent - 从文件中读取的 Markdown 全文。
  * @returns 一个包含文件路径和代码内容的对象数组。
  */
-function parseMarkdown(markdownContent: string, rootResolver: PathResolver): DiffFiles {
+function parseMarkdown(markdownContent: string, rootResolver: PathResolver): AiResponse {
+  const gitCommitMessageRegex = /【变更日志】[\s\n]+`{3,4}\s*\n([\s\S]*?)\n`{3,4}/;
+  const gitCommitMessageMatchRes = markdownContent.match(gitCommitMessageRegex);
+  let gitCommitMessage: GitCommitMessage | null = null;
+  if (gitCommitMessageMatchRes) {
+    const gitCommitMessageContent = gitCommitMessageMatchRes[1].trim();
+    const [title, ...detailLines] = gitCommitMessageContent.split("\n");
+    gitCommitMessage = {
+      title: title.trim(),
+      detail: detailLines.join("\n").trim(),
+    };
+  }
+
   // 正则表达式，用于匹配文件路径标题和对应的代码块
   // 匹配 `#### ` 开头，后面跟着路径，直到换行符
   // 然后非贪婪地匹配 ` ``` ` 代码块之间的所有内容
   const fileBlockRegex = /\#{4}[\s\*]+`(.+?)`[\s\S]*?\n`{3,4}[\w]*\s*\n([\s\S]*?)\n`{3,4}/g;
-  const matches: DiffFiles = [];
+  const diffFiles: DiffFiles = [];
 
   logger.info("Parsing Markdown content to find file blocks...");
 
@@ -82,25 +105,43 @@ function parseMarkdown(markdownContent: string, rootResolver: PathResolver): Dif
     //   logger.error(`unsafe file path: ${logger.file(filePath)}.`);
     // }
 
-    matches.push({filePath, code, fullSourcePath, fullTargetPath, mode, safe});
+    diffFiles.push({filePath, code, fullSourcePath, fullTargetPath, mode, safe});
   }
 
-  if (matches.length === 0) {
+  if (diffFiles.length === 0) {
     logger.warn("No valid file blocks found in the Markdown content.");
   } else {
-    logger.success(`Found ${matches.length} file blocks to process.`);
+    logger.success(`Found ${diffFiles.length} file blocks to process.`);
   }
 
-  return matches;
+  return {gitCommitMessage, diffFiles};
 }
 
 /**
  * 将解析出的代码内容安全地写入到本地文件系统。
  * @param files - 从 Markdown 解析出的文件对象数组。
  */
-async function applyChanges(files: DiffFiles): Promise<void> {
+async function applyChanges(files: DiffFiles, format?: boolean): Promise<void> {
   for (const file of files) {
     const writeFile = async (filepath = file.fullSourcePath, filecode: string = file.code) => {
+      if (format) {
+        const fileInfo = await prettier.getFileInfo(filepath);
+        if (fileInfo.ignored) {
+          logger.info(`文件 ${path.relative(process.cwd(), filepath)} 已被 .prettierignore 忽略。`);
+          return;
+        }
+
+        if (!fileInfo.inferredParser) {
+          logger.warn(`无法推断文件 ${path.relative(process.cwd(), filepath)} 的解析器，跳过格式化。`);
+          return;
+        }
+        const config = await prettier.resolveConfig(filepath);
+
+        filecode = await prettier.format(filecode, {
+          ...config,
+          parser: fileInfo.inferredParser, // 使用推断出的解析器
+        });
+      }
       await fsp.writeFile(filepath, filecode, "utf-8");
     };
     try {
@@ -127,8 +168,8 @@ async function applyChanges(files: DiffFiles): Promise<void> {
           const targetPath = path.relative(cwd, file.fullTargetPath);
 
           if (mode.includes("modify")) {
-            // 写入文件
-            await writeFile();
+            // 修改目标文件
+            await writeFile(file.fullTargetPath);
             logger.success(`Successfully renamed and updated file: ${logger.file(file.filePath)} => ${logger.file(targetPath)}`);
           } else {
             logger.success(`Successfully renamed file: ${logger.file(file.filePath)} => ${logger.file(targetPath)}`);
@@ -172,11 +213,13 @@ interface ApplyAiResponseOptions {
   yes?: boolean; // 是否跳过确认提示
   cwd?: string; // 工作目录
   unsafe?: boolean; // 是否允许不安全的文件操作
+  format?: boolean; // 是否格式化代码
+  gitCommit?: boolean; // 是否自信 Git 提交
 }
 /**
  * 主执行函数。
  */
-export async function applyAiResponse(markdownFilePath?: string, {yes, cwd = process.cwd(), unsafe}: ApplyAiResponseOptions = {}) {
+export async function applyAiResponse(markdownFilePath?: string, {yes, cwd = process.cwd(), unsafe, format, gitCommit}: ApplyAiResponseOptions = {}) {
   if (!markdownFilePath) {
     logger.error("Usage: pnpm apply-ai-response <path_to_markdown_file>");
     process.exit(1);
@@ -195,16 +238,33 @@ export async function applyAiResponse(markdownFilePath?: string, {yes, cwd = pro
   try {
     logger.info(`Reading changes from: ${logger.file(absolutePath)}`);
     const markdownContent = await fsp.readFile(absolutePath, "utf-8");
-    let filesToUpdate = parseMarkdown(markdownContent, rootResolver);
+    const aiResponse = parseMarkdown(markdownContent, rootResolver);
 
+    let filesToUpdate = aiResponse.diffFiles;
     if (filesToUpdate.length > 0) {
       filesToUpdate = yes ? filesToUpdate.filter((f) => f.safe || unsafe) : await confirmAction(filesToUpdate, unsafe);
       if (filesToUpdate.length > 0) {
         logger.info("Applying changes...");
-        await applyChanges(filesToUpdate);
+        await applyChanges(filesToUpdate, format);
         logger.success("All changes have been applied successfully!");
       } else {
         logger.info("Operation cancelled by user.");
+      }
+    }
+    if (gitCommit) {
+      const {gitCommitMessage} = aiResponse;
+      if (gitCommitMessage == null) {
+        logger.warn("No Git commit message provided. Skipping commit.");
+      } else {
+        const {title, detail} = gitCommitMessage;
+        const git = simpleGit(cwd);
+        const commitRes = await git.commit(
+          [title, detail],
+          // 源文件和目标文件都提交了
+          filesToUpdate.map((f) => [f.fullSourcePath, f.fullTargetPath]).flat(),
+        );
+
+        logger.success(`Changes committed successfully! ${blue(commitRes.commit)}`);
       }
     }
     return filesToUpdate;
@@ -216,9 +276,10 @@ export async function applyAiResponse(markdownFilePath?: string, {yes, cwd = pro
 
 if (import_meta_ponyfill(import.meta).main) {
   const args = parseArgs(process.argv.slice(2), {
-    boolean: ["format", "yes"],
+    boolean: ["format", "yes", "gitCommit"],
     string: ["cwd"],
     alias: {
+      G: "gitCommit",
       F: "format",
       Y: "yes",
       C: "cwd",
@@ -227,15 +288,15 @@ if (import_meta_ponyfill(import.meta).main) {
 
   const markdownFilePath = args._.map((v) => v.toString()).shift();
   // 运行主函数
-  const filesToUpdate = await applyAiResponse(markdownFilePath, args);
+  const _filesToUpdate = await applyAiResponse(markdownFilePath, args);
 
-  if (args.format && filesToUpdate.length > 0) {
-    console.log(cyan("----Format----"));
-    await $`pnpm prettier --experimental-cli --write ${iter_map_not_null(filesToUpdate, (f) => {
-      if (f.mode === "delete") {
-        return;
-      }
-      return f.fullSourcePath;
-    })}`;
-  }
+  // if (args.format && filesToUpdate.length > 0) {
+  //   console.log(cyan("----Format----"));
+  //   await $`pnpm prettier --experimental-cli --write ${iter_map_not_null(filesToUpdate, (f) => {
+  //     if (f.mode === "delete") {
+  //       return;
+  //     }
+  //     return f.fullSourcePath;
+  //   })}`;
+  // }
 }
