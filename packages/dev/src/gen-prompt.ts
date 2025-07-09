@@ -3,6 +3,7 @@ process.removeAllListeners("warning");
 import {blue, createResolver, createResolverByRootFile, cwdResolver, green, normalizeFilePath} from "@gaubee/nodekit";
 import parcelWatcher from "@parcel/watcher";
 import {parseArgs} from "@std/cli/parse-args";
+import {defaultParseSearch} from "@tanstack/router-core";
 import Debug from "debug";
 import {globbySync, isDynamicPattern, type Options as GlobbyOptions} from "globby";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
@@ -13,7 +14,8 @@ import path from "node:path";
 import {Signal} from "signal-polyfill";
 import {effect} from "signal-utils/subtle/microtask-effect";
 import {simpleGit, type SimpleGit} from "simple-git";
-const debug = Debug("gen-prompt");
+import {match, P} from "ts-pattern";
+export const debug = Debug("gen-prompt");
 
 const parseParams = (paramString: string): Record<string, string | boolean | string[]> => {
   const params: Record<string, string | boolean | string[]> = {};
@@ -229,7 +231,11 @@ const processReplacement = async (
   }
   glob_or_filepath = normalizeFilePath(glob_or_filepath);
 
-  const params = parseParams(paramString || ""); // Changed to parseParams
+  const params = defaultParseSearch(paramString || "") as Record<string, unknown>;
+  debug("processReplacement.glob_or_filepath", glob_or_filepath);
+  debug("processReplacement.mode", mode);
+  debug("processReplacement.params", params);
+
   const normalizedMode = mode.toUpperCase().replaceAll("-", "_").trim();
 
   const git = simpleGit({baseDir, maxConcurrentProcesses: cpus().length}); // Initialize simpleGit with the correct base directory
@@ -325,29 +331,103 @@ const processReplacement = async (
     return result;
   }
 
-  // Handle FILE, INJECT, and FILE_TREE modes
-  // Pass params to globbySync. Ensure 'ignore' param is handled correctly by globby.
-  const globbyOptions: GlobbyOptions = {
-    // Explicitly set gitignore or ignore if present in params
-    gitignore: typeof params.gitignore === "boolean" ? params.gitignore : true,
-    cwd: baseDir,
-  };
-  // Remove gitignore from params, as we'll handle ignoring explicitly with micromatch
-  delete params.gitignore;
+  /// Handle FILE, INJECT, and FILE_TREE modes
 
-  let ignorePatterns: string[] = [];
-  if (Array.isArray(params.ignore)) {
-    ignorePatterns = params.ignore;
-  } else if (typeof params.ignore === "string") {
-    ignorePatterns = [params.ignore];
-  }
-  debug("globbyOptions", globbyOptions); // Added debug log
-  let files = isDynamicPattern(glob_or_filepath) ? globbySync(glob_or_filepath, globbyOptions) : [glob_or_filepath];
+  const isGlob = isDynamicPattern(glob_or_filepath);
+  debug("isGlob", isGlob);
+  const isInsideBaseDir = (targetPath: string) => normalizeFilePath(path.resolve(baseDir, targetPath)).startsWith(normalizeFilePath(baseDir) + "/");
+  // canNotGlobby: 判断是否是一个绝对明确的外置文件路径，这种情况下进行 globbySync 的难度比较大，目前不支持
+  const isOutBaseDirFile = !isGlob && !isInsideBaseDir(glob_or_filepath);
 
-  // Apply ignore patterns using micromatch
-  if (ignorePatterns.length > 0) {
-    files = files.filter((file) => !micromatch.isMatch(file, ignorePatterns));
-  }
+  debug("canNotGlobby", isOutBaseDirFile);
+
+  let files = isOutBaseDirFile
+    ? [glob_or_filepath]
+    : globbySync(
+        glob_or_filepath,
+        (() => {
+          let opts = {
+            expandDirectories: match(params.expandDirectories)
+              .with(P.boolean, (v) => v)
+              .with(P.array(P.string), (v) => v)
+              .with({files: P.array(P.string).optional(), extensions: P.array(P.string).optional()}, (v) => v)
+              .otherwise(() => undefined),
+            gitignore: match(params.gitignore)
+              .with(P.boolean, (v) => v)
+              .otherwise(() =>
+                // 如果是一个glob，那么默认启用 gitignore。这样意味着如果直接提供一个明确的文件路径，那么默认不会走gitignore判定
+                isGlob ? true : false,
+              ),
+            ignore: match(params.ignore)
+              .with(P.string, (v) => [v])
+              .with(P.array(P.string), (v) => v)
+              .otherwise(() => undefined),
+            ignoreFiles: match(params.ignoreFiles)
+              .with(P.string, P.array(P.string), (v) => v)
+              .otherwise(() => undefined),
+            cwd: match(params.cwd)
+              .with(P.string, (v) => v)
+              .otherwise(() => baseDir),
+            absolute: match(params.absolute)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            baseNameMatch: match(params.baseNameMatch)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            braceExpansion: match(params.braceExpansion)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            caseSensitiveMatch: match(params.caseSensitiveMatch)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            concurrency: match(params.concurrency)
+              .with(P.number, (v) => v)
+              .otherwise(() => undefined),
+            deep: match(params.deep)
+              .with(P.number, (v) => v)
+              .otherwise(() => undefined),
+            dot: match(params.dot)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            extglob: match(params.extglob)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            followSymbolicLinks: match(params.followSymbolicLinks)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            globstar: match(params.globstar)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            markDirectories: match(params.markDirectories)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            objectMode: match(params.objectMode)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            onlyDirectories: match(params.onlyDirectories)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            onlyFiles: match(params.onlyFiles)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            stats: match(params.stats)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            suppressErrors: match(params.suppressErrors)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            throwErrorOnBrokenSymbolicLink: match(params.throwErrorOnBrokenSymbolicLink)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+            unique: match(params.unique)
+              .with(P.boolean, (v) => v)
+              .otherwise(() => undefined),
+          } satisfies GlobbyOptions;
+          opts = JSON.parse(JSON.stringify(opts));
+          debug("globbyOptions", opts);
+          return opts;
+        })(),
+      );
 
   if (files.length === 0) {
     debug(`processReplacement (${normalizedMode} mode) returning original placeholder: ${_}`);
@@ -390,7 +470,7 @@ export const gen_prompt = async (input: string, once: boolean, _output?: string,
   const output = _output ? cwdResolver(_output) : input.replace(/\.md$/, ".gen.md");
   let inputContent = getFileState(input, once).get();
 
-  const regex = /\[(.+?)\]\(@([\w-_:]+)(\?[\w=&.-]+)?\)/g; // Updated regex to capture parameters
+  const regex = /\[(.+?)\]\(@([\w-_:]+)(\?.+)?\)/g; // Updated regex to capture parameters
   const matches = [...inputContent.matchAll(regex)];
 
   // Create a root resolver based on the input file's directory

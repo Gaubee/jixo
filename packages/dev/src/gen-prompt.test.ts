@@ -4,14 +4,16 @@ import os from "node:os";
 import path from "node:path";
 import {simpleGit, type SimpleGit} from "simple-git";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-import {gen_prompt} from "./gen-prompt.js"; // Assuming gen-prompt.js is the compiled output
+import {debug, gen_prompt} from "./gen-prompt.js"; // Assuming gen-prompt.js is the compiled output
 
 describe("gen_prompt FILE/FILE_TREE modes and parameter parsing", () => {
   let tempDir: string;
   let mdFilePath: string;
   let git: SimpleGit; // Add git instance
 
-  beforeEach(async () => { // Make beforeEach async
+  beforeEach(async () => {
+    // Make beforeEach async
+    debug.enabled = true;
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gen-prompt-file-test-" + randomUUID()));
     mdFilePath = path.join(tempDir, "test.md");
 
@@ -22,7 +24,8 @@ describe("gen_prompt FILE/FILE_TREE modes and parameter parsing", () => {
     await git.addConfig("user.email", "test@example.com");
   });
 
-  afterEach(async () => { // Make afterEach async
+  afterEach(async () => {
+    // Make afterEach async
     fs.rmSync(tempDir, {recursive: true, force: true});
   });
 
@@ -42,7 +45,7 @@ describe("gen_prompt FILE/FILE_TREE modes and parameter parsing", () => {
     await git.commit("Add test-file.txt");
 
     // Create .gitignore and commit it so globby's gitignore option works
-    createTestFile(".gitignore", "*.txt"); 
+    createTestFile(".gitignore", "*.txt");
     await git.add(".gitignore");
     await git.commit("Add .gitignore");
 
