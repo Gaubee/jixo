@@ -310,6 +310,9 @@ importers:
       '@tanstack/router-core':
         specifier: ^1.125.4
         version: 1.125.4
+      debug:
+        specifier: ^4.4.1
+        version: 4.4.1
       globby:
         specifier: ^14.1.0
         version: 14.1.0
@@ -335,6 +338,9 @@ importers:
         specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
+      '@types/debug':
+        specifier: ^4.1.12
+        version: 4.1.12
       '@types/micromatch':
         specifier: ^4.0.9
         version: 4.0.9

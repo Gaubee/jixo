@@ -3,7 +3,8 @@ process.removeAllListeners("warning");
 import {blue, createResolver, createResolverByRootFile, cwdResolver, green, normalizeFilePath} from "@gaubee/nodekit";
 import parcelWatcher from "@parcel/watcher";
 import {parseArgs} from "@std/cli/parse-args";
-import {globbySync} from "globby";
+import Debug from "debug";
+import {globbySync, isDynamicPattern, type Options as GlobbyOptions} from "globby";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import micromatch from "micromatch"; // Import micromatch
 import {readFileSync, statSync, watch, writeFileSync} from "node:fs";
@@ -12,6 +13,7 @@ import path from "node:path";
 import {Signal} from "signal-polyfill";
 import {effect} from "signal-utils/subtle/microtask-effect";
 import {simpleGit, type SimpleGit} from "simple-git";
+const debug = Debug("gen-prompt");
 
 const parseParams = (paramString: string): Record<string, string | boolean | string[]> => {
   const params: Record<string, string | boolean | string[]> = {};
@@ -54,7 +56,7 @@ const getFileState = (filepath: string, once: boolean) => {
 };
 
 const dirGLobState = (dirname: string, glob: string, once: boolean) => {
-  const dirState = new Signal.State(globbySync(glob, {cwd: dirname}).map(String), {
+  const dirState = new Signal.State(globbySync(glob, {cwd: dirname}), {
     equals(t, t2) {
       return t.length === t2.length && t.every((file, i) => file === t2[i]);
     },
@@ -64,7 +66,7 @@ const dirGLobState = (dirname: string, glob: string, once: boolean) => {
       const sub = await parcelWatcher.subscribe(dirname, (err, events) => {
         if (events.some((event) => event.type === "create" || event.type === "delete")) {
           try {
-            dirState.set(globbySync(glob, {cwd: dirname}).map(String));
+            dirState.set(globbySync(glob, {cwd: dirname}));
           } catch {
             sub.unsubscribe();
             off();
@@ -325,11 +327,11 @@ const processReplacement = async (
 
   // Handle FILE, INJECT, and FILE_TREE modes
   // Pass params to globbySync. Ensure 'ignore' param is handled correctly by globby.
-  const globbyOptions: Record<string, any> = {cwd: baseDir, gitignore: true};
-  // Explicitly set gitignore or ignore if present in params
-  if (typeof params.gitignore === "boolean") {
-    globbyOptions.gitignore = params.gitignore;
-  }
+  const globbyOptions: GlobbyOptions = {
+    // Explicitly set gitignore or ignore if present in params
+    gitignore: typeof params.gitignore === "boolean" ? params.gitignore : true,
+    cwd: baseDir,
+  };
   // Remove gitignore from params, as we'll handle ignoring explicitly with micromatch
   delete params.gitignore;
 
@@ -339,8 +341,8 @@ const processReplacement = async (
   } else if (typeof params.ignore === "string") {
     ignorePatterns = [params.ignore];
   }
-  console.log("DEBUG: globbyOptions", globbyOptions); // Added debug log
-  let files = globbySync(glob_or_filepath, globbyOptions).map(String);
+  debug("globbyOptions", globbyOptions); // Added debug log
+  let files = isDynamicPattern(glob_or_filepath) ? globbySync(glob_or_filepath, globbyOptions) : [glob_or_filepath];
 
   // Apply ignore patterns using micromatch
   if (ignorePatterns.length > 0) {
@@ -348,7 +350,7 @@ const processReplacement = async (
   }
 
   if (files.length === 0) {
-    console.log(`DEBUG: processReplacement (${normalizedMode} mode) returning original placeholder: ${_}`);
+    debug(`processReplacement (${normalizedMode} mode) returning original placeholder: ${_}`);
     return `<!-- No files found for pattern: ${glob_or_filepath} -->`;
   }
   const lines: string[] = [];

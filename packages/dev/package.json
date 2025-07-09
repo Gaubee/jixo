@@ -1,6 +1,6 @@
 {
   "name": "@jixo/dev",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "",
   "main": "dist/cli.js",
   "type": "module",
@@ -37,6 +37,7 @@
     "@parcel/watcher": "^2.5.1",
     "@std/cli": "jsr:^1.0.20",
     "@tanstack/router-core": "^1.125.4",
+    "debug": "^4.4.1",
     "globby": "^14.1.0",
     "import-meta-ponyfill": "^3.2.2",
     "prettier": "^3.6.2",
@@ -47,6 +48,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/debug": "^4.1.12",
     "@types/micromatch": "^4.0.9",
     "@types/node": "^24.0.12",
     "micromatch": "^4.0.8",
