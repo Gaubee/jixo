@@ -354,7 +354,6 @@ const processReplacement = async (
   const lines: string[] = [];
 
   if (normalizedMode === "FILE_TREE") {
-    console.log("QAQ", paramString, params);
     // Extract expandDirectories parameter
     const expandDirectories = params.expandDirectories !== false; // Default to true if not explicitly false
     lines.push("", "```", generateFileTree(files, expandDirectories), "```", "");
