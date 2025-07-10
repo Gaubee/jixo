@@ -1,7 +1,7 @@
 process.removeAllListeners("warning");
 
 import {blue, createResolver, createResolverByRootFile, cwdResolver, green, matter, normalizeFilePath, readJson} from "@gaubee/nodekit";
-import {func_remember, map_get_or_put_async} from "@gaubee/util";
+import {func_remember, iter_map_not_null, map_get_or_put_async} from "@gaubee/util";
 import parcelWatcher from "@parcel/watcher";
 import {parseArgs} from "@std/cli/parse-args";
 import {defaultParseSearch} from "@tanstack/router-core";
@@ -16,6 +16,10 @@ import {Signal} from "signal-polyfill";
 import {effect} from "signal-utils/subtle/microtask-effect";
 import {simpleGit, type SimpleGit} from "simple-git";
 import {match, P} from "ts-pattern";
+import {getCommitDiffs} from "./git-helper/getCommitDiffs.js";
+import {getMultipleFileContents} from "./git-helper/getMultipleFileContents.js";
+import {getWorkingCopyContents} from "./git-helper/getWorkingCopyContents.js";
+import {getWorkingCopyDiffs} from "./git-helper/getWorkingCopyDiffs.js";
 export const debug = Debug("gen-prompt");
 const fetchCache = new Map<string, {res: Response; text: string}>();
 
@@ -268,16 +272,35 @@ const processReplacement = async (
     } else {
       filePattern = glob_or_filepath;
     }
+    filePattern = filePattern.trim();
 
-    const lines: string[] = [];
+    const lines: Array<string[] | string> = [];
     try {
       let filesToProcess: string[] = [];
       if (commitHash) {
-        // Get all files at the specified commit
-        const allFilesInCommit = (await git.raw(["ls-tree", "-r", "--name-only", commitHash])).split("\n").filter(Boolean); // Filter out empty strings
-
-        // Filter files based on the glob pattern using micromatch
-        filesToProcess = micromatch.match(allFilesInCommit, filePattern);
+        git.show({});
+        filesToProcess = (
+          await git.raw(
+            iter_map_not_null(
+              [
+                "show",
+                commitHash,
+                "--pretty=",
+                "--name-only",
+                /// git show 自带 glob 的支持
+                filePattern.trim().length > 0
+                  ? // Get all files at the specified commit
+                    filePattern
+                  : // Filter files based on the glob pattern using micromatch
+                    null,
+              ],
+              (v) => v,
+            ),
+          )
+        )
+          .split("\n")
+          .filter(Boolean); // Filter out empty strings
+        console.log("QAQ filesToProcess", filesToProcess);
       } else {
         // For both GIT_FILE and GIT_DIFF without commitHash, use git.status to list files
         const statusResult = await git.status();
@@ -289,62 +312,89 @@ const processReplacement = async (
         return `<!-- No files found for pattern: ${filePattern} ${commitHash ? `at commit ${commitHash}` : "in working directory"} -->`;
       }
 
-      for (const filepath of filesToProcess) {
-        const fullFilepath = rootResolver(filepath); // This might not be needed if only using git commands
-
-        if (normalizedMode === "GIT_DIFF") {
-          let diffContent: string;
-          if (commitHash) {
-            // Get diff between the specified commit and its parent for the given file
-            diffContent = await git.diff([`${commitHash}~1`, commitHash, "--", filepath]);
-          } else {
-            // Get status of the file to determine if it's untracked
-            const statusResult = await git.status();
-            const fileStatus = statusResult.files.find((f) => f.path === filepath);
-
-            if (fileStatus && fileStatus.working_dir === "?" && fileStatus.index === "?") {
-              // Untracked file: compare with /dev/null
-              diffContent = await git.raw(["diff", "--no-index", "/dev/null", filepath]);
-            } else {
-              // Tracked file (modified, deleted, etc.): get unstaged diff
-              diffContent = await git.diff(["--", filepath]);
-            }
-          }
-          if (diffContent) {
-            lines.push(
-              "",
-              `\`\`\`diff`, // Markdown code block for diff
-              diffContent,
-              `\`\`\``,
-              "",
-            );
-          } else {
-            lines.push(`<!-- No diff found for ${filepath} ${commitHash ? `at commit ${commitHash}` : "in working directory"} -->`);
-          }
-        } else if (normalizedMode === "GIT_FILE") {
-          // Retrieve the full file content from Git
-          const fileContent = await getFileContentFromGit(git, filepath, baseDir, commitHash);
-          if (fileContent !== null) {
-            // Determine appropriate markdown code block splitter
-            const split = fileContent.includes("```") ? "````" : "```";
-            lines.push(
-              "",
-              filepath,
-              split + path.parse(filepath).ext.slice(1), // Add file extension for syntax highlighting
-              fileContent,
-              split,
-              "",
-            );
-          } else {
-            lines.push(`<!-- Could not retrieve content for ${filepath} ${commitHash ? `at commit ${commitHash}` : "in working directory"} -->`);
-          }
+      if (commitHash && normalizedMode === "GIT_FILE") {
+        const result = await getMultipleFileContents(baseDir, commitHash, filesToProcess);
+        for (const item of result) {
+          const ext = path.parse(item.path).ext.slice(1);
+          lines.push(
+            useFileOrInject("FILE", item.path, item.content ?? `<!-- ERROR: ${item.error ?? "No error message provided"} -->`, {
+              prefix: params.prefix,
+              lang: params[`map_ext_${ext}_lang`] ?? params.lang,
+            }),
+          );
         }
+      } else if (commitHash && normalizedMode === "GIT_DIFF") {
+        const result = await getCommitDiffs(baseDir, commitHash, filesToProcess);
+        for (const item of result.files) {
+          lines.push(
+            useFileOrInject(
+              "FILE",
+              item.path +
+                match(item.status)
+                  .with("A", () => " (Added)")
+                  .with("M", () => " (Modified)")
+                  .with("D", () => " (Deleted)")
+                  .with("R", () => " (Renamed)")
+                  .with("T", () => " (Type Changed)")
+                  .exhaustive(),
+              item.diff,
+              {
+                prefix: params.prefix,
+                lang: "diff",
+              },
+            ),
+          );
+        }
+      } else if (!commitHash && normalizedMode === "GIT_DIFF") {
+        const result = await getWorkingCopyDiffs(baseDir, {
+          staged: match(params.staged)
+            .with(P.boolean, (v) => v)
+            .otherwise(() => undefined),
+          filePaths: filesToProcess,
+        });
+        for (const item of result) {
+          lines.push(
+            useFileOrInject(
+              "FILE",
+              item.path +
+                match(item.status)
+                  .with("A", () => " (Added)")
+                  .with("M", () => " (Modified)")
+                  .with("D", () => " (Deleted)")
+                  .with("R", () => " (Renamed)")
+                  .with("U", () => " (Unmerged)")
+                  .exhaustive(),
+              item.diff,
+              {
+                prefix: params.prefix,
+                lang: "diff",
+              },
+            ),
+          );
+        }
+      } else if (!commitHash && normalizedMode === "GIT_FILE") {
+        const result = await getWorkingCopyContents(baseDir, filesToProcess, {
+          staged: match(params.staged)
+            .with(P.boolean, (v) => v)
+            .otherwise(() => undefined),
+        });
+        for (const item of result) {
+          const ext = path.parse(item.path).ext.slice(1);
+          lines.push(
+            useFileOrInject("FILE", item.path, item.content ?? `<!-- ERROR: ${item.error ?? "No error message provided"} -->`, {
+              prefix: params.prefix,
+              lang: params[`map_ext_${ext}_lang`] ?? params.lang,
+            }),
+          );
+        }
+      } else {
+        throw new Error(`mode=${normalizedMode} commitRef=${commitHash}`);
       }
     } catch (error: unknown) {
       console.error(`Error processing GIT mode for ${glob_or_filepath}:`, error);
       return `<!-- Error processing GIT mode for ${glob_or_filepath}: ${(error as Error).message} -->`;
     }
-    const result = lines.join("\n");
+    const result = lines.flat().join("\n");
     return result;
   }
 
