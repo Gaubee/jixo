@@ -3,6 +3,7 @@ process.removeAllListeners("warning");
 import {blue, bold, createResolver, cyan, green, italic, magenta, normalizeFilePath, prompts, red, underline, yellow, type PathResolver} from "@gaubee/nodekit";
 import {iter_map_not_null} from "@gaubee/util";
 import {parseArgs} from "@std/cli/parse-args";
+import {globbySync, isDynamicPattern} from "globby";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import fs from "node:fs";
 import path from "node:path";
@@ -228,26 +229,60 @@ interface ApplyAiResponseOptions {
 /**
  * 主执行函数。
  */
-export async function applyAiResponse(markdownFilePath?: string, {yes, cwd = process.cwd(), unsafe, format, gitCommit}: ApplyAiResponseOptions = {}) {
-  if (!markdownFilePath) {
-    logger.error("Usage: pnpm apply-ai-response <path_to_markdown_file>");
+export async function applyAiResponse(markdownFilePaths: string[] | string, {yes, cwd = process.cwd(), unsafe, format, gitCommit}: ApplyAiResponseOptions = {}) {
+  if (typeof markdownFilePaths === "string") {
+    markdownFilePaths = [markdownFilePaths];
+  }
+  if (markdownFilePaths.length === 0) {
+    logger.error("Usage: pnpm apply-ai-response <path_to_markdown_file>, ...<more_markdown_files>");
     process.exit(1);
   }
 
-  let absolutePath = path.resolve(markdownFilePath);
-  // 尝试自动补全 .md 文件后缀
-  if (!fs.existsSync(absolutePath) && !absolutePath.endsWith(".md")) {
-    if (fs.existsSync(absolutePath + ".md")) {
-      absolutePath += ".md";
-    }
-  }
+  const absolutePaths = [
+    ...new Set(
+      markdownFilePaths
+        .map((f) => {
+          if (isDynamicPattern(f)) {
+            return globbySync(f, {cwd: cwd});
+          }
+          let absolutePath = path.resolve(cwd, f);
+
+          // 尝试自动补全 .md 文件后缀
+          if (!fs.existsSync(absolutePath) && !absolutePath.endsWith(".md")) {
+            if (fs.existsSync(absolutePath + ".md")) {
+              absolutePath += ".md";
+            }
+          }
+          return absolutePath;
+        })
+        .flat(),
+    ),
+  ];
 
   const rootResolver = createResolver(cwd);
 
   try {
-    logger.info(`Reading changes from: ${logger.file(absolutePath)}`);
-    const markdownContent = await fsp.readFile(absolutePath, "utf-8");
-    const aiResponse = await parseMarkdown(markdownContent, rootResolver);
+    logger.info(
+      `Reading changes from: ${
+        absolutePaths.length === 1
+          ? // one file
+            logger.file(absolutePaths[0])
+          : // multi files
+            ["", ...absolutePaths.map((p) => logger.file(p))].join("\n\t-")
+      }`,
+    );
+    const parseMarkdowns = async (filepaths: string[]) => {
+      let gitCommitMessage: GitCommitMessage | null = null;
+      const diffFiles: DiffFiles = [];
+      for (const filepath of filepaths) {
+        const markdownContent = await fsp.readFile(filepath, "utf-8");
+        const aiResponse = await parseMarkdown(markdownContent, rootResolver);
+        gitCommitMessage ??= aiResponse.gitCommitMessage;
+        diffFiles.push(...aiResponse.diffFiles);
+      }
+      return {gitCommitMessage, diffFiles} satisfies AiResponse;
+    };
+    const aiResponse = await parseMarkdowns(absolutePaths);
     const {gitCommitMessage} = aiResponse;
 
     let filesToUpdate = aiResponse.diffFiles;
@@ -315,7 +350,9 @@ if (import_meta_ponyfill(import.meta).main) {
     },
   });
 
-  const markdownFilePath = args._.map((v) => v.toString()).shift();
   // 运行主函数
-  await applyAiResponse(markdownFilePath, args);
+  await applyAiResponse(
+    args._.map((v) => v.toString()),
+    args,
+  );
 }
