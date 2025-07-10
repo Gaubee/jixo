@@ -1,6 +1,7 @@
 process.removeAllListeners("warning");
 
 import {blue, createResolver, createResolverByRootFile, cwdResolver, green, normalizeFilePath} from "@gaubee/nodekit";
+import {map_get_or_put_async} from "@gaubee/util";
 import parcelWatcher from "@parcel/watcher";
 import {parseArgs} from "@std/cli/parse-args";
 import {defaultParseSearch} from "@tanstack/router-core";
@@ -16,6 +17,7 @@ import {effect} from "signal-utils/subtle/microtask-effect";
 import {simpleGit, type SimpleGit} from "simple-git";
 import {match, P} from "ts-pattern";
 export const debug = Debug("gen-prompt");
+const fetchCache = new Map<string, {res: Response; text: string}>();
 
 const parseParams = (paramString: string): Record<string, string | boolean | string[]> => {
   const params: Record<string, string | boolean | string[]> = {};
@@ -331,6 +333,38 @@ const processReplacement = async (
     return result;
   }
 
+  /// Handle FILE, INJECT with web-url
+  if (/^https?:\/\//.test(glob_or_filepath)) {
+    const lines: string[] = [];
+    const url = new URL(glob_or_filepath);
+    const urlRes = await map_get_or_put_async(fetchCache, url.href, async () => {
+      const res = await fetch(url);
+      const text = await res.text();
+      return {res, text};
+    });
+    if (normalizedMode === "FILE") {
+      const split = urlRes.text.includes("```") ? "````" : "```";
+      const ext = path.parse(url.pathname).ext.slice(1);
+      lines.push(
+        "`" + urlRes.res.url + "`",
+        "",
+        split +
+          match(params[`mime_${urlRes.res.headers.get("content-type")?.split(";")[0]}_lang`] ?? params.lang)
+            .with(P.string, (v) => v)
+            .otherwise(() => ext),
+        urlRes.text,
+        split,
+        "",
+      );
+    } else if (normalizedMode === "INJECT") {
+      lines.push(urlRes.text);
+    } else {
+      lines.push(`<!-- unknown mode ${normalizedMode} -->`);
+    }
+    const result = lines.join("\n");
+    return result;
+  }
+
   /// Handle FILE, INJECT, and FILE_TREE modes
 
   const isGlob = isDynamicPattern(glob_or_filepath);
@@ -447,7 +481,18 @@ const processReplacement = async (
       }
       const fileContent = getFileState(fullFilepath, once).get();
       const split = fileContent.includes("```") ? "````" : "```";
-      lines.push("", filepath, split + path.parse(filepath).ext.slice(1), fileContent, split, "");
+      const ext = path.parse(filepath).ext.slice(1);
+      lines.push(
+        filepath,
+        "",
+        split +
+          match(params[`map_ext_${ext}_lang`] ?? params.lang)
+            .with(P.string, (v) => v)
+            .otherwise(() => ext),
+        fileContent,
+        split,
+        "",
+      );
     }
   } else if (normalizedMode === "INJECT") {
     for (const filepath of files) {
