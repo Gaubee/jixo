@@ -1,7 +1,7 @@
 process.removeAllListeners("warning");
 
-import {blue, createResolver, createResolverByRootFile, cwdResolver, green, matter, normalizeFilePath} from "@gaubee/nodekit";
-import {map_get_or_put_async} from "@gaubee/util";
+import {blue, createResolver, createResolverByRootFile, cwdResolver, green, matter, normalizeFilePath, readJson} from "@gaubee/nodekit";
+import {func_remember, map_get_or_put_async} from "@gaubee/util";
 import parcelWatcher from "@parcel/watcher";
 import {parseArgs} from "@std/cli/parse-args";
 import {defaultParseSearch} from "@tanstack/router-core";
@@ -19,27 +19,42 @@ import {match, P} from "ts-pattern";
 export const debug = Debug("gen-prompt");
 const fetchCache = new Map<string, {res: Response; text: string}>();
 
-const parseParams = (paramString: string): Record<string, string | boolean | string[]> => {
-  const params: Record<string, string | boolean | string[]> = {};
-  if (!paramString) {
-    return params;
-  }
-  const searchParams = new URLSearchParams(paramString);
-  for (const [key, value] of searchParams.entries()) {
-    if (key === "ignore") {
-      // Special handling for 'ignore' parameter
-      params[key] = value.split(",").map((item) => item.trim()); // Always treat as array of strings
-    } else if (value.toLowerCase() === "true") {
-      params[key] = true;
-    } else if (value.toLowerCase() === "false") {
-      params[key] = false;
-    } else if (value.includes(",")) {
-      params[key] = value.split(",").map((item) => item.trim());
-    } else {
-      params[key] = value;
+const projectResolver = createResolverByRootFile(import.meta.url);
+
+const GET_JIXO_PROMPT = func_remember(() => readJson<Record<string, string>>(projectResolver("./assets/prompt.json")));
+
+const useFileOrInject = (mode: string, filepath: string, filecontent: string, opts: {lang?: unknown; prefix?: unknown} = {}) => {
+  const lines: Array<string[] | string> = [];
+  const prefixStr = match(opts.prefix)
+    .with(P.number, (len) => " ".repeat(len))
+    .with(P.string, (str) => str)
+    .otherwise(() => "");
+
+  const contentLines = prefixStr.length ? filecontent.split("\n").map((line) => prefixStr + line) : filecontent;
+  if (mode === "FILE") {
+    const split = filepath.includes("```") ? "````" : "```";
+    const ext = path.parse(filepath).ext.slice(1);
+    if (prefixStr.length) {
     }
+    lines.push(
+      prefixStr + "`" + filepath + "`",
+      "",
+      prefixStr +
+        split +
+        match(opts.lang)
+          .with(P.string, (v) => v)
+          .otherwise(() => ext),
+      contentLines,
+      prefixStr + split,
+      "",
+    );
+  } else if (mode === "INJECT") {
+    lines.push(contentLines);
+  } else {
+    lines.push(`<!-- unknown mode ${mode} -->`);
   }
-  return params;
+  const result = lines.flat().join("\n");
+  return result;
 };
 
 const getFileState = (filepath: string, once: boolean) => {
@@ -333,36 +348,32 @@ const processReplacement = async (
     return result;
   }
 
+  /// Handle FILE, INJECT with internal-symbol
+  if (/^jixo:/.test(glob_or_filepath)) {
+    const jixo_url = new URL(glob_or_filepath);
+    const filepath = (jixo_url.pathname || jixo_url.hostname).replace(/^\//, "");
+    const content = GET_JIXO_PROMPT()[filepath];
+    if (content) {
+      return useFileOrInject(normalizedMode, filepath + ".md", content, {
+        prefix: params.prefix,
+        lang: params.lang,
+      });
+    }
+    return `<!-- unknown jixo content ${filepath} -->`;
+  }
+
   /// Handle FILE, INJECT with web-url
   if (/^https?:\/\//.test(glob_or_filepath)) {
-    const lines: string[] = [];
     const url = new URL(glob_or_filepath);
     const urlRes = await map_get_or_put_async(fetchCache, url.href, async () => {
       const res = await fetch(url);
       const text = await res.text();
       return {res, text};
     });
-    if (normalizedMode === "FILE") {
-      const split = urlRes.text.includes("```") ? "````" : "```";
-      const ext = path.parse(url.pathname).ext.slice(1);
-      lines.push(
-        "`" + urlRes.res.url + "`",
-        "",
-        split +
-          match(params[`mime_${urlRes.res.headers.get("content-type")?.split(";")[0]}_lang`] ?? params.lang)
-            .with(P.string, (v) => v)
-            .otherwise(() => ext),
-        urlRes.text,
-        split,
-        "",
-      );
-    } else if (normalizedMode === "INJECT") {
-      lines.push(urlRes.text);
-    } else {
-      lines.push(`<!-- unknown mode ${normalizedMode} -->`);
-    }
-    const result = lines.join("\n");
-    return result;
+    return useFileOrInject(normalizedMode, urlRes.res.url, urlRes.text, {
+      prefix: params.prefix,
+      lang: params[`mime_${urlRes.res.headers.get("content-type")?.split(";")[0]}_lang`] ?? params.lang,
+    });
   }
 
   /// Handle FILE, INJECT, and FILE_TREE modes
@@ -480,18 +491,13 @@ const processReplacement = async (
         continue;
       }
       const fileContent = getFileState(fullFilepath, once).get();
-      const split = fileContent.includes("```") ? "````" : "```";
       const ext = path.parse(filepath).ext.slice(1);
+
       lines.push(
-        filepath,
-        "",
-        split +
-          match(params[`map_ext_${ext}_lang`] ?? params.lang)
-            .with(P.string, (v) => v)
-            .otherwise(() => ext),
-        fileContent,
-        split,
-        "",
+        useFileOrInject(normalizedMode, filepath, fileContent, {
+          prefix: params.prefix,
+          lang: params[`map_ext_${ext}_lang`] ?? params.lang,
+        }),
       );
     }
   } else if (normalizedMode === "INJECT") {
@@ -500,7 +506,8 @@ const processReplacement = async (
       if (!statSync(fullFilepath).isFile()) {
         continue;
       }
-      lines.push(getFileState(fullFilepath, once).get());
+      const fileContent = getFileState(fullFilepath, once).get();
+      lines.push(useFileOrInject(normalizedMode, filepath, fileContent));
     }
   } else {
     lines.push(`<!-- unknown mode ${normalizedMode} -->`);

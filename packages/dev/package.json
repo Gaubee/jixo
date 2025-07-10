@@ -1,6 +1,6 @@
 {
   "name": "@jixo/dev",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "",
   "main": "dist/cli.js",
   "type": "module",
@@ -18,9 +18,11 @@
     "jixo-T": "./dist/run-test.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "assets"
   ],
   "scripts": {
+    "build": "node ./scripts/build.ts",
     "fmt": "prettier --write src",
     "test:watch": "vitest --watch",
     "test": "vitest --run"
