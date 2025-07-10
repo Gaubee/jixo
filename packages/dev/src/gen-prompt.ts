@@ -1,6 +1,6 @@
 process.removeAllListeners("warning");
 
-import {blue, createResolver, createResolverByRootFile, cwdResolver, green, normalizeFilePath} from "@gaubee/nodekit";
+import {blue, createResolver, createResolverByRootFile, cwdResolver, green, matter, normalizeFilePath} from "@gaubee/nodekit";
 import {map_get_or_put_async} from "@gaubee/util";
 import parcelWatcher from "@parcel/watcher";
 import {parseArgs} from "@std/cli/parse-args";
@@ -512,22 +512,39 @@ const processReplacement = async (
 
 export const gen_prompt = async (input: string, once: boolean, _output?: string, cwd?: string) => {
   console.log(blue("gen_prompt"), input);
-  const output = _output ? cwdResolver(_output) : input.replace(/\.md$/, ".gen.md");
+
+  /// 解析 input
   let inputContent = getFileState(input, once).get();
+  const inputArgs = matter(inputContent);
+  const inputData = inputArgs.data;
+  inputContent = inputArgs.content;
 
-  const regex = /\[(.+?)\]\(@([\w-_:]+)(\?.+)?\)/g; // Updated regex to capture parameters
-  const matches = [...inputContent.matchAll(regex)];
-
+  /// 解析 cwd
   // Create a root resolver based on the input file's directory
   const currentRootResolver = cwd
     ? createResolver(cwd)
-    : createResolverByRootFile(input, ".git", () => {
-        const cwd = normalizeFilePath(process.cwd());
-        if (input.startsWith(cwd + "/")) {
-          return cwd;
-        }
-        return path.dirname(input);
-      });
+    : match(inputData.cwd)
+        .with(P.string, (v) => createResolver(v))
+        .otherwise(() =>
+          createResolverByRootFile(input, ".git", () => {
+            const cwd = normalizeFilePath(process.cwd());
+            if (input.startsWith(cwd + "/")) {
+              return cwd;
+            }
+            return path.dirname(input);
+          }),
+        );
+
+  /// 解析 output
+  const output = currentRootResolver(
+    _output ??
+      match(inputData.output)
+        .with(P.string, (v) => v)
+        .otherwise(() => input.replace(/\.md$/, ".gen.md")),
+  );
+
+  const regex = /\[(.+?)\]\(@([\w-_:]+)(\?.+)?\)/g; // Updated regex to capture parameters
+  const matches = [...inputContent.matchAll(regex)];
 
   // Collect all promises for replacements
   const replacementPromises = matches.map(async (match) => {
