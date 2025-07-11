@@ -36,7 +36,7 @@ const useFileOrInject = (mode: string, filepath: string, filecontent: string, op
 
   const contentLines = prefixStr.length ? filecontent.split("\n").map((line) => prefixStr + line) : filecontent;
   if (mode === "FILE") {
-    const split = filepath.includes("```") ? "````" : "```";
+    const split = filecontent.includes("```") ? "````" : "```";
     const ext = path.parse(filepath).ext.slice(1);
     if (prefixStr.length) {
     }
