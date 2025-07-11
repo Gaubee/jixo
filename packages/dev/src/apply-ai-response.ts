@@ -57,7 +57,7 @@ interface AiResponse {
  * @returns 一个包含文件路径和代码内容的对象数组。
  */
 async function parseMarkdown(markdownContent: string, rootResolver: PathResolver) {
-  const gitCommitMessageRegex = /【变更日志】[\s\n]+`{3,4}[\w]*\s*\n([\s\S]*?)\n`{3,4}/;
+  const gitCommitMessageRegex = /【变更日志】[\*\s\n]+`{3,4}[\w]*\s*\n([\s\S]*?)\n`{3,4}/;
   const gitCommitMessageMatchRes = markdownContent.match(gitCommitMessageRegex);
   let gitCommitMessage: GitCommitMessage | null = null;
   if (gitCommitMessageMatchRes) {
