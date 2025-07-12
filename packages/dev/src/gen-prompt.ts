@@ -9,7 +9,7 @@ import Debug from "debug";
 import {globbySync, isDynamicPattern, type Options as GlobbyOptions} from "globby";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import micromatch from "micromatch"; // Import micromatch
-import {readFileSync, statSync, watch, writeFileSync} from "node:fs";
+import {mkdirSync, readFileSync, statSync, watch, writeFileSync} from "node:fs";
 import {cpus} from "node:os";
 import path from "node:path";
 import {Signal} from "signal-polyfill";
@@ -621,6 +621,7 @@ export const gen_prompt = async (input: string, once: boolean, _output?: string,
     outputContent = outputContent.substring(0, match.index!) + replacement + outputContent.substring(match.index! + match[0].length);
   }
 
+  mkdirSync(path.dirname(output), {recursive: true});
   writeFileSync(output, outputContent);
   console.log(blue(new Date().toLocaleTimeString()), green(`✅ ${path.parse(output).name} updated`));
 };
