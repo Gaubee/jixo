@@ -30,15 +30,43 @@ const logger = {
       .exhaustive(),
 };
 
+type FormatCodeOptions = {
+  filepath: string;
+  prettierParser?: prettier.LiteralUnion<prettier.BuiltInParserName, string>;
+};
+const formatCode = async (filecode: string, {filepath, prettierParser}: FormatCodeOptions) => {
+  const fileInfo = await prettier.getFileInfo(filepath);
+  if (fileInfo.ignored) {
+    logger.info(`文件 ${path.relative(process.cwd(), filepath)} 已被 .prettierignore 忽略。`);
+    return filecode;
+  }
+
+  const fileparser = prettierParser ?? fileInfo?.inferredParser;
+
+  if (!fileparser) {
+    logger.warn(`无法推断文件 ${path.relative(process.cwd(), filepath)} 的解析器，跳过格式化。`);
+    return filecode;
+  }
+  const config = await prettier.resolveConfig(filepath);
+
+  filecode = await prettier.format(filecode, {
+    ...config,
+    parser: fileparser,
+  });
+  return filecode;
+};
+
 type DiffFileMode = "add" | "delete" | "modify" | "rename" | "rename+modify";
-type DiffFiles = Array<{
+type DiffFile = {
+  from: string;
   filePath: string;
   code: string;
   fullSourcePath: string;
   fullTargetPath: string;
   mode: DiffFileMode;
   safe: boolean;
-}>;
+};
+type DiffFiles = Array<DiffFile>;
 
 type GitCommitMessage = {
   title: string;
@@ -47,6 +75,7 @@ type GitCommitMessage = {
 };
 
 interface AiResponse {
+  fromFilepath: string;
   gitCommitMessage: GitCommitMessage | null;
   diffFiles: DiffFiles;
 }
@@ -56,7 +85,7 @@ interface AiResponse {
  * @param markdownContent - 从文件中读取的 Markdown 全文。
  * @returns 一个包含文件路径和代码内容的对象数组。
  */
-async function parseMarkdown(markdownContent: string, rootResolver: PathResolver) {
+async function parseMarkdown(from: string, markdownContent: string, rootResolver: PathResolver) {
   const gitCommitMessageRegex = /【变更日志】[\*\s\n]+`{3,4}[\w]*\s*\n([\s\S]*?)\n`{3,4}/;
   const gitCommitMessageMatchRes = markdownContent.match(gitCommitMessageRegex);
   let gitCommitMessage: GitCommitMessage | null = null;
@@ -69,10 +98,7 @@ async function parseMarkdown(markdownContent: string, rootResolver: PathResolver
       all: "",
     };
 
-    gitCommitMessage.all = await prettier.format(`${gitCommitMessage.title}\n\n${gitCommitMessage.detail}\n`, {
-      ...prettier.resolveConfig(rootResolver.dirname),
-      parser: "markdown",
-    });
+    gitCommitMessage.all = `${gitCommitMessage.title}\n\n${gitCommitMessage.detail}\n`;
   }
 
   // 正则表达式，用于匹配文件路径标题和对应的代码块
@@ -115,7 +141,7 @@ async function parseMarkdown(markdownContent: string, rootResolver: PathResolver
     //   logger.error(`unsafe file path: ${logger.file(filePath)}.`);
     // }
 
-    diffFiles.push({filePath, code, fullSourcePath, fullTargetPath, mode, safe});
+    diffFiles.push({from, filePath, code, fullSourcePath, fullTargetPath, mode, safe});
   }
 
   if (diffFiles.length === 0) {
@@ -124,7 +150,7 @@ async function parseMarkdown(markdownContent: string, rootResolver: PathResolver
     logger.success(`Found ${diffFiles.length} file blocks to process.`);
   }
 
-  return {gitCommitMessage, diffFiles} satisfies AiResponse;
+  return {fromFilepath: from, gitCommitMessage, diffFiles} satisfies AiResponse;
 }
 
 /**
@@ -135,22 +161,7 @@ async function applyChanges(files: DiffFiles, format?: boolean): Promise<void> {
   for (const file of files) {
     const writeFile = async (filepath = file.fullSourcePath, filecode: string = file.code) => {
       if (format) {
-        const fileInfo = await prettier.getFileInfo(filepath);
-        if (fileInfo.ignored) {
-          logger.info(`文件 ${path.relative(process.cwd(), filepath)} 已被 .prettierignore 忽略。`);
-          return;
-        }
-
-        if (!fileInfo.inferredParser) {
-          logger.warn(`无法推断文件 ${path.relative(process.cwd(), filepath)} 的解析器，跳过格式化。`);
-          return;
-        }
-        const config = await prettier.resolveConfig(filepath);
-
-        filecode = await prettier.format(filecode, {
-          ...config,
-          parser: fileInfo.inferredParser, // 使用推断出的解析器
-        });
+        filecode = await formatCode(filecode, {filepath});
       }
       await fsp.writeFile(filepath, filecode, "utf-8");
     };
@@ -195,15 +206,23 @@ async function applyChanges(files: DiffFiles, format?: boolean): Promise<void> {
 /**
  * 提示用户确认操作。
  */
-async function confirmAction(filesToUpdate: DiffFiles, options: {topMessage?: string | string[]; allowUnsafe?: boolean}): Promise<DiffFiles> {
+async function confirmAction<T extends DiffFile>(filesToUpdate: T[], options: {topMessage?: string | string[]; allowUnsafe?: boolean}): Promise<T[]> {
   if (filesToUpdate.length === 0) {
     return [];
   }
 
   console.log("\n-----------------------------------------");
-  const selectedFiles = await prompts.checkbox({
-    message: iter_map_not_null([options.topMessage, "The following files will be overwritten:\n"].flat()).join("\n"),
-    choices: filesToUpdate.map((file) => ({
+  type $1 = typeof prompts.checkbox;
+  type $2 = $1 extends (a1: infer T, ...rest: any[]) => any ? T : never;
+  type $3 = $2 extends {choices: infer T} ? T : never;
+  type $4 = $3 extends readonly (infer T)[] ? T : never;
+  const choices: $4[] = [];
+  let currentFrom = "";
+  for (const file of filesToUpdate) {
+    if (file.from !== currentFrom) {
+      choices.push(new prompts.Separator((currentFrom = file.from)));
+    }
+    choices.push({
       name: [
         //
         logger.mode(file.mode) + (file.safe ? "" : "⚠️"),
@@ -212,7 +231,11 @@ async function confirmAction(filesToUpdate: DiffFiles, options: {topMessage?: st
 
       value: file.filePath,
       checked: file.safe || options.allowUnsafe,
-    })),
+    });
+  }
+  const selectedFiles = await prompts.checkbox({
+    message: iter_map_not_null([options.topMessage, "The following files will be overwritten:\n"].flat()).join("\n"),
+    choices: choices as $3,
     pageSize: process.stdout.rows || filesToUpdate.length,
   });
   console.log("-----------------------------------------");
@@ -275,12 +298,16 @@ export async function applyAiResponse(markdownFilePaths: string[] | string, {yes
       let gitCommitMessage: GitCommitMessage | null = null;
       const diffFiles: DiffFiles = [];
       for (const filepath of filepaths) {
-        const markdownContent = await fsp.readFile(filepath, "utf-8");
-        const aiResponse = await parseMarkdown(markdownContent, rootResolver);
+        let markdownContent = await fsp.readFile(filepath, "utf-8");
+        if (format) {
+          /// 对整个md文件做格式化，目的是为了修复md格式错误的可能。后续代码还是要格式化，因为可能存在插件
+          markdownContent = await formatCode(markdownContent, {filepath, prettierParser: "markdown"});
+        }
+        const aiResponse = await parseMarkdown(filepath, markdownContent, rootResolver);
         gitCommitMessage ??= aiResponse.gitCommitMessage;
         diffFiles.push(...aiResponse.diffFiles);
       }
-      return {gitCommitMessage, diffFiles} satisfies AiResponse;
+      return {gitCommitMessage, diffFiles};
     };
     const aiResponse = await parseMarkdowns(absolutePaths);
     const {gitCommitMessage} = aiResponse;
@@ -347,6 +374,9 @@ if (import_meta_ponyfill(import.meta).main) {
       F: "format",
       Y: "yes",
       C: "cwd",
+    },
+    default: {
+      format: true,
     },
   });
 
