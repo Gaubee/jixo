@@ -574,7 +574,7 @@ export const gen_prompt = async (input: string, once: boolean, _output?: string,
   /// 解析 input
   const inputSource = getFileState(input, once).get();
   let {data: inputData, content: inputContent} = matter(inputSource);
-  inputContent = removeMarkdownComments(inputContent);
+  inputContent = removeMarkdownComments(inputContent).trim();
 
   /// 解析 cwd
   // Create a root resolver based on the input file's directory
