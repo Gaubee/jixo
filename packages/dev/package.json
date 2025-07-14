@@ -1,6 +1,6 @@
 {
   "name": "@jixo/dev",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "description": "",
   "main": "dist/cli.js",
   "type": "module",
@@ -42,17 +42,21 @@
     "debug": "^4.4.1",
     "globby": "^14.1.0",
     "import-meta-ponyfill": "^3.2.2",
+    "mdast-util-from-markdown": "^2.0.2",
     "prettier": "^3.6.2",
     "signal-polyfill": "^0.2.2",
     "signal-utils": "^0.21.1",
     "simple-git": "^3.28.0",
     "ts-pattern": "^5.7.1",
+    "unist-util-visit": "^5.0.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/debug": "^4.1.12",
+    "@types/mdast": "^4.0.4",
     "@types/micromatch": "^4.0.9",
     "@types/node": "^24.0.12",
+    "@types/unist": "^3.0.3",
     "micromatch": "^4.0.8",
     "vitest": "^3.2.4"
   }

@@ -20,6 +20,7 @@ import {getCommitDiffs} from "./git-helper/getCommitDiffs.js";
 import {getMultipleFileContents} from "./git-helper/getMultipleFileContents.js";
 import {getWorkingCopyContents} from "./git-helper/getWorkingCopyContents.js";
 import {getWorkingCopyDiffs} from "./git-helper/getWorkingCopyDiffs.js";
+import {removeMarkdownComments} from "./utils/markdown-remove-comment.js";
 export const debug = Debug("gen-prompt");
 const fetchCache = new Map<string, {res: Response; text: string}>();
 
@@ -571,10 +572,9 @@ export const gen_prompt = async (input: string, once: boolean, _output?: string,
   console.log(blue("gen_prompt"), input);
 
   /// 解析 input
-  let inputContent = getFileState(input, once).get();
-  const inputArgs = matter(inputContent);
-  const inputData = inputArgs.data;
-  inputContent = inputArgs.content;
+  const inputSource = getFileState(input, once).get();
+  let {data: inputData, content: inputContent} = matter(inputSource);
+  inputContent = removeMarkdownComments(inputContent);
 
   /// 解析 cwd
   // Create a root resolver based on the input file's directory
