@@ -317,6 +317,10 @@ const processReplacement = async (
         const result = await getMultipleFileContents(baseDir, commitHash, filesToProcess);
         for (const item of result) {
           const ext = path.parse(item.path).ext.slice(1);
+          if (item.error?.startsWith("File not found in workspace")) {
+            continue;
+          }
+
           lines.push(
             useFileOrInject("FILE", item.path, item.content ?? `<!-- ERROR: ${item.error ?? "No error message provided"} -->`, {
               prefix: params.prefix,
@@ -381,6 +385,10 @@ const processReplacement = async (
         });
         for (const item of result) {
           const ext = path.parse(item.path).ext.slice(1);
+          if (item.error?.startsWith("File not found in workspace")) {
+            continue;
+          }
+
           lines.push(
             useFileOrInject("FILE", item.path, item.content ?? `<!-- ERROR: ${item.error ?? "No error message provided"} -->`, {
               prefix: params.prefix,

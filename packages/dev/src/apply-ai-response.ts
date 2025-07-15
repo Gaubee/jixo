@@ -118,12 +118,15 @@ async function parseMarkdown(from: string, markdownContent: string, rootResolver
     if (code === "$$DELETE_FILE$$") {
       mode = "delete";
     } else if (code.startsWith("$$RENAME_FILE$$")) {
-      fullTargetPath = rootResolver(code.replace("$$RENAME_FILE$$", ""));
-      code = code.indexOf("\n") === -1 ? "" : code.slice(code.indexOf("\n") + 1);
-      if (code.length > 0) {
+      const firstLineIndex = code.indexOf("\n");
+      if (firstLineIndex !== -1) {
         mode = "rename+modify";
+        fullTargetPath = rootResolver(code.slice(0, firstLineIndex).replace("$$RENAME_FILE$$", ""));
+        code = code.slice(firstLineIndex + 1);
       } else {
         mode = "rename";
+        fullTargetPath = rootResolver(code.replace("$$RENAME_FILE$$", ""));
+        code = "";
       }
     } else if (fs.existsSync(fullSourcePath)) {
       mode = "modify";
@@ -185,15 +188,15 @@ async function applyChanges(files: DiffFiles, format?: boolean): Promise<void> {
           await fsp.mkdir(path.dirname(file.fullTargetPath), {recursive: true});
 
           await fsp.rename(file.fullSourcePath, file.fullTargetPath);
-          const cwd = process.cwd();
-          const targetPath = path.relative(cwd, file.fullTargetPath);
+          const log_cwd = process.cwd();
+          const log_targetPath = path.relative(log_cwd, file.fullTargetPath);
 
           if (mode.includes("modify")) {
             // 修改目标文件
             await writeFile(file.fullTargetPath);
-            logger.success(`Successfully renamed and updated file: ${logger.file(file.filePath)} => ${logger.file(targetPath)}`);
+            logger.success(`Successfully renamed and updated file: ${logger.file(file.filePath)} => ${logger.file(log_targetPath)}`);
           } else {
-            logger.success(`Successfully renamed file: ${logger.file(file.filePath)} => ${logger.file(targetPath)}`);
+            logger.success(`Successfully renamed file: ${logger.file(file.filePath)} => ${logger.file(log_targetPath)}`);
           }
         })
         .exhaustive();
