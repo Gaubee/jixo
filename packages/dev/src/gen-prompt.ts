@@ -14,7 +14,7 @@ import {cpus} from "node:os";
 import path from "node:path";
 import {Signal} from "signal-polyfill";
 import {effect} from "signal-utils/subtle/microtask-effect";
-import {simpleGit, type SimpleGit} from "simple-git";
+import {simpleGit} from "simple-git";
 import {match, P} from "ts-pattern";
 import {getCommitDiffs} from "./git-helper/getCommitDiffs.js";
 import {getMultipleFileContents} from "./git-helper/getMultipleFileContents.js";
@@ -69,7 +69,7 @@ const getFileState = (filepath: string, once: boolean) => {
       const watcher = watch(filepath, () => {
         try {
           fileState.set(readFileSync(filepath, "utf-8"));
-        } catch (error) {
+        } catch {
           watcher.close();
           off();
         }
@@ -190,44 +190,6 @@ const generateFileTree = (files: string[], expandDirectories: boolean = true): s
   });
 
   return outputLines.join("\n");
-};
-
-/**
- * Retrieves file content from a Git repository.
- * If a commit hash is provided, it fetches the file content at that specific commit.
- * Otherwise, it attempts to read the file from the working directory,
- * or from the Git index if it's staged but not in the working directory.
- * @param gitInstance The simple-git instance.
- * @param filePath The path to the file.
- * @param commitHash Optional commit hash.
- * @returns The file content as a string, or null if an error occurs or content is not found.
- */
-const getFileContentFromGit = async (
-  gitInstance: SimpleGit,
-  filePath: string,
-  baseDir: string, // Add baseDir here
-  commitHash?: string,
-): Promise<string | null> => {
-  try {
-    if (commitHash) {
-      // Fetch file content at a specific commit
-      return await gitInstance.show([`${commitHash}:${filePath}`]);
-    } else {
-      // Check file status to determine if it's staged or only in working directory
-      const status = await gitInstance.status();
-      if (status.files.some((f) => f.path === filePath && f.index !== " " && f.working_dir === " ")) {
-        // File is staged but not present in working directory (e.g., deleted or moved)
-        // Get content from the Git index
-        return await gitInstance.show([`:${filePath}`]);
-      } else {
-        // Read directly from the working directory for unstaged or unmodified files
-        return readFileSync(path.join(baseDir, filePath), "utf-8");
-      }
-    }
-  } catch (error: unknown) {
-    console.error(`Error getting file content for ${filePath} at commit ${commitHash || "HEAD"}:`, error);
-    return null;
-  }
 };
 
 /**
@@ -408,7 +370,7 @@ const processReplacement = async (
   }
 
   /// Handle FILE, INJECT with internal-symbol
-  if (/^jixo:/.test(glob_or_filepath)) {
+  if (glob_or_filepath.startsWith('jixo:')) {
     const jixo_url = new URL(glob_or_filepath);
     const filepath = (jixo_url.pathname || jixo_url.hostname).replace(/^\//, "");
     const content = GET_JIXO_PROMPT()[filepath];

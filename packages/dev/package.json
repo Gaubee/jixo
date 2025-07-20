@@ -8,6 +8,8 @@
     ".": "./dist/index.js"
   },
   "bin": {
+    "jixo-sync-ai-response": "./dist/sync-ai-response.js",
+    "jixo-S": "./dist/sync-ai-response.js",
     "jixo-apply-ai-response": "./dist/apply-ai-response.js",
     "jixo-A": "./dist/apply-ai-response.js",
     "jixo-gen-prompt": "./dist/gen-prompt.js",
@@ -22,6 +24,9 @@
     "assets"
   ],
   "scripts": {
+    "bundle-google-aistudio-browser": "esbuild --bundle --platform=browser src/google-aistudio/browser/index.ts --outfile=bundle/google-aistudio.browser.js",
+    "bundle-google-aistudio-node": "esbuild --bundle --platform=node src/google-aistudio/node/index.ts --outfile=bundle/google-aistudio.node.js --format=esm",
+    "bundle-google-aistudio": "pnpm bundle-google-aistudio-browser && pnpm bundle-google-aistudio-node",
     "build": "node ./scripts/build.ts",
     "fmt": "prettier --write src",
     "test:watch": "vitest --watch",
@@ -39,9 +44,11 @@
     "@parcel/watcher": "^2.5.1",
     "@std/cli": "jsr:^1.0.20",
     "@tanstack/router-core": "^1.125.4",
+    "clipboardy": "^4.0.0",
     "debug": "^4.4.1",
     "globby": "^14.1.0",
     "import-meta-ponyfill": "^3.2.2",
+    "json5": "^2.2.3",
     "mdast-util-from-markdown": "^2.0.2",
     "prettier": "^3.6.2",
     "signal-polyfill": "^0.2.2",
@@ -57,6 +64,7 @@
     "@types/micromatch": "^4.0.9",
     "@types/node": "^24.0.12",
     "@types/unist": "^3.0.3",
+    "@types/wicg-file-system-access": "^2023.10.6",
     "micromatch": "^4.0.8",
     "vitest": "^3.2.4"
   }
