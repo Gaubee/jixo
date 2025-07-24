@@ -37,7 +37,7 @@ export const sync = async (basePath: string, outDir?: string) => {
   const name_prefix = path.basename(basePath).split(".")[0];
   const name_len = 2; // 固定长度，避免抖动
   const model_files = modelHistory.map((content) => {
-    if (content.includes("【变更日志】")) {
+    if (/【变更日志】[*\s\n]+/.test(content)) {
       first_index += 1;
       second_index = 0;
     } else {
@@ -48,27 +48,20 @@ export const sync = async (basePath: string, outDir?: string) => {
     return {name, content};
   });
 
-  outDir = path.join(outDir ?? path.dirname(basePath), name_prefix);
-  await mkdir(outDir, {recursive: true});
+  const resolvedOutDir = path.join(outDir ?? path.dirname(basePath), name_prefix);
+  await mkdir(resolvedOutDir, {recursive: true});
 
-  console.log("prefix", name_prefix);
-  const oldFileNames = new Set(globbySync(`*.md`, {cwd: outDir}));
+  const oldFileNames = new Set(globbySync(`*.md`, {cwd: resolvedOutDir}));
   const newFileNames = new Set(model_files.map((file) => file.name));
-  const rmFileNameList = [...oldFileNames.difference(newFileNames)];
-  const addFileNames = newFileNames.difference(oldFileNames);
+  const rmFileNameList = [...oldFileNames].filter((x) => !newFileNames.has(x));
+  const addFileNames = new Set([...newFileNames].filter((x) => !oldFileNames.has(x)));
 
   /// 删除废弃的文件
   if (rmFileNameList.length) {
-    await Promise.all(rmFileNameList.map((name) => rm(path.join(outDir, name))));
+    await Promise.all(rmFileNameList.map((name) => rm(path.join(resolvedOutDir, name))));
   }
   /// 保存新增的文件
-  await Promise.all(
-    model_files.map((file) => {
-      if (addFileNames.has(file.name)) {
-        return writeFile(path.join(outDir, file.name), file.content);
-      }
-    }),
-  );
+  await Promise.all(model_files.filter((file) => addFileNames.has(file.name)).map((file) => writeFile(path.join(resolvedOutDir, file.name), file.content)));
 
   console.log(blue(new Date().toLocaleTimeString()), green("sync"), path.relative(process.cwd(), basePath));
 };

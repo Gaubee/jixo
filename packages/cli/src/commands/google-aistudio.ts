@@ -1,12 +1,11 @@
-import {sync} from "@jixo/dev/google-aistudio";
-import {reactiveFs} from "@jixo/dev/reactive-fs";
-
+import {doSync, type SyncOptions} from "@jixo/dev/google-aistudio";
 import type {Arguments, CommandModule} from "yargs";
-import z from "zod";
 
+// 定义 yargs builder 所需的参数接口
 interface SyncArgs {
   path?: string;
   watch?: boolean;
+  outDir?: string;
 }
 
 // 定义 'sync' 子命令
@@ -26,22 +25,21 @@ const syncCommand: CommandModule<object, SyncArgs> = {
         type: "boolean",
         describe: "Watch for file changes and sync automatically",
         default: false,
+      })
+      .option("outDir", {
+        alias: "O",
+        type: "string",
+        describe: "Specify the output directory for generated markdown files",
       }),
   handler: async (argv: Arguments<SyncArgs>) => {
-    reactiveFs.use(
-      async () => {
-        // 使用 Zod 对路径进行安全解析，即使有默认值也确保类型正确
-        const targetPath = z.string().parse(argv.path);
-        await sync(targetPath);
-      },
-      {
-        once: !argv.watch,
-      },
-    );
-
-    if (argv.watch) {
-      console.log("\nWatching for file changes... Press Ctrl+C to exit.");
-    }
+    // 将 yargs 的解析结果适配为 doSync 函数期望的格式。
+    // 关键是 yargs 的位置参数是命名好的 (argv.path)，而 doSync
+    // 期望它在 `_` 数组的第一个位置。
+    const optionsForDoSync: SyncOptions = {
+      ...argv,
+      _: [argv.path as string],
+    };
+    doSync(optionsForDoSync);
   },
 };
 

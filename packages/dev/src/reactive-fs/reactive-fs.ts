@@ -13,6 +13,7 @@ export const getFileState = (filepath: string, once: boolean = ONCE_AC.get()) =>
         try {
           fileState.set(readFileSync(filepath, "utf-8"));
         } catch {
+          console.log(`File ${filepath} not found, stopping watcher.`);
           watcher.close();
           off();
         }
@@ -29,6 +30,7 @@ export const dirGlobState = (dirname: string, glob: string, once: boolean = ONCE
   });
   if (!once) {
     const off = effect(async () => {
+      
       const sub = await parcelWatcher.subscribe(dirname, (err, events) => {
         if (events.some((event) => event.type === "create" || event.type === "delete")) {
           try {
