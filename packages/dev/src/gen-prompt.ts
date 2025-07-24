@@ -1,6 +1,6 @@
 process.removeAllListeners("warning");
 
-import {blue, createResolver, createResolverByRootFile, cwdResolver, green, matter, normalizeFilePath, readJson} from "@gaubee/nodekit";
+import {blue, createResolver, createResolverByRootFile, green, matter, normalizeFilePath, readJson} from "@gaubee/nodekit";
 import {func_remember, iter_map_not_null, map_get_or_put_async} from "@gaubee/util";
 import {parseArgs} from "@std/cli/parse-args";
 import {defaultParseSearch} from "@tanstack/router-core";
@@ -8,7 +8,7 @@ import Debug from "debug";
 import {globbySync, isDynamicPattern, type Options as GlobbyOptions} from "globby";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import micromatch from "micromatch"; // Import micromatch
-import {mkdirSync, statSync, writeFileSync} from "node:fs";
+import fs, {mkdirSync, statSync, writeFileSync} from "node:fs";
 import {cpus} from "node:os";
 import path from "node:path";
 import {effect} from "signal-utils/subtle/microtask-effect";
@@ -352,7 +352,7 @@ const processReplacement = async (
     });
     return useFileOrInject(normalizedMode, urlRes.res.url, urlRes.text, {
       prefix: params.prefix,
-      lang: params[`mime_${urlRes.res.headers.get("content-type")?.split(";")[0]}_lang`] ?? params.lang,
+      lang: params[`mime_${urlRes.res.headers.get("content-type")?.split(";")}_lang`] ?? params.lang,
     });
   }
 
@@ -555,10 +555,61 @@ export const gen_prompt = async (input: string, once: boolean, _output?: string,
   console.log(blue(new Date().toLocaleTimeString()), green(`✅ ${path.parse(output).name} updated`));
 };
 
-const gen_prompts = (dirname: string, once: boolean, glob = "*.meta.md", cwd?: string) => {
-  console.log(blue("gen_prompts"), dirname, glob);
-  for (const filename of dirGlobState(dirname, glob, once).get()) {
-    gen_prompt(path.join(dirname, filename), once, undefined, cwd);
+export interface GenOptions {
+  inputs: string[];
+  outFile?: string;
+  watch: boolean;
+  cwd?: string;
+  glob: string;
+}
+
+export const doGenPrompts = async (argv: GenOptions) => {
+  const once = !argv.watch;
+  const CWD = argv.cwd || process.cwd();
+
+  const inputs = argv.inputs;
+
+  for (const input of inputs) {
+    const resolvedInput = path.resolve(CWD, input);
+
+    if (isDynamicPattern(input)) {
+      const files = globbySync(input, {cwd: CWD});
+      console.log(`Glob pattern '${input}' matched ${files.length} files.`);
+      for (const file of files) {
+        // When using globs, output file is determined automatically by gen_prompt
+        await gen_prompt(file, once, undefined, CWD);
+      }
+    } else if (fs.existsSync(resolvedInput)) {
+      const stat = fs.statSync(resolvedInput);
+      if (stat.isFile()) {
+        const off = effect(() => {
+          gen_prompt(input, once, argv.outFile, CWD);
+        });
+        if (once) off();
+      } else if (stat.isDirectory()) {
+        console.log(`Processing directory '${input}' with glob '${argv.glob}'...`);
+        const off = effect(() => {
+          for (const filename of dirGlobState(resolvedInput, argv.glob, once).get()) {
+            gen_prompt(path.join(resolvedInput, filename), once, undefined, CWD);
+          }
+        });
+        if (once) off();
+      }
+    } else {
+      console.warn(`Warning: Input path does not exist, but treating as a potential glob: ${input}`);
+      const files = globbySync(input, {cwd: CWD});
+      if (files.length > 0) {
+        for (const file of files) {
+          await gen_prompt(file, once, undefined, CWD);
+        }
+      } else {
+        console.error(`Error: Input '${input}' not found and did not match any files.`);
+      }
+    }
+  }
+
+  if (argv.watch) {
+    console.log("\nWatching for file changes... Press Ctrl+C to exit.");
   }
 };
 
@@ -571,34 +622,17 @@ if (import_meta_ponyfill(import.meta).main) {
       G: "glob",
       W: "watch",
     },
+    default: {
+      glob: "*.meta.md",
+      watch: false,
+    },
   });
   if (args._.length === 0) {
-    throw new Error("Please specify the input file");
+    throw new Error("Please specify the input file(s) or pattern(s).");
   }
-  let input = normalizeFilePath(cwdResolver(args._[0].toString()));
-  if (input.includes("*")) {
-    const parts = input.split("/");
-    const index = parts.findIndex((part) => part.includes("*"));
-    const dir = parts.slice(0, index).join("/") || "/";
-    const glob = parts.slice(index).join("/");
-    input = dir;
-    args.glob = glob;
-  }
-  const once = !args.watch;
-  const inputStat = statSync(input);
-  if (inputStat.isFile()) {
-    const off = effect(() => {
-      gen_prompt(input, once, args.outFile);
-    });
-    if (once) {
-      off();
-    }
-  } else {
-    const off = effect(() => {
-      gen_prompts(input, once, args.glob);
-    });
-    if (once) {
-      off();
-    }
-  }
+
+  await doGenPrompts({
+    ...args,
+    inputs: args._.map(String),
+  });
 }

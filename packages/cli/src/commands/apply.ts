@@ -1,21 +1,12 @@
-import {applyAiResponse} from "@jixo/dev/apply-ai-response";
+import {doApplyAiResponse, type ApplyOptions} from "@jixo/dev/apply-ai-response";
 import type {Arguments, CommandModule} from "yargs";
-
-interface ApplyArgs {
-  files: string[];
-  yes: boolean;
-  cwd: string;
-  unsafe: boolean;
-  format: boolean;
-  gitCommit: boolean;
-}
 
 /**
  * @jixo/cli apply
  *
  * Apply changes from AI-generated markdown file.
  */
-export const applyCommand: CommandModule<object, ApplyArgs> = {
+export const applyCommand: CommandModule<object, ApplyOptions> = {
   command: "apply <files...>",
   aliases: ["A"],
   describe: "Apply changes from AI-generated markdown files",
@@ -25,7 +16,7 @@ export const applyCommand: CommandModule<object, ApplyArgs> = {
         describe: "Paths or glob patterns to the markdown files",
         type: "string",
         demandOption: true,
-        array: true, // Corrected: This makes TS infer string[]
+        array: true,
       })
       .option("yes", {
         alias: "Y",
@@ -56,9 +47,10 @@ export const applyCommand: CommandModule<object, ApplyArgs> = {
         describe: "Automatically commit changes with the message from markdown",
         default: false,
       }),
-  handler: async (argv: Arguments<ApplyArgs>) => {
-    // With array: true, argv.files is now correctly typed as string[]
-    await applyAiResponse(argv.files, {
+  handler: async (argv: Arguments<ApplyOptions>) => {
+    // yargs 的 argv 结构与 ApplyOptions 几乎完全兼容
+    // files 参数会被 yargs 正确处理为 string[]
+    await doApplyAiResponse(argv.files as string[], {
       yes: argv.yes,
       cwd: argv.cwd,
       unsafe: argv.unsafe,

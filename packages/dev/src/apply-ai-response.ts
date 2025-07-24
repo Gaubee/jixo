@@ -104,7 +104,7 @@ async function parseMarkdown(from: string, markdownContent: string, rootResolver
   // 正则表达式，用于匹配文件路径标题和对应的代码块
   // 匹配 `#### ` 开头，后面跟着路径，直到换行符
   // 然后非贪婪地匹配 ` ``` ` 代码块之间的所有内容
-  const fileBlockRegex = /\#{4}[\s\*]+`(.+?)`[\s\S]*?\n`{3,4}[\w]*\s*\n([\s\S]*?)\n`{3,4}/g;
+  const fileBlockRegex = /#{4}[\s*]+`(.+?)`[\s\S]*?\n`{3,6}[\w]*\s*\n([\s\S]*?)\n`{3,6}/g;
   const diffFiles: DiffFiles = [];
 
   logger.info("Parsing Markdown content to find file blocks...");
@@ -245,7 +245,7 @@ async function confirmAction<T extends DiffFile>(filesToUpdate: T[], options: {t
   return filesToUpdate.filter((file) => selectedFiles.includes(file.filePath));
 }
 
-interface ApplyAiResponseOptions {
+export interface ApplyOptions {
   yes?: boolean; // 是否跳过确认提示
   cwd?: string; // 工作目录
   unsafe?: boolean; // 是否允许不安全的文件操作
@@ -255,7 +255,7 @@ interface ApplyAiResponseOptions {
 /**
  * 主执行函数。
  */
-export async function applyAiResponse(markdownFilePaths: string[] | string, {yes, cwd = process.cwd(), unsafe, format, gitCommit}: ApplyAiResponseOptions = {}) {
+export async function doApplyAiResponse(markdownFilePaths: string[] | string, {yes, cwd = process.cwd(), unsafe, format, gitCommit}: ApplyOptions = {}) {
   if (typeof markdownFilePaths === "string") {
     markdownFilePaths = [markdownFilePaths];
   }
@@ -384,7 +384,7 @@ if (import_meta_ponyfill(import.meta).main) {
   });
 
   // 运行主函数
-  await applyAiResponse(
+  await doApplyAiResponse(
     args._.map((v) => v.toString()),
     args,
   );

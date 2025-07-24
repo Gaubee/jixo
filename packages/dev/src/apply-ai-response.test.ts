@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-import {applyAiResponse} from "./apply-ai-response.js";
+import {doApplyAiResponse} from "./apply-ai-response.js";
 
 describe("applyAiResponse", () => {
   let tempDir: string;
@@ -32,7 +32,7 @@ Hello, new file!
     `;
     createMarkdownFile(mdContent);
 
-    await applyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
+    await doApplyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
 
     const newFilePath = path.join(tempDir, "src", "new-file.txt");
     expect(fs.existsSync(newFilePath)).toBe(true);
@@ -52,7 +52,7 @@ Updated content.
     `;
     createMarkdownFile(mdContent);
 
-    await applyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
+    await doApplyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
 
     const fileContent = fs.readFileSync(existingFilePath, "utf-8");
     expect(fileContent.trim()).toBe("Updated content.");
@@ -70,7 +70,7 @@ $$DELETE_FILE$$
     `;
     createMarkdownFile(mdContent);
 
-    await applyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
+    await doApplyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
 
     expect(fs.existsSync(fileToDeletePath)).toBe(false);
   });
@@ -89,7 +89,7 @@ $$RENAME_FILE$$new-name.txt
     `;
     createMarkdownFile(mdContent);
 
-    await applyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
+    await doApplyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
 
     expect(fs.existsSync(oldPath)).toBe(false);
     expect(fs.existsSync(newPath)).toBe(true);
@@ -123,7 +123,7 @@ $$DELETE_FILE$$
     `;
     createMarkdownFile(mdContent);
 
-    await applyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
+    await doApplyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
 
     // Assertions
     const newFilePath = path.join(tempDir, "src", "new-component.tsx");
@@ -142,7 +142,7 @@ No code blocks with file paths here.
     createMarkdownFile(mdContent);
     const initialFiles = fs.readdirSync(tempDir);
 
-    await applyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
+    await doApplyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
 
     const finalFiles = fs.readdirSync(tempDir);
     expect(finalFiles).toEqual(initialFiles); // No files should be added or removed.
@@ -157,12 +157,12 @@ This should be marked as unsafe.
     `;
     createMarkdownFile(mdContent);
     {
-      const filesToUpdate = await applyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
+      const filesToUpdate = await doApplyAiResponse(mdFilePath, {yes: true, cwd: tempDir});
 
       expect(filesToUpdate).toHaveLength(0);
     }
     {
-      const filesToUpdate = await applyAiResponse(mdFilePath, {yes: true, cwd: tempDir, unsafe: true});
+      const filesToUpdate = await doApplyAiResponse(mdFilePath, {yes: true, cwd: tempDir, unsafe: true});
 
       expect(filesToUpdate).toHaveLength(1);
       const unsafeFile = filesToUpdate?.[0];
