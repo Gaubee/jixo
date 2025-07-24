@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import {simpleGit, type SimpleGit} from "simple-git";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-import {gen_prompt} from "./gen-prompt.js"; // Assuming gen-prompt.js is the compiled output
+import {gen_prompt} from "./gen-prompt.js";
 
 describe("gen_prompt GIT modes", (t) => {
   let tempDir: string;
