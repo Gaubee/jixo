@@ -28,10 +28,8 @@
         //     "path": "./packages/webui/tsconfig.json"
         // }
     ],
-    "files": [],
-    "compilerOptions": {
-        "types": [
-            "node"
-        ]
-    }
+    "extends": "./tsconfig.base.json",
+    "files": [
+        "**/tsdown.config.ts"
+    ]
 }

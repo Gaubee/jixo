@@ -11,9 +11,9 @@
     "bundle:docs": "cd docs && pnpm build",
     "build": "tsc --build",
     "build:all": "pnpm -r --include-workspace-root --parallel run build",
-    "dev": "tsc --build --watch",
+    "ts": "tsc --build --noEmit --watch",
     "clean": "node scripts/clean.ts",
-    "bundle:json": "cd packages/cli && pnpm gen-prompts",
+    "//bundle:json": "cd packages/cli && pnpm gen-prompts",
     "bundle:js": "esbuild ./index.ts --format=cjs --outfile=./bundle/index.cjs --platform=node",
     "G": "pnpm jixo-gen-prompt",
     "A": "pnpm jixo-apply-ai-response",
@@ -53,13 +53,13 @@
     "@jixo/cli": "workspace:^"
   },
   "devDependencies": {
-    "@jixo/mcp-fs": "workspace:^",
-    "@jixo/mcp-git": "workspace:^",
-    "@jixo/mcp-pnpm": "workspace:^",
     "@gaubee/node": "^0.2.4",
     "@gaubee/nodekit": "^0.10.2",
     "@gaubee/util": "^0.34.1",
     "@jixo/dev": "workspace:^",
+    "@jixo/mcp-fs": "workspace:^",
+    "@jixo/mcp-git": "workspace:^",
+    "@jixo/mcp-pnpm": "workspace:^",
     "@parcel/watcher": "^2.5.1",
     "@std/cli": "jsr:^1.0.17",
     "@std/fmt": "jsr:^1.0.8",
@@ -75,6 +75,7 @@
     "signal-polyfill": "^0.2.2",
     "signal-utils": "^0.21.1",
     "ts-pattern": "^5.7.1",
+    "tsdown": "^0.13.0",
     "typescript": "^5.8.3"
   }
 }
