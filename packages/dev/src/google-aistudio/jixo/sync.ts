@@ -18,7 +18,13 @@ export const sync = async (basePath: string, outDir?: string) => {
   }
 
   const rawContents = reactiveFs.getFile(basePath).get();
-  const safeContents = await zContentSchema.safeParseAsync(JSON.parse(rawContents));
+  const safeContents = await zContentSchema.safeParseAsync(
+    (() => {
+      try {
+        return JSON.parse(rawContents);
+      } catch {}
+    })(),
+  );
   if (safeContents.error) {
     console.error(safeContents.error.message);
     return;
