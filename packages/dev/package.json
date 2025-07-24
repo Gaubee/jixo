@@ -14,8 +14,8 @@
   "bin": {
     "jixo-sync-google-aistudio": "./dist/google-aistudio/jixo/cli.js",
     "jixo-S": "./dist/google-aistudio/jixo/cli.js",
-    "jixo-apply-ai-response": "./dist/apply-ai-response.js",
-    "jixo-A": "./dist/apply-ai-response.js",
+    "jixo-apply-ai-response": "./dist/bin/apply-ai-response.js",
+    "jixo-A": "./dist/bin/apply-ai-response.js",
     "jixo-gen-prompt": "./dist/gen-prompt.js",
     "jixo-G": "./dist/gen-prompt.js",
     "jixo-mcp-inspector": "./dist/mcp-inspector.js",
