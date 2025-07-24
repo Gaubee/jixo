@@ -5,7 +5,9 @@
   "main": "dist/cli.js",
   "type": "module",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./apply-ai-response": "./dist/apply-ai-response.js",
+    "./gen-prompt": "./dist/gen-prompt.js"
   },
   "bin": {
     "jixo-sync-google-aistudio": "./dist/google-aistudio/jixo/cli.js",

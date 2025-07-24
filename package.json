@@ -1,6 +1,6 @@
 {
   "name": "jixo",
-  "version": "0.12.0",
+  "version": "1.0.0",
   "description": "The AI-Driven Development Foundation for Automated Software Engineering",
   "main": "index.js",
   "type": "module",
@@ -10,7 +10,7 @@
     "pub": "pnpm publish --access public --no-git-checks -r",
     "bundle:docs": "cd docs && pnpm build",
     "build": "tsc --build",
-    "build:all":"pnpm -r --include-workspace-root --parallel run build",
+    "build:all": "pnpm -r --include-workspace-root --parallel run build",
     "dev": "tsc --build --watch",
     "clean": "node scripts/clean.ts",
     "bundle:json": "cd packages/cli && pnpm gen-prompts",
@@ -49,13 +49,13 @@
       "ai": "patches/ai.patch"
     }
   },
-  "@jixo/cli": "workspace:^",
   "dependencies": {
-    "@jixo/mcp-fs": "workspace:^",
-    "@jixo/mcp-git": "workspace:^",
-    "@jixo/mcp-pnpm": "workspace:^"
+    "@jixo/cli": "workspace:^"
   },
   "devDependencies": {
+    "@jixo/mcp-fs": "workspace:^",
+    "@jixo/mcp-git": "workspace:^",
+    "@jixo/mcp-pnpm": "workspace:^",
     "@gaubee/node": "^0.2.4",
     "@gaubee/nodekit": "^0.10.2",
     "@gaubee/util": "^0.34.1",

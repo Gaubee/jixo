@@ -1,5 +1,7 @@
+import {blue, green} from "@gaubee/nodekit";
 import {iter_map_not_null} from "@gaubee/util";
-import {statSync, writeFileSync} from "node:fs";
+import {statSync} from "node:fs";
+import {writeFile} from "node:fs/promises";
 import path from "node:path";
 import {reactiveFs} from "../../reactive-fs/reactive-fs.js";
 import {zContentSchema} from "../node/types.js";
@@ -27,7 +29,7 @@ export const sync = async (basePath: string, outDir?: string) => {
       return textParts.at(-1)?.text;
     }
   });
-  const name_len = 2;// 固定长度，避免抖动
+  const name_len = 2; // 固定长度，避免抖动
   const model_files = modelHistory.map((content) => {
     if (content.includes("【变更日志】")) {
       first_index += 1;
@@ -41,6 +43,8 @@ export const sync = async (basePath: string, outDir?: string) => {
 
   outDir ??= path.dirname(basePath);
   for (const file of model_files) {
-    writeFileSync(path.join(outDir, file.name), file.content);
+    await writeFile(path.join(outDir, file.name), file.content);
   }
+
+  console.log(blue(new Date().toLocaleTimeString()), green("sync"), path.relative(process.cwd(), basePath));
 };
