@@ -35,7 +35,7 @@ export interface SyncAiResponsesOptions {
    */
   watch?: boolean;
 }
-const zInput = z.enum(["clipboard", "file"]).optional().default("clipboard");
+const zInput = z.enum(["clipboard", "file",]).optional().default("clipboard");
 const zFrom = z.enum(["aistudio.google", "chat.qwen"]).optional().default("aistudio.google");
 const zStyle = z.enum(["jixo:system", "none"]).optional().default("jixo:system");
 
@@ -47,7 +47,7 @@ export const syncAiResponses = async ({outDir, input, from, style}: SyncAiRespon
 
   const unknownData = await match(safeInput)
     .with("clipboard", () => clipboard.read())
-    .with("file", () => readFile(argv[0], "utf-8"))
+    .with("file", () => readFile(argv[0] as string, "utf-8"))
     .exhaustive();
 
   const modelHistory: string[] = match(safeFrom)

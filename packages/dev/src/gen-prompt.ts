@@ -2,17 +2,15 @@ process.removeAllListeners("warning");
 
 import {blue, createResolver, createResolverByRootFile, cwdResolver, green, matter, normalizeFilePath, readJson} from "@gaubee/nodekit";
 import {func_remember, iter_map_not_null, map_get_or_put_async} from "@gaubee/util";
-import parcelWatcher from "@parcel/watcher";
 import {parseArgs} from "@std/cli/parse-args";
 import {defaultParseSearch} from "@tanstack/router-core";
 import Debug from "debug";
 import {globbySync, isDynamicPattern, type Options as GlobbyOptions} from "globby";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import micromatch from "micromatch"; // Import micromatch
-import {mkdirSync, readFileSync, statSync, watch, writeFileSync} from "node:fs";
+import {mkdirSync, statSync, writeFileSync} from "node:fs";
 import {cpus} from "node:os";
 import path from "node:path";
-import {Signal} from "signal-polyfill";
 import {effect} from "signal-utils/subtle/microtask-effect";
 import {simpleGit} from "simple-git";
 import {match, P} from "ts-pattern";
@@ -20,6 +18,7 @@ import {getCommitDiffs} from "./git-helper/getCommitDiffs.js";
 import {getMultipleFileContents} from "./git-helper/getMultipleFileContents.js";
 import {getWorkingCopyContents} from "./git-helper/getWorkingCopyContents.js";
 import {getWorkingCopyDiffs} from "./git-helper/getWorkingCopyDiffs.js";
+import {dirGlobState, getFileState} from "./reactive-fs/reactive-fs.js";
 import {removeMarkdownComments} from "./utils/markdown-remove-comment.js";
 export const debug = Debug("gen-prompt");
 const fetchCache = new Map<string, {res: Response; text: string}>();
@@ -60,46 +59,6 @@ const useFileOrInject = (mode: string, filepath: string, filecontent: string, op
   }
   const result = lines.flat().join("\n");
   return result;
-};
-
-const getFileState = (filepath: string, once: boolean) => {
-  const fileState = new Signal.State(readFileSync(filepath, "utf-8"));
-  if (!once) {
-    const off = effect(() => {
-      const watcher = watch(filepath, () => {
-        try {
-          fileState.set(readFileSync(filepath, "utf-8"));
-        } catch {
-          watcher.close();
-          off();
-        }
-      });
-    });
-  }
-  return fileState;
-};
-
-const dirGLobState = (dirname: string, glob: string, once: boolean) => {
-  const dirState = new Signal.State(globbySync(glob, {cwd: dirname}), {
-    equals(t, t2) {
-      return t.length === t2.length && t.every((file, i) => file === t2[i]);
-    },
-  });
-  if (!once) {
-    const off = effect(async () => {
-      const sub = await parcelWatcher.subscribe(dirname, (err, events) => {
-        if (events.some((event) => event.type === "create" || event.type === "delete")) {
-          try {
-            dirState.set(globbySync(glob, {cwd: dirname}));
-          } catch {
-            sub.unsubscribe();
-            off();
-          }
-        }
-      });
-    });
-  }
-  return dirState;
 };
 
 interface FileTreeNode {
@@ -370,7 +329,7 @@ const processReplacement = async (
   }
 
   /// Handle FILE, INJECT with internal-symbol
-  if (glob_or_filepath.startsWith('jixo:')) {
+  if (glob_or_filepath.startsWith("jixo:")) {
     const jixo_url = new URL(glob_or_filepath);
     const filepath = (jixo_url.pathname || jixo_url.hostname).replace(/^\//, "");
     const content = GET_JIXO_PROMPT()[filepath];
@@ -598,7 +557,7 @@ export const gen_prompt = async (input: string, once: boolean, _output?: string,
 
 const gen_prompts = (dirname: string, once: boolean, glob = "*.meta.md", cwd?: string) => {
   console.log(blue("gen_prompts"), dirname, glob);
-  for (const filename of dirGLobState(dirname, glob, once).get()) {
+  for (const filename of dirGlobState(dirname, glob, once).get()) {
     gen_prompt(path.join(dirname, filename), once, undefined, cwd);
   }
 };

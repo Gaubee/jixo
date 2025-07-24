@@ -8,8 +8,8 @@
     ".": "./dist/index.js"
   },
   "bin": {
-    "jixo-sync-ai-response": "./dist/sync-ai-response.js",
-    "jixo-S": "./dist/sync-ai-response.js",
+    "jixo-sync-google-aistudio": "./dist/google-aistudio/jixo/cli.js",
+    "jixo-S": "./dist/google-aistudio/jixo/cli.js",
     "jixo-apply-ai-response": "./dist/apply-ai-response.js",
     "jixo-A": "./dist/apply-ai-response.js",
     "jixo-gen-prompt": "./dist/gen-prompt.js",
