@@ -16,15 +16,9 @@ importers:
 
   .:
     dependencies:
-      '@jixo/mcp-fs':
+      '@jixo/cli':
         specifier: workspace:^
-        version: link:packages/mcp-fs
-      '@jixo/mcp-git':
-        specifier: workspace:^
-        version: link:packages/mcp-git
-      '@jixo/mcp-pnpm':
-        specifier: workspace:^
-        version: link:packages/mcp-pnpm
+        version: link:packages/cli
     devDependencies:
       '@gaubee/node':
         specifier: ^0.2.4
@@ -38,6 +32,15 @@ importers:
       '@jixo/dev':
         specifier: workspace:^
         version: link:packages/dev
+      '@jixo/mcp-fs':
+        specifier: workspace:^
+        version: link:packages/mcp-fs
+      '@jixo/mcp-git':
+        specifier: workspace:^
+        version: link:packages/mcp-git
+      '@jixo/mcp-pnpm':
+        specifier: workspace:^
+        version: link:packages/mcp-pnpm
       '@parcel/watcher':
         specifier: ^2.5.1
         version: 2.5.1

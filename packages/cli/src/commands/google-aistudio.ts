@@ -1,4 +1,6 @@
-import {reactiveFs, sync} from "@jixo/dev/google-aistudio/jixo";
+import {sync} from "@jixo/dev/google-aistudio";
+import {reactiveFs} from "@jixo/dev/reactive-fs";
+
 import type {Arguments, CommandModule} from "yargs";
 import z from "zod";
 

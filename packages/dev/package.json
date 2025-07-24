@@ -8,7 +8,7 @@
     ".": "./dist/index.js",
     "./apply-ai-response": "./dist/apply-ai-response.js",
     "./gen-prompt": "./dist/gen-prompt.js",
-    "./google-aistudio/jixo": "./dist/google-aistudio/jixo/index.js",
+    "./google-aistudio": "./dist/google-aistudio/jixo/index.js",
     "./reactive-fs": "./dist/reactive-fs/reactive-fs.js"
   },
   "bin": {
