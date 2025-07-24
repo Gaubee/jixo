@@ -1,6 +1,6 @@
 {
   "name": "@jixo/cli",
-  "version": "0.13.0",
+  "version": "0.20.0",
   "type": "module",
   "bin": {
     "jixo": "./dist/index.js"
@@ -17,31 +17,10 @@
     }
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "alpha",
-    "@ai-sdk/deepinfra": "alpha",
-    "@ai-sdk/deepseek": "alpha",
-    "@ai-sdk/google": "alpha",
-    "@ai-sdk/openai": "alpha",
-    "@ai-sdk/provider": "alpha",
-    "@ai-sdk/xai": "alpha",
-    "@gaubee/node": "^0.2.4",
-    "@gaubee/nodekit": "^0.10.2",
-    "@gaubee/util": "^0.34.1",
-    "@jixo/mcp-fs": "workspace:^",
-    "@jixo/mcp-pnpm": "workspace:^",
-    "ai": "^4.3.16",
-    "commander": "^14.0.0",
-    "cosmiconfig": "^9.0.0",
-    "debug": "^4.4.1",
-    "defu": "^6.1.4",
-    "dotenv": "^17.1.0",
+    "@jixo/dev": "workspace:^",
     "import-meta-ponyfill": "^3.2.2",
-    "marked": "^16.0.0",
-    "ms": "^2.1.3",
-    "semver": "^7.7.2",
     "ts-pattern": "^5.7.1",
     "tslib": "^2.8.1",
-    "uuidv7": "^1.0.2",
     "yargs": "^18.0.0",
     "zod": "^3.25.76"
   },

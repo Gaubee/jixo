@@ -39,6 +39,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@gaubee/node": "^0.4.0",
     "@gaubee/nodekit": "^0.10.2",
     "@gaubee/util": "^0.34.1",
     "@parcel/watcher": "^2.5.1",

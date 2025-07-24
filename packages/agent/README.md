@@ -1,6 +1,6 @@
-# @jixo/cli
+# @jixo/agent
 
-AI 工具集
+JIXO-AI 智能体
 
 ## Install
 
