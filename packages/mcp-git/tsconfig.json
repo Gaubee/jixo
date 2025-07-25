@@ -1,10 +1,20 @@
 {
   "extends": "../../tsconfig.base.json",
+  "references": [
+    {
+      "path": "../mcp-core/tsconfig.json"
+    }
+  ],
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src/**/*.ts", "src/**/*.json"],
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.json"
+  ],
   "exclude": []
 }

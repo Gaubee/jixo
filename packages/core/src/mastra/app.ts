@@ -86,7 +86,7 @@ export class JixoApp extends Mastra<
   }
 }
 
-export const jixoAppConfigFactory = async ({appName = "JIXO", workspaceDir, logLevel, otlpEndpoint = "http://localhost:4318"}: CreateJixoAppOptions) => {
+export const jixoAppConfigFactory = async ({appName = "JIXO", workspaceDir, logLevel, otlpEndpoint = "http://localhost:4318"}: CreateJixoAppOptions): Promise<JixoAppConfig> => {
   const memoryFilepath = path.join(workspaceDir, ".jixo/memory/shared.db");
   mkdirSync(path.dirname(memoryFilepath), {recursive: true});
   const memoryStorage = new LibSQLStore({

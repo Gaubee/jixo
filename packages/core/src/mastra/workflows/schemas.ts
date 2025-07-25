@@ -24,7 +24,7 @@ export const JixoJobWorkflowExitInfoSchema = z.object({
   exitCode: z.number().describe("0: Complete, 1: Error, 2: Standby/Continue"),
   reason: z.string().optional().describe("The reason for exiting the job."),
 });
-export type JixoJobWorkflowExitInfoData = z.infer<typeof JixoJobWorkflowExitInfoSchema>;
+export type JixoJobWorkflowExitInfoData = z.output<typeof JixoJobWorkflowExitInfoSchema>;
 
 // --- Role-Specific Runtime Context Schemas ---
 
@@ -32,18 +32,18 @@ export type JixoJobWorkflowExitInfoData = z.infer<typeof JixoJobWorkflowExitInfo
 export const JobBaseRuntimeContextSchema = z.object({
   logManager: z.instanceof(LogManager),
 });
-export type JobBaseRuntimeContextData = z.infer<typeof JobBaseRuntimeContextSchema>;
+export type JobBaseRuntimeContextData = z.output<typeof JobBaseRuntimeContextSchema>;
 
 // Context for the PlannerAgent's encapsulated hook.
 export const PlannerRuntimeContextSchema = JobBaseRuntimeContextSchema.extend({});
-export type PlannerRuntimeContextData = z.infer<typeof PlannerRuntimeContextSchema>;
+export type PlannerRuntimeContextData = z.output<typeof PlannerRuntimeContextSchema>;
 
 // Context for the ExecutorAgent's encapsulated hook.
 export const ExecutorRuntimeContextSchema = JobBaseRuntimeContextSchema.extend({
   task: AnyTaskSchema,
   recentWorkLog: z.array(WorkLogEntrySchema),
 }).extend(JixoBaseWorkflowInputSchema.pick({gitCommit: true}).shape);
-export type ExecutorRuntimeContextData = z.infer<typeof ExecutorRuntimeContextSchema>;
+export type ExecutorRuntimeContextData = z.output<typeof ExecutorRuntimeContextSchema>;
 
 // Context for the ReviewerAgent's encapsulated hook.
 export const ReviewerRuntimeContextSchema = JobBaseRuntimeContextSchema.extend({
@@ -51,7 +51,7 @@ export const ReviewerRuntimeContextSchema = JobBaseRuntimeContextSchema.extend({
   taskSpecificLogs: z.array(WorkLogEntrySchema),
   executionSummary: z.string(),
 });
-export type ReviewerRuntimeContextData = z.infer<typeof ReviewerRuntimeContextSchema>;
+export type ReviewerRuntimeContextData = z.output<typeof ReviewerRuntimeContextSchema>;
 
 // --- Triage Step Schemas ---
 
@@ -98,25 +98,25 @@ export const TriagePlanSchema = TriageBaseSchema.extend({
   action: z.literal("plan"),
   planningContext: PlanningContextSchema,
 });
-export type TriagePlanData = z.infer<typeof TriagePlanSchema>;
+export type TriagePlanData = z.output<typeof TriagePlanSchema>;
 
 export const TriageExecuteSchema = TriageBaseSchema.extend({
   action: z.literal("execute"),
   task: AnyTaskSchema,
 });
-export type TriageExecuteData = z.infer<typeof TriageExecuteSchema>;
+export type TriageExecuteData = z.output<typeof TriageExecuteSchema>;
 
 export const TriageReviewSchema = TriageBaseSchema.extend({
   action: z.literal("review"),
   task: AnyTaskSchema,
 });
-export type TriageReviewData = z.infer<typeof TriageReviewSchema>;
+export type TriageReviewData = z.output<typeof TriageReviewSchema>;
 
 export const TriageExitSchema = TriageBaseSchema.extend({
   action: z.literal("exit"),
   exitInfo: JixoJobWorkflowExitInfoSchema,
 });
-export type TriageExitData = z.infer<typeof TriageExitSchema>;
+export type TriageExitData = z.output<typeof TriageExitSchema>;
 
 export const TriageOutputSchema = z.union([TriagePlanSchema, TriageExecuteSchema, TriageReviewSchema, TriageExitSchema]);
-export type TriageOutputData = z.infer<typeof TriageOutputSchema>;
+export type TriageOutputData = z.output<typeof TriageOutputSchema>;

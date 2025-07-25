@@ -1,6 +1,6 @@
 import {genericErrorRawShape, returnSuccess, safeRegisterTool2} from "@jixo/mcp-core";
 import {GitResponseError, type MergeResult} from "simple-git";
-import z from "zod";
+import z from "zod/v3";
 import {handleToolError, MergeConflictError} from "../error.js";
 import * as s from "../schema.js";
 import {server, withGit} from "./server.js";

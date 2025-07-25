@@ -2,8 +2,9 @@ import {registerApiRoute} from "@mastra/core/server";
 import {type JixoApp} from "../../../app.js";
 import {assertJixoApp} from "../../../utils.js";
 import {JixoMasterWorkflowInputSchema} from "../../../workflows/schemas.js";
+import type {ApiRoute} from "../types.js";
 
-export const jobsApi = [
+export const jobsApi: ApiRoute[] = [
   registerApiRoute("/jixo/v1/jobs", {
     method: "POST",
     handler: async (c) => {

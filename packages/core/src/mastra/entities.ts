@@ -35,9 +35,9 @@ export const RoadmapTaskNodeSchema = SubTaskSchema.extend({
 // A new union type to represent either a root task or a sub-task.
 export const AnyTaskSchema = z.union([RoadmapTaskNodeSchema, SubTaskSchema]);
 
-export type RoadmapTaskNodeData = z.infer<typeof RoadmapTaskNodeSchema>;
-export type SubTaskData = z.infer<typeof SubTaskSchema>;
-export type AnyTaskData = z.infer<typeof AnyTaskSchema>;
+export type RoadmapTaskNodeData = z.output<typeof RoadmapTaskNodeSchema>;
+export type SubTaskData = z.output<typeof SubTaskSchema>;
+export type AnyTaskData = z.output<typeof AnyTaskSchema>;
 
 export const WorkLogEntrySchema = z.object({
   timestamp: z.string().datetime().describe("The ISO 8601 timestamp of when the log entry was created."),
@@ -47,7 +47,7 @@ export const WorkLogEntrySchema = z.object({
   result: z.enum(["Succeeded", "Failed", "Pending"]).describe("The outcome of the action."),
   summary: z.string().describe("A detailed summary of what was done and the result."),
 });
-export type WorkLogEntryData = z.infer<typeof WorkLogEntrySchema>;
+export type WorkLogEntryData = z.output<typeof WorkLogEntrySchema>;
 
 // Defines the persistent metadata associated with a Job.
 export const JobInfoSchema = z.object({
@@ -56,13 +56,13 @@ export const JobInfoSchema = z.object({
   jobDir: z.string().describe("The absolute path to the sandboxed working directory for this job."),
   // Future fields like gitRepositoryUrl can be added here.
 });
-export type JobInfoData = z.infer<typeof JobInfoSchema>;
+export type JobInfoData = z.output<typeof JobInfoSchema>;
 
 export const LogFileSchema = z.object({
   info: JobInfoSchema,
   roadmap: z.array(RoadmapTaskNodeSchema).optional().default([]).describe("The hierarchical list of tasks to be executed for the job."),
   workLog: z.array(WorkLogEntrySchema).optional().default([]).describe("An immutable, time-ordered log of all actions taken during the job."),
 });
-export type LogFileData = z.infer<typeof LogFileSchema>;
+export type LogFileData = z.output<typeof LogFileSchema>;
 
 export const DELETE_FIELD_MARKER = "<!--DELETE-->";

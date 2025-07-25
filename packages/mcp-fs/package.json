@@ -2,20 +2,23 @@
   "name": "@jixo/mcp-fs",
   "version": "1.6.0",
   "description": "",
-  "main": "dist/cli.js",
   "type": "module",
   "exports": {
     ".": "./dist/index.js"
   },
   "bin": {
-    "mcp-fs": "./dist/index.js"
+    "mcp-fs": "./bundle/index.js"
   },
   "scripts": {
+    "build": "pnpm run '/^b\\:.*/'",
+    "b:ts": "tsc --build",
+    "b:bundle": "tsdown",
     "fmt": "prettier --write src",
     "test": "run-test"
   },
   "files": [
-    "dist"
+    "dist",
+    "bundle"
   ],
   "keywords": [
     "pnpm",
@@ -25,7 +28,7 @@
   "license": "MIT",
   "dependencies": {
     "@jixo/mcp-core": "workspace:^",
-    "@modelcontextprotocol/sdk": "^1.15.0",
+    "@modelcontextprotocol/sdk": "^1.17.0",
     "commander": "^14.0.0",
     "diff": "^8.0.2",
     "glob": "^11.0.3",
@@ -34,13 +37,13 @@
     "react": "^19.1.0",
     "typescript": "^5.8.3",
     "yargs": "^18.0.0",
-    "zod": "^3.25.76",
+    "zod": "^3.0.0",
     "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
     "@jixo/dev": "workspace:^",
     "@types/diff": "^8.0.0",
-    "@types/node": "^24.0.12",
+    "@types/node": "^24.1.0",
     "@types/yargs": "^17.0.33",
     "vitest": "^3.2.4"
   }

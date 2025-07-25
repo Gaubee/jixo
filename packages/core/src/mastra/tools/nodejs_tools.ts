@@ -8,7 +8,7 @@ const NodeCliInputSchema = z.object({
 });
 const ProcessInputSchema = z.object({
   cwd: z.string().optional(),
-  env: z.record(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
 });
 
 const EvalNodeScriptInputSchema = NodeCliInputSchema.merge(ProcessInputSchema).extend({

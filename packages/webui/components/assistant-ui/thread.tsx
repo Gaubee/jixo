@@ -1,17 +1,32 @@
-import {cn} from "@/lib/utils";
-import {ActionBarPrimitive, BranchPickerPrimitive, ComposerPrimitive, MessagePrimitive, ThreadPrimitive} from "@assistant-ui/react";
-import {ArrowDownIcon, CheckIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon, PencilIcon, RefreshCwIcon, SendHorizontalIcon} from "lucide-react";
-import type {FC} from "react";
+import {
+  ActionBarPrimitive,
+  BranchPickerPrimitive,
+  ComposerPrimitive,
+  ErrorPrimitive,
+  MessagePrimitive,
+  ThreadPrimitive,
+} from "@assistant-ui/react";
+import type { FC } from "react";
+import {
+  ArrowDownIcon,
+  CheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CopyIcon,
+  PencilIcon,
+  RefreshCwIcon,
+  SendHorizontalIcon,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-import {MarkdownText} from "@/components/assistant-ui/markdown-text";
-import {TooltipIconButton} from "@/components/assistant-ui/tooltip-icon-button";
-import {Button} from "@/components/ui/button";
-import {ToolFallback} from "./tool-fallback";
+import { Button } from "@/components/ui/button";
+import { MarkdownText } from "@/components/assistant-ui/markdown-text";
+import { TooltipIconButton } from "@/components/assistant-ui/tooltip-icon-button";
 
 export const Thread: FC = () => {
   return (
     <ThreadPrimitive.Root
-      className="bg-background box-border flex h-full flex-col overflow-hidden"
+      className="text-foreground bg-background box-border flex h-full flex-col overflow-hidden"
       style={{
         ["--thread-max-width" as string]: "42rem",
       }}
@@ -43,7 +58,11 @@ export const Thread: FC = () => {
 const ThreadScrollToBottom: FC = () => {
   return (
     <ThreadPrimitive.ScrollToBottom asChild>
-      <TooltipIconButton tooltip="Scroll to bottom" variant="outline" className="absolute -top-8 rounded-full disabled:invisible">
+      <TooltipIconButton
+        tooltip="Scroll to bottom"
+        variant="outline"
+        className="absolute -top-8 rounded-full disabled:invisible"
+      >
         <ArrowDownIcon />
       </TooltipIconButton>
     </ThreadPrimitive.ScrollToBottom>
@@ -55,7 +74,9 @@ const ThreadWelcome: FC = () => {
     <ThreadPrimitive.Empty>
       <div className="flex w-full max-w-[var(--thread-max-width)] flex-grow flex-col">
         <div className="flex w-full flex-grow flex-col items-center justify-center">
-          <p className="mt-4 font-medium">How can I help you today?</p>
+          <p className="mt-4 font-medium">
+            How can I help you today?
+          </p>
         </div>
         <ThreadWelcomeSuggestions />
       </div>
@@ -68,19 +89,23 @@ const ThreadWelcomeSuggestions: FC = () => {
     <div className="mt-3 flex w-full items-stretch justify-center gap-4">
       <ThreadPrimitive.Suggestion
         className="hover:bg-muted/80 flex max-w-sm grow basis-0 flex-col items-center justify-center rounded-lg border p-3 transition-colors ease-in"
-        prompt="列出所有的工作"
+        prompt="What is the weather in Tokyo?"
         method="replace"
         autoSend
       >
-        <span className="line-clamp-2 text-ellipsis text-sm font-semibold">列出所有的工作</span>
+        <span className="line-clamp-2 text-ellipsis text-sm font-semibold">
+          What is the weather in Tokyo?
+        </span>
       </ThreadPrimitive.Suggestion>
       <ThreadPrimitive.Suggestion
         className="hover:bg-muted/80 flex max-w-sm grow basis-0 flex-col items-center justify-center rounded-lg border p-3 transition-colors ease-in"
-        prompt="请你发挥创意，想象一个使用Web技术构建的小工具、小游戏，然后创建新工作去完成这个创意"
+        prompt="What is assistant-ui?"
         method="replace"
         autoSend
       >
-        <span className="line-clamp-2 text-ellipsis text-sm font-semibold">请你发挥创意，随机创建一个新的小工具、小游戏</span>
+        <span className="line-clamp-2 text-ellipsis text-sm font-semibold">
+          What is assistant-ui?
+        </span>
       </ThreadPrimitive.Suggestion>
     </div>
   );
@@ -105,14 +130,22 @@ const ComposerAction: FC = () => {
     <>
       <ThreadPrimitive.If running={false}>
         <ComposerPrimitive.Send asChild>
-          <TooltipIconButton tooltip="Send" variant="default" className="my-2.5 size-8 p-2 transition-opacity ease-in">
+          <TooltipIconButton
+            tooltip="Send"
+            variant="default"
+            className="my-2.5 size-8 p-2 transition-opacity ease-in"
+          >
             <SendHorizontalIcon />
           </TooltipIconButton>
         </ComposerPrimitive.Send>
       </ThreadPrimitive.If>
       <ThreadPrimitive.If running>
         <ComposerPrimitive.Cancel asChild>
-          <TooltipIconButton tooltip="Cancel" variant="default" className="my-2.5 size-8 p-2 transition-opacity ease-in">
+          <TooltipIconButton
+            tooltip="Cancel"
+            variant="default"
+            className="my-2.5 size-8 p-2 transition-opacity ease-in"
+          >
             <CircleStopIcon />
           </TooltipIconButton>
         </ComposerPrimitive.Cancel>
@@ -127,7 +160,7 @@ const UserMessage: FC = () => {
       <UserActionBar />
 
       <div className="bg-muted text-foreground max-w-[calc(var(--thread-max-width)*0.8)] break-words rounded-3xl px-5 py-2.5 col-start-2 row-start-2">
-        <MessagePrimitive.Content />
+        <MessagePrimitive.Parts />
       </div>
 
       <BranchPicker className="col-span-full col-start-1 row-start-3 -mr-1 justify-end" />
@@ -137,7 +170,11 @@ const UserMessage: FC = () => {
 
 const UserActionBar: FC = () => {
   return (
-    <ActionBarPrimitive.Root hideWhenRunning autohide="not-last" className="flex flex-col items-end col-start-1 row-start-2 mr-3 mt-2.5">
+    <ActionBarPrimitive.Root
+      hideWhenRunning
+      autohide="not-last"
+      className="flex flex-col items-end col-start-1 row-start-2 mr-3 mt-2.5"
+    >
       <ActionBarPrimitive.Edit asChild>
         <TooltipIconButton tooltip="Edit">
           <PencilIcon />
@@ -168,13 +205,24 @@ const AssistantMessage: FC = () => {
   return (
     <MessagePrimitive.Root className="grid grid-cols-[auto_auto_1fr] grid-rows-[auto_1fr] relative w-full max-w-[var(--thread-max-width)] py-4">
       <div className="text-foreground max-w-[calc(var(--thread-max-width)*0.8)] break-words leading-7 col-span-2 col-start-2 row-start-1 my-1.5">
-        <MessagePrimitive.Content components={{Text: MarkdownText, tools: {Fallback: ToolFallback}}} />
+        <MessagePrimitive.Parts components={{ Text: MarkdownText }} />
+        <MessageError />
       </div>
 
       <AssistantActionBar />
 
       <BranchPicker className="col-start-2 row-start-2 -ml-2 mr-2" />
     </MessagePrimitive.Root>
+  );
+};
+
+const MessageError: FC = () => {
+  return (
+    <MessagePrimitive.Error>
+      <ErrorPrimitive.Root className="border-destructive bg-destructive/10 dark:text-red-200 dark:bg-destructive/5 text-destructive mt-2 rounded-md border p-3 text-sm">
+        <ErrorPrimitive.Message className="line-clamp-2" />
+      </ErrorPrimitive.Root>
+    </MessagePrimitive.Error>
   );
 };
 
@@ -205,9 +253,16 @@ const AssistantActionBar: FC = () => {
   );
 };
 
-const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({className, ...rest}) => {
+const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({
+  className,
+  ...rest
+}) => {
   return (
-    <BranchPickerPrimitive.Root hideWhenSingleBranch className={cn("text-muted-foreground inline-flex items-center text-xs", className)} {...rest}>
+    <BranchPickerPrimitive.Root
+      hideWhenSingleBranch
+      className={cn("text-muted-foreground inline-flex items-center text-xs", className)}
+      {...rest}
+    >
       <BranchPickerPrimitive.Previous asChild>
         <TooltipIconButton tooltip="Previous">
           <ChevronLeftIcon />
@@ -227,7 +282,13 @@ const BranchPicker: FC<BranchPickerPrimitive.Root.Props> = ({className, ...rest}
 
 const CircleStopIcon = () => {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" width="16" height="16">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 16 16"
+      fill="currentColor"
+      width="16"
+      height="16"
+    >
       <rect width="10" height="10" x="3" y="3" rx="2" />
     </svg>
   );

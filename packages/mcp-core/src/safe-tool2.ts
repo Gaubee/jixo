@@ -1,7 +1,8 @@
 import {type McpServer, type RegisteredTool, type ToolCallback} from "@modelcontextprotocol/sdk/server/mcp.js";
 import type {RequestHandlerExtra} from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type {CallToolResult, ServerNotification, ServerRequest} from "@modelcontextprotocol/sdk/types.js";
-import {z, ZodBoolean, ZodOptional, ZodUnion, type ZodLiteral, type ZodObject, type ZodRawShape, type ZodTypeAny} from "zod";
+import type {ZodBoolean, ZodLiteral, ZodObject, ZodOptional, ZodRawShape, ZodUnion} from "zod/v3";
+import z from "zod/v3";
 import {genericErrorRawShape} from "./schemas.js";
 
 type PromiseMaybe<T> = Promise<T> | T;
@@ -39,7 +40,7 @@ export type UnsafeOutputRawShape<TSuccess extends ZodRawShape, TError extends Zo
 }; //& TSuccess;
 export type UnsafeOutputSchema<TSuccess extends ZodRawShape, TError extends ZodRawShape> = ZodObject<UnsafeOutputRawShape<TSuccess, TError>>;
 
-export type UnsafeOutputData<TSuccess extends ZodRawShape, TError extends ZodRawShape> = z.infer<UnsafeOutputSchema<TSuccess, TError>>;
+export type UnsafeOutputData<TSuccess extends ZodRawShape, TError extends ZodRawShape> = z.output<UnsafeOutputSchema<TSuccess, TError>>;
 
 const successShape = <TSuccess extends ZodRawShape>(success: TSuccess) => {
   return z.object({
@@ -60,7 +61,7 @@ const safeOutputSchema = <TSuccess extends ZodRawShape, TError extends ZodRawSha
 // export type SafeOutputSchema<TSuccess extends ZodRawShape, TError extends ZodRawShape> = ReturnType<typeof safeOutputSchema<TSuccess, TError>>;
 export type SafeOutputSchema<TSuccess extends ZodRawShape, TError extends ZodRawShape> = ZodUnion<[SuccessData<TSuccess>, ErrorData<TError>]>;
 
-export type SafeOutputData<TSuccess extends ZodRawShape, TError extends ZodRawShape> = z.infer<SafeOutputSchema<TSuccess, TError>>;
+export type SafeOutputData<TSuccess extends ZodRawShape, TError extends ZodRawShape> = z.output<SafeOutputSchema<TSuccess, TError>>;
 
 /**
  * A strongly-typed tool callback for safeRegisterTool2.
@@ -68,7 +69,7 @@ export type SafeOutputData<TSuccess extends ZodRawShape, TError extends ZodRawSh
  * based on the `success` literal flag.
  */
 export type SafeToolCallback2<TInput extends ZodRawShape, TSuccess extends ZodRawShape, TError extends ZodRawShape> = (
-  args: z.objectOutputType<TInput, ZodTypeAny>,
+  args: z.output<z.ZodObject<TInput>>,
   extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
 ) => PromiseMaybe<
   CallToolResult & {

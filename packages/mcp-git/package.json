@@ -2,20 +2,23 @@
   "name": "@jixo/mcp-git",
   "version": "1.4.2",
   "description": "",
-  "main": "dist/cli.js",
   "type": "module",
   "exports": {
     ".": "./dist/index.js"
   },
   "bin": {
-    "mcp-git": "./dist/index.js"
+    "mcp-git": "./bundle/index.js"
   },
   "scripts": {
+    "build": "pnpm run '/^b\\:.*/'",
+    "b:ts": "tsc --build",
+    "b:bundle": "tsdown",
     "fmt": "prettier --write src",
     "test": "run-test --concurrency"
   },
   "files": [
-    "dist"
+    "dist",
+    "bundle"
   ],
   "keywords": [
     "git",
@@ -24,18 +27,18 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@gaubee/util": "^0.34.1",
+    "@gaubee/util": "^0.34.2",
     "@jixo/mcp-core": "workspace:^",
-    "@modelcontextprotocol/sdk": "^1.15.0",
+    "@modelcontextprotocol/sdk": "^1.17.0",
     "import-meta-ponyfill": "^3.2.2",
     "simple-git": "^3.28.0",
     "yargs": "^18.0.0",
-    "zod": "^3.25.76",
+    "zod": "^3.0.0",
     "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
     "@jixo/dev": "workspace:^",
-    "@types/node": "^24.0.12",
+    "@types/node": "^24.1.0",
     "@types/yargs": "^17.0.33",
     "vitest": "^3.2.4"
   }

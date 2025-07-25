@@ -6,7 +6,7 @@ import {import_meta_ponyfill} from "import-meta-ponyfill";
 import {spawn} from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import {z, type ZodObject, type ZodRawShape} from "zod";
+import {z, type ZodObject, type ZodRawShape} from "zod/v3";
 import pkg from "../package.json" with {type: "json"};
 
 // --- Custom Error Class ---

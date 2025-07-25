@@ -29,7 +29,11 @@
         // }
     ],
     "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "noEmit": true
+    },
     "include": [
-        "**/tsdown.config.ts"
+        "**/tsdown.config.ts",
+        "**/*.tsdown.config.ts"
     ]
 }

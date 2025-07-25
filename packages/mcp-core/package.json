@@ -12,6 +12,7 @@
     "dist"
   ],
   "scripts": {
+    "build": "tsc --build",
     "fmt": "prettier --write src",
     "test": "node --test dist/test/*.test.js"
   },
@@ -21,12 +22,12 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.15.0",
-    "zod": "^3.25.76"
+    "@modelcontextprotocol/sdk": "^1.17.0",
+    "zod": "^3.0.0"
   },
   "devDependencies": {
     "@types/diff": "^8.0.0",
     "@types/minimatch": "^6.0.0",
-    "@types/node": "^24.0.12"
+    "@types/node": "^24.1.0"
   }
 }

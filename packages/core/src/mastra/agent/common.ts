@@ -39,24 +39,24 @@ export const agentGenerateStructuredOutput = async <O extends ZodSchema>(
   output: O,
   opts: Pick<AgentGenerateOptions, "runtimeContext" | "toolsets">, // Omit< AgentGenerateOptions,'output'|'experimental_output'> ,
 ) => {
-  if (true) {
-    /// 首先执行任务
-    const result = await agent.generate(message, {
-      ...opts,
-      // experimental_output: ExecutionResultSchema,
-    });
+  // if (true) {
+  /// 首先执行任务
+  const result = await agent.generate(message, {
+    ...opts,
+    // experimental_output: ExecutionResultSchema,
+  });
 
-    /// 然后返回结构体
-    const result2 = await structuredOutputAgent.generate(result.text, {
-      output: output,
-    });
+  /// 然后返回结构体
+  const result2 = await structuredOutputAgent.generate(result.text, {
+    output: output,
+  });
 
-    return result2.object;
-  } else {
-    const result2 = await agent.generate(message, {
-      ...opts,
-      experimental_output: output,
-    });
-    return result2.object;
-  }
+  return result2.object;
+  // } else {
+  //   const result2 = await agent.generate(message, {
+  //     ...opts,
+  //     experimental_output: output,
+  //   });
+  //   return result2.object;
+  // }
 };

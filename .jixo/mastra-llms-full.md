@@ -13831,7 +13831,7 @@ const triggerSchema = z.object({
   orderItems: z.array(z.string()),
 });
 
-type TriggerType = z.infer<typeof triggerSchema>;
+type TriggerType = z.output<typeof triggerSchema>;
 
 const processOrderStep = new LegacyStep({
   id: "processOrder",
@@ -15906,7 +15906,7 @@ const triggerSchema = z.object({
   inputValue: z.string(),
 });
 
-type TriggerType = z.infer<typeof triggerSchema>;
+type TriggerType = z.output<typeof triggerSchema>;
 
 // Step with typed context
 const step1 = new LegacyStep({
@@ -59048,7 +59048,7 @@ const myStep = createStep({
       properties: [
         {
           name: "inputData",
-          type: "z.infer<TInput>",
+          type: "z.output<TInput>",
           description: "Input data matching the step's input schema",
           isOptional: false,
         },
@@ -59121,7 +59121,7 @@ const myStep = createStep({
   content={[
     {
       name: "result",
-      type: "Promise<z.infer<TOutput>>",
+      type: "Promise<z.output<TOutput>>",
       description: "A promise that resolves to the output of the executed step",
     },
   ]}
@@ -59787,7 +59787,7 @@ const result = await run.start({
       properties: [
         {
           name: "inputData",
-          type: "z.infer<TInput>",
+          type: "z.output<TInput>",
           description: "Input data matching the workflow's input schema",
           isOptional: true,
         },
@@ -59923,12 +59923,12 @@ const processOrder = createStep({
   content={[
     {
       name: "inputData",
-      type: "z.infer<TStepInput>",
+      type: "z.output<TStepInput>",
       description: "The input data matching the inputSchema",
     },
     {
       name: "resumeData",
-      type: "z.infer<TResumeSchema>",
+      type: "z.output<TResumeSchema>",
       description:
         "The resume data matching the resumeSchema, when resuming the step from a suspended state. Only exists if the step is being resumed.",
     },
@@ -60171,10 +60171,10 @@ for (const chunk of stream) {
       properties: [
         {
           name: "inputData",
-          type: "z.infer<TInput>",
+          type: "z.output<TInput>",
           parameters: [
             {
-              name: "z.infer<TInput>",
+              name: "z.output<TInput>",
               type: "inputData",
               description:
                 "Runtime context data to use when starting the workflow",

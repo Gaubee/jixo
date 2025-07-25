@@ -1,5 +1,16 @@
 {
   "extends": "../../tsconfig.base.json",
+  "references": [
+    {
+      "path": "../mcp-fs/tsconfig.json"
+    },
+    {
+      "path": "../mcp-pnpm/tsconfig.json"
+    },
+    {
+      "path": "../mcp-git/tsconfig.json"
+    }
+  ],
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",

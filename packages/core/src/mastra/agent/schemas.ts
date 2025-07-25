@@ -10,13 +10,13 @@ const NewSubTaskSchema = SubTaskSchema.omit({
   reworkReason: true,
 });
 
-export type NewSubTaskData = z.infer<typeof NewSubTaskSchema>;
+export type NewSubTaskData = z.output<typeof NewSubTaskSchema>;
 
 // Schema for a root-level task input. It can have an array of sub-tasks.
 export const NewTaskSchema = NewSubTaskSchema.extend({
   children: z.array(NewSubTaskSchema).optional().describe("A list of sub-tasks to be completed as part of this main task."),
 });
-export type NewTaskData = z.infer<typeof NewTaskSchema>;
+export type NewTaskData = z.output<typeof NewTaskSchema>;
 
 export const AddTaskSchema = z.object({
   type: z.literal("add"),
@@ -56,11 +56,11 @@ export const ExecutionResultSchema = z.object({
   summary: z.string().describe("A concise, one-sentence summary of the work performed, focusing on the outcome."),
   errorMessage: z.string().optional().describe("If the outcome was a failure, a description of the error."),
 });
-export type ExecutionResultData = z.infer<typeof ExecutionResultSchema>;
+export type ExecutionResultData = z.output<typeof ExecutionResultSchema>;
 
 // Schema for the structured output from the ReviewerAgent.
 export const ReviewResultSchema = z.object({
   decision: z.enum(["approved", "rejected"]).describe("The final verdict of the review."),
   feedback: z.string().optional().describe("If rejected, a concise, actionable list of changes required."),
 });
-export type ReviewResultData = z.infer<typeof ReviewResultSchema>;
+export type ReviewResultData = z.output<typeof ReviewResultSchema>;

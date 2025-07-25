@@ -10,7 +10,7 @@ import {paramsToGlobbyOptions} from "./params-to-globby-options.js";
 import type {Replacer} from "./types.js";
 
 const fetchCache = new Map<string, {res: Response; text: string}>();
-const projectResolver = createResolverByRootFile(import.meta.url, "../../../../package.json");
+const projectResolver = createResolverByRootFile(import.meta.url, "package.json");
 const GET_JIXO_PROMPT = func_remember(() => readJson<Record<string, string>>(projectResolver("./assets/prompt.json")));
 
 /**

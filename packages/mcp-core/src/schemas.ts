@@ -1,4 +1,4 @@
-import {z} from "zod";
+import {z} from "zod/v3";
 
 export const genericErrorRawShape = {
   name: z.string().describe("The type of error."),

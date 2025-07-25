@@ -2,20 +2,23 @@
   "name": "@jixo/mcp-pnpm",
   "version": "1.4.0",
   "description": "Your friendly pnpm CLI pal. Helps you find commands and configs quickly.",
-  "main": "dist/cli.js",
   "type": "module",
   "exports": {
     ".": "./dist/index.js"
   },
   "bin": {
-    "mcp-pnpm": "./dist/index.js"
+    "mcp-pnpm": "./bundle/index.js"
   },
   "scripts": {
+    "build": "pnpm run '/^b\\:.*/'",
+    "b:ts": "tsc --build",
+    "b:bundle": "tsdown",
     "fmt": "prettier --write src",
-    "test": "node --experimental-test-coverage --enable-source-maps --test dist/test/*.test.js"
+    "test": "vitest"
   },
   "files": [
-    "dist"
+    "dist",
+    "bundle"
   ],
   "keywords": [
     "pnpm",
@@ -23,11 +26,11 @@
   ],
   "author": "",
   "license": "MIT",
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.15.0",
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.0",
     "import-meta-ponyfill": "^3.2.2",
     "react": "^19.1.0",
     "typescript": "^5.8.3",
-    "zod": "^3.25.76"
+    "zod": "^3.0.0"
   }
 }

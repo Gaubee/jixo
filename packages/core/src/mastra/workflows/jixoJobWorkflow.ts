@@ -23,7 +23,7 @@ import {triageStep} from "./triageStep.js";
 export const jixoJobWorkflow = createWorkflow({
   id: "jixoJobWorkflow",
   inputSchema: JixoJobWorkflowInputSchema,
-  outputSchema: z.record(JixoJobWorkflowExitInfoSchema),
+  outputSchema: z.record(z.string(), JixoJobWorkflowExitInfoSchema),
 })
   .then(triageStep)
   .branch([

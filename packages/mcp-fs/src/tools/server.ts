@@ -1,6 +1,6 @@
 import {type SafeToolCallback2, genericErrorRawShape, safeRegisterTool2} from "@jixo/mcp-core";
 import {McpServer} from "@modelcontextprotocol/sdk/server/mcp.js";
-import type {ZodRawShape} from "zod";
+import type {ZodRawShape} from "zod/v3";
 import pkg from "../../package.json" with {type: "json"};
 
 export const readOnlyServer = new McpServer({
