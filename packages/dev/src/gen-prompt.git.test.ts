@@ -63,8 +63,7 @@ describe("gen_prompt GIT modes", (t) => {
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     expect(outputContent).toContain("```diff");
-    expect(outputContent).toContain(`--- a/${testFilePath}`);
-    expect(outputContent).toContain(`+++ b/${testFilePath}`);
+    expect(outputContent).toContain(`\`${testFilePath} (Modified)\``);
     expect(outputContent).toContain("-line 2");
     expect(outputContent).toContain("+changed line 2");
     expect(outputContent).toContain("+added line 4");
@@ -172,8 +171,7 @@ describe("gen_prompt GIT modes", (t) => {
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     expect(outputContent).toContain("```diff");
-    expect(outputContent).toContain(`--- a/${testFilePath}`);
-    expect(outputContent).toContain(`+++ b/${testFilePath}`);
+    expect(outputContent).toContain(`\`${testFilePath} (Modified)\``);
     expect(outputContent).toContain("-line 2");
     expect(outputContent).toContain("+changed line 2");
     expect(outputContent).toContain("+added line 4");
@@ -191,9 +189,9 @@ describe("gen_prompt GIT modes", (t) => {
     let commitHash: string;
 
     await createAndCommitFile(file1Path, content1, "Add file1.js");
+    commitHash = (await git.revparse(["HEAD"])).trim();
     await createAndCommitFile(file2Path, content2, "Add file2.ts");
     await createAndCommitFile(file3Path, content3, "Add file3.js");
-    commitHash = (await git.revparse(["HEAD"])).trim();
 
     // Delete files from working directory to ensure they are read from commit
     fs.unlinkSync(path.join(tempDir, file1Path));
@@ -306,8 +304,6 @@ describe("gen_prompt GIT modes", (t) => {
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     expect(outputContent).toContain("```diff");
-    expect(outputContent).toContain(`--- /dev/null`);
-    expect(outputContent).toContain(`+++ b/${testFilePath}`);
     expect(outputContent).toContain(`+${content}`);
   });
 
@@ -330,8 +326,7 @@ describe("gen_prompt GIT modes", (t) => {
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     expect(outputContent).toContain("```diff");
-    expect(outputContent).toContain(`--- a/${testFilePath}`);
-    expect(outputContent).toContain(`+++ /dev/null`);
+    expect(outputContent).toContain(`\`${testFilePath} (Deleted)\``);
     expect(outputContent).toContain(`-${content}`);
   });
 

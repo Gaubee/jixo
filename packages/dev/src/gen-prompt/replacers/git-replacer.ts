@@ -3,46 +3,49 @@ import {cpus} from "node:os";
 import path from "node:path";
 import {simpleGit} from "simple-git";
 import {match, P} from "ts-pattern";
-import {getCommitDiffs} from "../../git-helper/getCommitDiffs.js";
-import {getMultipleFileContents} from "../../git-helper/getMultipleFileContents.js";
-import {getWorkingCopyContents} from "../../git-helper/getWorkingCopyContents.js";
-import {getWorkingCopyDiffs} from "../../git-helper/getWorkingCopyDiffs.js";
+import {gitCommitContents} from "../../git-helper/gitCommitContents.js";
+import {gitCommitDiffs} from "../../git-helper/gitCommitDiffs.js";
+import {gitWorkingContents} from "../../git-helper/gitWorkingContents.js";
+import {gitWorkingDiffs} from "../../git-helper/gitWorkingDiffs.js";
+import {humanfiyedGitFileStatus} from "../../git-helper/types.js";
 import type {Replacer} from "./types.js";
 
-function useFileOrInject(mode: string, filepath: string, filecontent: string, opts: {lang?: unknown; prefix?: unknown} = {}): string {
+function useFileOrInject(mode: string, filepath: string, filecontent: string | undefined, opts: {lang?: unknown; prefix?: unknown} = {}): string {
   const lines: Array<string[] | string> = [];
   const prefixStr = match(opts.prefix)
     .with(P.number, (len) => " ".repeat(len))
     .with(P.string, (str) => str)
     .otherwise(() => "");
 
-  const contentLines = prefixStr.length ? filecontent.split("\n").map((line) => prefixStr + line) : [filecontent];
+  const contentLines = (filecontent: string) => (prefixStr.length ? filecontent.split("\n").map((line) => prefixStr + line) : [filecontent]);
 
   if (mode === "FILE") {
-    const split = filecontent.includes("```") ? "````" : "```";
+    const split = filecontent?.includes("```") ? "````" : "```";
     const ext = path.parse(filepath).ext.slice(1);
-    lines.push(
-      `${prefixStr}\`${filepath}\``,
-      "",
-      prefixStr +
-        split +
-        match(opts.lang)
-          .with(P.string, (v) => v)
-          .otherwise(() => ext),
-      ...contentLines,
-      prefixStr + split,
-      "",
-    );
+    lines.push(`${prefixStr}\`${filepath}\``, "");
+    if (filecontent) {
+      lines.push(
+        prefixStr +
+          split +
+          match(opts.lang)
+            .with(P.string, (v) => v)
+            .otherwise(() => ext),
+        ...contentLines(filecontent),
+        prefixStr + split,
+        "",
+      );
+    }
   } else if (mode === "INJECT") {
-    lines.push(...contentLines);
+    if (filecontent) {
+      lines.push(...contentLines(filecontent));
+    }
   } else {
     lines.push(`<!-- unknown mode ${mode} -->`);
   }
   return lines.join("\n");
 }
 
-export const handleGitReplacement: Replacer = async ({globOrFilepath, params, baseDir}) => {
-  const normalizedMode = (params.mode as string).toUpperCase().replaceAll("-", "_").trim();
+export const handleGitReplacement: Replacer = async ({globOrFilepath, mode, params, baseDir}) => {
   const git = simpleGit({baseDir, maxConcurrentProcesses: cpus().length});
 
   let commitHash: string | undefined;
@@ -72,35 +75,32 @@ export const handleGitReplacement: Replacer = async ({globOrFilepath, params, ba
 
     const lines: string[] = [];
 
-    if (normalizedMode === "GIT_FILE") {
+    if (mode === "GIT_FILE") {
       const result = commitHash
-        ? await getMultipleFileContents(baseDir, commitHash, filesToProcess)
-        : await getWorkingCopyContents(baseDir, filesToProcess, {staged: typeof params.staged === "boolean" ? params.staged : undefined});
+        ? await gitCommitContents(baseDir, commitHash, filesToProcess)
+        : await gitWorkingContents(baseDir, {
+            filePaths: filesToProcess,
+            staged: typeof params.staged === "boolean" ? params.staged : undefined,
+          });
 
       for (const item of result) {
         const ext = path.parse(item.path).ext.slice(1);
-        if (item.error?.startsWith("File not found")) continue;
         lines.push(
-          useFileOrInject("FILE", item.path, item.content ?? `<!-- ERROR: ${item.error ?? "No error message provided"} -->`, {
+          useFileOrInject("FILE", `${item.path} (${humanfiyedGitFileStatus(item.status)})`, item.content, {
             prefix: params.prefix,
             lang: params[`map_ext_${ext}_lang`] ?? params.lang,
           }),
         );
       }
-    } else if (normalizedMode === "GIT_DIFF") {
-      if (commitHash) {
-        const result = await getCommitDiffs(baseDir, commitHash, filesToProcess);
-        for (const item of result.files) {
-          lines.push(useFileOrInject("FILE", `${item.path} (${item.status})`, item.diff, {prefix: params.prefix, lang: "diff"}));
-        }
-      } else {
-        const result = await getWorkingCopyDiffs(baseDir, {
-          staged: typeof params.staged === "boolean" ? params.staged : undefined,
-          filePaths: filesToProcess,
-        });
-        for (const item of result) {
-          lines.push(useFileOrInject("FILE", `${item.path} (${item.status})`, item.diff, {prefix: params.prefix, lang: "diff"}));
-        }
+    } else if (mode === "GIT_DIFF") {
+      const result = commitHash
+        ? await gitCommitDiffs(baseDir, commitHash, filesToProcess)
+        : await gitWorkingDiffs(baseDir, {
+            staged: typeof params.staged === "boolean" ? params.staged : undefined,
+            filePaths: filesToProcess,
+          });
+      for (const item of result) {
+        lines.push(useFileOrInject("FILE", `${item.path} (${humanfiyedGitFileStatus(item.status)})`, item.diff, {prefix: params.prefix, lang: "diff"}));
       }
     }
     return lines.join("\n");

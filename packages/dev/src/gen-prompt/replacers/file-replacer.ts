@@ -1,11 +1,12 @@
 import {createResolverByRootFile, normalizeFilePath, readJson} from "@gaubee/nodekit";
 import {func_remember, map_get_or_put_async} from "@gaubee/util";
-import {globbySync, isDynamicPattern, type Options as GlobbyOptions} from "globby";
+import {globbySync, isDynamicPattern} from "globby";
 import fs from "node:fs";
 import path from "node:path";
 import {match, P} from "ts-pattern";
 import {getFileState} from "../../reactive-fs/reactive-fs.js";
 import {generateFileTree} from "../file-tree.js";
+import {paramsToGlobbyOptions} from "./params-to-globby-options.js";
 import type {Replacer} from "./types.js";
 
 const fetchCache = new Map<string, {res: Response; text: string}>();
@@ -51,16 +52,14 @@ function useFileOrInject(mode: string, filepath: string, filecontent: string, op
 /**
  * Handles replacements for file-based sources like local file system, URLs, and internal jixo protocol.
  */
-export const handleFileReplacement: Replacer = async ({globOrFilepath, params, once, rootResolver, baseDir}) => {
-  const normalizedMode = (params.mode as string).toUpperCase().replaceAll("-", "_").trim();
-
+export const handleFileReplacement: Replacer = async ({globOrFilepath, mode, params, once, rootResolver, baseDir}) => {
   // Handle internal-symbol like `jixo:system/prompt.md`
   if (globOrFilepath.startsWith("jixo:")) {
     const jixo_url = new URL(globOrFilepath);
     const filepath = (jixo_url.pathname || jixo_url.hostname).replace(/^\//, "");
     const content = (await GET_JIXO_PROMPT())[filepath];
     if (content) {
-      return useFileOrInject(normalizedMode, `${filepath}.md`, content, {
+      return useFileOrInject(mode, `${filepath}.md`, content, {
         prefix: params.prefix,
         lang: params.lang,
       });
@@ -76,7 +75,7 @@ export const handleFileReplacement: Replacer = async ({globOrFilepath, params, o
       const text = await res.text();
       return {res, text};
     });
-    return useFileOrInject(normalizedMode, urlRes.res.url, urlRes.text, {
+    return useFileOrInject(mode, urlRes.res.url, urlRes.text, {
       prefix: params.prefix,
       lang: params[`mime_${urlRes.res.headers.get("content-type")?.split(";")}_lang`] ?? params.lang,
     });
@@ -91,10 +90,11 @@ export const handleFileReplacement: Replacer = async ({globOrFilepath, params, o
     ? [globOrFilepath]
     : globbySync(
         globOrFilepath,
-        match(params)
-          .returnType<GlobbyOptions>()
-          .with({cwd: P.string}, (p) => ({...p, absolute: false}))
-          .otherwise(() => ({cwd: baseDir, absolute: false})),
+        paramsToGlobbyOptions(params, {
+          // 如果是一个glob，那么默认启用 gitignore。这样意味着如果直接提供一个明确的文件路径，那么默认不会走gitignore判定
+          gitignore: isGlob ? true : false,
+          cwd: baseDir,
+        }),
       );
 
   if (files.length === 0) {
@@ -102,7 +102,7 @@ export const handleFileReplacement: Replacer = async ({globOrFilepath, params, o
   }
 
   const lines: string[] = [];
-  if (normalizedMode === "FILE_TREE") {
+  if (mode === "FILE_TREE") {
     const expandDirectories = params.expandDirectories !== false;
     lines.push("\n```\n", generateFileTree(files, expandDirectories), "\n```\n");
   } else {
@@ -115,7 +115,7 @@ export const handleFileReplacement: Replacer = async ({globOrFilepath, params, o
       const ext = path.parse(filepath).ext.slice(1);
 
       lines.push(
-        useFileOrInject(normalizedMode, filepath, fileContent, {
+        useFileOrInject(mode, filepath, fileContent, {
           prefix: params.prefix,
           lang: params[`map_ext_${ext}_lang`] ?? params.lang,
         }),

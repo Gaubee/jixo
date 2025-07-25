@@ -1,32 +1,32 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
 exports[`gen_prompt FILE/FILE_TREE modes and parameter parsing > should generate a file tree for a simple directory structure 1`] = `
-"
-# Test Prompt
+"# Test Prompt
 
 
 \`\`\`
+
 ├── dir1
 │   ├── dir2
 │   │   └── file2.js
 │   └── file1.txt
 ├── file3.md
 └── test.md
-\`\`\`
 
-    "
+\`\`\`
+"
 `;
 
 exports[`gen_prompt FILE/FILE_TREE modes and parameter parsing > should generate a file tree with expandDirectories=false 1`] = `
-"
-# Test Prompt
+"# Test Prompt
 
 
 \`\`\`
+
 ├── dirA
 ├── fileC.txt
 └── test.md
-\`\`\`
 
-    "
+\`\`\`
+"
 `;

@@ -29,7 +29,7 @@
         // }
     ],
     "extends": "./tsconfig.base.json",
-    "files": [
+    "include": [
         "**/tsdown.config.ts"
     ]
 }

@@ -3,18 +3,20 @@ process.removeAllListeners("warning");
 import {blue, createResolver, createResolverByRootFile, green, matter, normalizeFilePath, type PathResolver} from "@gaubee/nodekit";
 import {defaultParseSearch} from "@tanstack/router-core";
 import Debug from "debug";
-import {mkdirSync, writeFileSync} from "node:fs";
+import {globbySync, isDynamicPattern} from "globby";
+import fs, {mkdirSync, writeFileSync} from "node:fs";
 import path from "node:path";
+import {effect} from "signal-utils/subtle/microtask-effect";
 import {match, P} from "ts-pattern";
 import {handleFileReplacement} from "./gen-prompt/replacers/file-replacer.js";
 import {handleGitReplacement} from "./gen-prompt/replacers/git-replacer.js";
-import {getFileState} from "./reactive-fs/reactive-fs.js";
+import type {ReplacerOptions} from "./gen-prompt/replacers/types.js";
+import {dirGlobState, getFileState} from "./reactive-fs/reactive-fs.js";
 import {removeMarkdownComments} from "./utils/markdown-remove-comment.js";
 
 export const debug = Debug("gen-prompt");
 
 async function processReplacement(
-  fullMatch: string,
   globOrFilepath: string,
   mode: string,
   paramString: string | undefined,
@@ -22,22 +24,21 @@ async function processReplacement(
   rootResolver: PathResolver,
   baseDir: string,
 ): Promise<string> {
-  if (globOrFilepath.startsWith("`")) {
-    globOrFilepath = globOrFilepath.slice(1, -1);
+  if (globOrFilepath.startsWith("`") && globOrFilepath.endsWith("`")) {
+    globOrFilepath = globOrFilepath.replace(/^`+(.*)`+$/, "$1");
   }
   globOrFilepath = normalizeFilePath(globOrFilepath);
 
-  const params = {
-    ...defaultParseSearch(paramString || ""),
-    mode,
-  };
+  const normalizedMode = mode.toUpperCase().replaceAll("-", "_").trim();
 
-  debug("Dispatching replacement for:", {globOrFilepath, mode, params});
+  const params = defaultParseSearch(paramString || "");
 
-  const options = {globOrFilepath, params, once, rootResolver, baseDir};
+  const options: ReplacerOptions = {globOrFilepath, mode: normalizedMode, params, once, rootResolver, baseDir};
+
+  debug("Dispatching replacement for:", {globOrFilepath, mode: normalizedMode, params});
 
   // Dispatch to the appropriate replacer based on the mode prefix.
-  if (mode.toUpperCase().startsWith("GIT")) {
+  if (mode.startsWith("GIT")) {
     return handleGitReplacement(options);
   }
 
@@ -75,8 +76,8 @@ export async function gen_prompt(input: string, once: boolean, _output?: string,
   const matches = [...inputContent.matchAll(regex)];
 
   const replacementPromises = matches.map((match) => {
-    const [fullMatch, globOrFilepath, mode, paramString] = match;
-    return processReplacement(fullMatch, globOrFilepath, mode, paramString, once, currentRootResolver, currentRootResolver.dirname);
+    const [_, globOrFilepath, mode, paramString] = match;
+    return processReplacement(globOrFilepath, mode, paramString, once, currentRootResolver, currentRootResolver.dirname);
   });
 
   const replacements = await Promise.all(replacementPromises);
@@ -104,8 +105,48 @@ export interface GenOptions {
 }
 
 export const doGenPrompts = async (argv: GenOptions) => {
-  // This function is now intended to be the primary entry point for CLI tools.
-  // The logic has been moved to the bin file to keep this module as a library.
-  // We keep the export for API compatibility.
-  console.log("`doGenPrompts` is now primarily handled by its bin entry. Use the CLI or the bin script.");
+  const once = !argv.watch;
+  const CWD = argv.cwd || process.cwd();
+
+  for (const input of argv.inputs) {
+    const resolvedInput = path.resolve(CWD, input);
+
+    if (isDynamicPattern(input)) {
+      const files = globbySync(input, {cwd: CWD});
+      console.log(`Glob pattern '${input}' matched ${files.length} files.`);
+      for (const file of files) {
+        await gen_prompt(file, once, undefined, CWD);
+      }
+    } else if (fs.existsSync(resolvedInput)) {
+      const stat = fs.statSync(resolvedInput);
+      if (stat.isFile()) {
+        const off = effect(() => {
+          gen_prompt(resolvedInput, once, argv.outFile, CWD);
+        });
+        if (once) off();
+      } else if (stat.isDirectory()) {
+        console.log(`Processing directory '${input}' with glob '${argv.glob}'...`);
+        const off = effect(() => {
+          for (const filename of dirGlobState(resolvedInput, argv.glob, once).get()) {
+            gen_prompt(path.join(resolvedInput, filename), once, undefined, CWD);
+          }
+        });
+        if (once) off();
+      }
+    } else {
+      console.warn(`Warning: Input path does not exist, but treating as a potential glob: ${input}`);
+      const files = globbySync(input, {cwd: CWD});
+      if (files.length > 0) {
+        for (const file of files) {
+          await gen_prompt(file, once, undefined, CWD);
+        }
+      } else {
+        console.error(`Error: Input '${input}' not found and did not match any files.`);
+      }
+    }
+  }
+
+  if (argv.watch) {
+    console.log("\nWatching for file changes... Press Ctrl+C to exit.");
+  }
 };
