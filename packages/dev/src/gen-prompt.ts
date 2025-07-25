@@ -1,6 +1,6 @@
 process.removeAllListeners("warning");
 
-import {blue, createResolver, createResolverByRootFile, green, matter, normalizeFilePath, type PathResolver} from "@gaubee/nodekit";
+import {blue, createResolver, createResolverByRootFile, gray, green, matter, normalizeFilePath, type PathResolver} from "@gaubee/nodekit";
 import {defaultParseSearch} from "@tanstack/router-core";
 import Debug from "debug";
 import {globbySync, isDynamicPattern} from "globby";
@@ -147,6 +147,6 @@ export const doGenPrompts = async (argv: GenOptions) => {
   }
 
   if (argv.watch) {
-    console.log("\nWatching for file changes... Press Ctrl+C to exit.");
+    console.log(gray("\nWatching for file changes... Press Ctrl+C to exit."));
   }
 };

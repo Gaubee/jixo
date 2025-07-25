@@ -1,4 +1,4 @@
-import {defineConfig} from "tsdown";
+import {defineConfig, type UserConfig} from "tsdown";
 
 export default defineConfig(() => {
   return {
@@ -8,5 +8,6 @@ export default defineConfig(() => {
     noExternal: /./,
     dts: false,
     minify: false,
-  };
+    external: ["@parcel/watcher"],
+  } satisfies UserConfig;
 });

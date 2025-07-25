@@ -20,8 +20,6 @@ export async function gitWorkingContents(repoPath: string, options: GetGitFilesO
           content: status === "D" ? undefined : await fs.readFile(path.join(repoPath, filepath), "utf-8"),
           status,
         });
-
-        console.log("QAQ results.size", results.size);
       };
     }),
     10,

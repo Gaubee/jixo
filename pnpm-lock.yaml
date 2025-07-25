@@ -58,9 +58,6 @@ importers:
       ai:
         specifier: ^4.3.16
         version: 4.3.19(patch_hash=401cba98694eafd7210cda98520ce0a5d8fbf37a340a917cffb58d59a2e2d6ae)(react@19.1.0)(zod@4.0.10)
-      esbuild:
-        specifier: ^0.25.8
-        version: 0.25.8
       globby:
         specifier: ^14.1.0
         version: 14.1.0
@@ -214,13 +211,14 @@ importers:
         version: 17.0.33
 
   packages/cli:
+    dependencies:
+      '@parcel/watcher':
+        specifier: ^2.5.1
+        version: 2.5.1
     devDependencies:
       '@jixo/dev':
         specifier: workspace:^
         version: link:../dev
-      '@parcel/watcher':
-        specifier: ^2.5.1
-        version: 2.5.1
       '@types/debug':
         specifier: ^4.1.12
         version: 4.1.12

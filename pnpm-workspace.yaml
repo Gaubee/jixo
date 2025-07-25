@@ -4,4 +4,3 @@ packages:
   - 'docs'
 onlyBuiltDependencies:
   - '@parcel/watcher'
-  - esbuild

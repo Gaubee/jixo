@@ -1,11 +1,11 @@
+import {gray} from "@gaubee/nodekit";
 import {func_debounce} from "@gaubee/util";
-import {import_meta_ponyfill} from "import-meta-ponyfill";
 import {createHash} from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
 import {zContentSchema} from "./types.js";
-const startWatch = (dir: string = process.cwd()) => {
+export const doGoogleAiStudioAutomation = (dir: string = process.cwd()) => {
   const watcher = fs.watch(dir);
   const handle = func_debounce(async () => {
     const names = fs.readdirSync(dir);
@@ -76,8 +76,5 @@ const startWatch = (dir: string = process.cwd()) => {
     handle();
   });
   handle();
+  console.log(gray("\nWatching for file changes... Press Ctrl+C to exit."));
 };
-
-if (import_meta_ponyfill(import.meta).main) {
-  startWatch(process.argv[2]);
-}

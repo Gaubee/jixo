@@ -1,6 +1,6 @@
 {
   "name": "jixo",
-  "version": "1.1.4",
+  "version": "1.1.8",
   "description": "The AI-Driven Development Foundation for Automated Software Engineering",
   "type": "module",
   "scripts": {
@@ -16,14 +16,13 @@
     "build:all": "pnpm -r --include-workspace-root --parallel run build",
     "clean": "node scripts/clean.ts",
     "//bundle:json": "cd packages/cli && pnpm gen-prompts",
-    "bundle:js": "esbuild ./index.ts --format=cjs --outfile=./bundle/index.cjs --platform=node",
     "G": "pnpm jixo-gen-prompt",
     "A": "pnpm jixo-apply-ai-response",
     "S": "pnpm jixo-sync-google-aistudio",
     "I": "pnpm jixo-mcp-inspector",
     "F": "prettier --write \"**/scripts/**/*.ts\" \"**/src/**/*.ts\"",
     "core:dev": "mastra dev -d packages/core/src/mastra -r packages/core",
-    "jixo": "node bundle/index.cjs"
+    "jixo": "node bundle/index.js"
   },
   "bin": "./bundle/index.js",
   "exports": {
@@ -66,7 +65,6 @@
     "@std/fmt": "jsr:^1.0.8",
     "@types/node": "^24.1.0",
     "ai": "^4.3.19",
-    "esbuild": "^0.25.8",
     "globby": "^14.1.0",
     "import-meta-ponyfill": "^3.2.2",
     "mastra": "^0.10.15",

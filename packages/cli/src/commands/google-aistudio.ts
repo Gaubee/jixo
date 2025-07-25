@@ -1,4 +1,4 @@
-import {doSync, type SyncOptions} from "@jixo/dev/google-aistudio";
+import {doGoogleAiStudioAutomation, doSync, type SyncOptions} from "@jixo/dev/google-aistudio";
 import type {Arguments, CommandModule} from "yargs";
 
 // 定义 yargs builder 所需的参数接口
@@ -43,6 +43,25 @@ const syncCommand: CommandModule<object, SyncArgs> = {
   },
 };
 
+interface BrowserArgs {
+  dir?: string;
+}
+
+const browserCommand: CommandModule<object, BrowserArgs> = {
+  command: "browser [dir]",
+  aliases: ["B"],
+  describe: "browser-kit for aistudio.google.com",
+  builder: (yargs) =>
+    yargs.positional("dir", {
+      describe: "Directory for aistudio output contents",
+      type: "string",
+      default: process.cwd(),
+    }),
+  handler: async (argv) => {
+    doGoogleAiStudioAutomation(argv.dir);
+  },
+};
+
 /**
  * @jixo/cli google-aistudio
  *
@@ -50,11 +69,11 @@ const syncCommand: CommandModule<object, SyncArgs> = {
  */
 export const googleAistudioCommand: CommandModule<object, object> = {
   command: "google-aistudio <command>",
-  aliases: ["GO"],
+  aliases: ["GO", "Go", "go"],
   describe: "Commands for Google AI Studio integration",
   builder: (yargs) => {
     // 将 syncCommand 注册为 google-aistudio 的子命令
-    return yargs.command(syncCommand).demandCommand(1, "You must provide a sub-command for 'google-aistudio'.");
+    return yargs.command(syncCommand).command(browserCommand).demandCommand(1, "You must provide a sub-command for 'google-aistudio'.");
   },
   // 这个 handler 理论上不会被执行，因为 yargs 会要求一个子命令
   handler: () => {},

@@ -1,5 +1,4 @@
 process.removeAllListeners("warning");
-import {import_meta_ponyfill} from "import-meta-ponyfill";
 import yargs from "yargs";
 import {hideBin} from "yargs/helpers";
 import packageJson from "../package.json" with {type: "json"};
@@ -27,11 +26,3 @@ export const runCli = async (args: string[] = process.argv) => {
     console.log(" " + "─".repeat(Math.max(4, process.stdout.columns - 2)));
   }
 };
-type AnyImportMeta = typeof import_meta_ponyfill extends (x: infer T) => any ? T : never;
-export const tryRunCli = (importMeta: AnyImportMeta, args?: string[]) => {
-  if (import_meta_ponyfill(importMeta).main) {
-    runCli(args);
-  }
-};
-
-tryRunCli(import.meta);
