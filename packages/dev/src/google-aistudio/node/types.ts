@@ -13,7 +13,7 @@ export const zContentSchema = z
       requiresParts: z.boolean(),
       requiresFunctionCalling: z.boolean(),
       requiresCodeExecution: z.boolean(),
-    }),
+    }).partial(),
     generateContentParameters: z.object({
       model: z.string(),
       contents: z.array(
@@ -70,7 +70,7 @@ export const zContentSchema = z
       config: z.object({
         thinkingConfig: z.object({thinkingBudget: z.string()}),
         stopSequences: z.array(z.unknown()),
-        responseMimeType: z.string(),
+        responseMimeType: z.string().optional(),
         responseModalities: z.array(z.unknown()),
         safetySettings: z.array(z.unknown()),
         tools: z.array(

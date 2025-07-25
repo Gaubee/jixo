@@ -10,7 +10,7 @@
     "mcp-pnpm": "./bundle/index.js"
   },
   "scripts": {
-    "build": "pnpm run '/^b\\:.*/'",
+    "build": "pnpm run \"/^b\\:.*/\"",
     "b:ts": "tsc --build",
     "b:bundle": "tsdown",
     "fmt": "prettier --write src",

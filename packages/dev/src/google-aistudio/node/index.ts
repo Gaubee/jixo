@@ -28,7 +28,7 @@ export const doGoogleAiStudioAutomation = (dir: string = process.cwd()) => {
     if (latestContent.role !== "user") {
       return;
     }
-    console.log("QAQ latestContent", latestContent);
+    // console.log("QAQ latestContent", latestContent);
     const functionResponsePart = latestContent.parts.find((p) => "functionResponse" in p);
     if (!functionResponsePart) {
       return;
@@ -62,7 +62,7 @@ export const doGoogleAiStudioAutomation = (dir: string = process.cwd()) => {
         const {functionCall} = await import(pathToFileURL(scriptFilepath).href);
         const input = JSON.parse(functionCallPart.parameters);
         const output = await functionCall(input);
-        console.log("QAQ output", output);
+        // console.log("QAQ output", output);
         console.log("WRITE TASK FILE:", taskFilename);
         fs.writeFileSync(path.join(dir, taskFilename), JSON.stringify({input, output}, null, 2));
       }
