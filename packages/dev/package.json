@@ -1,9 +1,10 @@
 {
   "name": "@jixo/dev",
-  "version": "1.13.1",
+  "version": "1.14.0",
   "description": "",
   "type": "module",
   "exports": {
+    "./utils/resolver": "./dist/utils/resolver.js",
     "./apply-ai-response": "./dist/apply-ai-response.js",
     "./gen-prompt": "./dist/gen-prompt.js",
     "./google-aistudio": "./dist/google-aistudio/jixo/index.js",

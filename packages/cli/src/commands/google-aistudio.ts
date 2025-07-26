@@ -1,4 +1,5 @@
-import {doGoogleAiStudioAutomation, doSync, type SyncOptions} from "@jixo/dev/google-aistudio";
+import {doGoogleAiStudioAutomation, doInit, doSync, type InitOptions, type SyncOptions} from "@jixo/dev/google-aistudio";
+import path from "node:path";
 import type {Arguments, CommandModule} from "yargs";
 
 // 定义 yargs builder 所需的参数接口
@@ -11,7 +12,7 @@ interface SyncArgs {
 // 定义 'sync' 子命令
 const syncCommand: CommandModule<object, SyncArgs> = {
   command: "sync [path]",
-  aliases: ["S"],
+  aliases: ["S", "s"],
   describe: "Sync with aistudio.google.com contents",
   builder: (yargs) =>
     yargs
@@ -49,7 +50,7 @@ interface BrowserArgs {
 
 const browserCommand: CommandModule<object, BrowserArgs> = {
   command: "browser [dir]",
-  aliases: ["B"],
+  aliases: ["B", "b"],
   describe: "browser-kit for aistudio.google.com",
   builder: (yargs) =>
     yargs.positional("dir", {
@@ -59,6 +60,27 @@ const browserCommand: CommandModule<object, BrowserArgs> = {
     }),
   handler: async (argv) => {
     doGoogleAiStudioAutomation(argv.dir);
+  },
+};
+
+const initCommand: CommandModule<object, InitOptions> = {
+  command: "init [dir]",
+  aliases: ["i", "I"],
+  describe: "init an browser-kit directory for aistudio.google.com",
+  builder: (yargs) =>
+    yargs
+      .positional("dir", {
+        describe: "Directory for aistudio input/output contents",
+        type: "string",
+        default: path.resolve(process.cwd(), ".ai"),
+      })
+      .option("force", {
+        alias: "F",
+        type: "boolean",
+        describe: "override exits files",
+      }),
+  handler: async (argv) => {
+    doInit(argv);
   },
 };
 
@@ -73,7 +95,14 @@ export const googleAistudioCommand: CommandModule<object, object> = {
   describe: "Commands for Google AI Studio integration",
   builder: (yargs) => {
     // 将 syncCommand 注册为 google-aistudio 的子命令
-    return yargs.command(syncCommand).command(browserCommand).demandCommand(1, "You must provide a sub-command for 'google-aistudio'.");
+    return (
+      yargs
+        .command(syncCommand)
+        .command(browserCommand)
+        .command(initCommand)
+        //
+        .demandCommand(1, "You must provide a sub-command for 'google-aistudio'.")
+    );
   },
   // 这个 handler 理论上不会被执行，因为 yargs 会要求一个子命令
   handler: () => {},

@@ -1,17 +1,17 @@
-import {createResolverByRootFile, normalizeFilePath, readJson} from "@gaubee/nodekit";
+import {normalizeFilePath, readJson} from "@gaubee/nodekit";
 import {func_remember, map_get_or_put_async} from "@gaubee/util";
 import {globbySync, isDynamicPattern} from "globby";
 import fs from "node:fs";
 import path from "node:path";
 import {match, P} from "ts-pattern";
 import {getFileState} from "../../reactive-fs/reactive-fs.js";
+import {assetsResolver} from "../../utils/resolver.js";
 import {generateFileTree} from "../file-tree.js";
 import {paramsToGlobbyOptions} from "./params-to-globby-options.js";
 import type {Replacer} from "./types.js";
 
 const fetchCache = new Map<string, {res: Response; text: string}>();
-const projectResolver = createResolverByRootFile(import.meta.url, "package.json");
-const GET_JIXO_PROMPT = func_remember(() => readJson<Record<string, string>>(projectResolver("./assets/prompt.json")));
+const GET_JIXO_PROMPT = func_remember(() => readJson<Record<string, string>>(assetsResolver("prompt.json")));
 
 /**
  * A utility function to format the file content output in a standardized way.

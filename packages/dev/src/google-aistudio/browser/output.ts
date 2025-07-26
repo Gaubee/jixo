@@ -1,4 +1,4 @@
-import {aFollowedByB, getTargetNamespace, prepareDirHandle, styles} from "./utils.js";
+import {aFollowedByB, delay, getTargetNamespace, prepareDirHandle, styles} from "./utils.js";
 
 //@ts-check
 export const syncOutput = () => {
@@ -18,18 +18,27 @@ export const syncOutput = () => {
   headEle.appendChild(styleEle);
 
   const findCdkOverlayContainer = () => document.querySelector<HTMLDivElement>(".cdk-overlay-container");
-  let cdkOverlayContainer: HTMLDivElement | null
-  let off = () => {};
-  void setInterval(() => {
-    const newCdkOverlayContainer = findCdkOverlayContainer();
-    if (newCdkOverlayContainer !== cdkOverlayContainer && newCdkOverlayContainer) {
-      off();
-      off = aFollowedByB((cdkOverlayContainer = newCdkOverlayContainer), ".cdk-overlay-backdrop", ".cdk-global-overlay-wrapper:has(.get-code-dialog)", (cdkOverlayBackdropEle) => {
-        console.log("QAQ", cdkOverlayBackdropEle);
-        cdkOverlayBackdropEle.style.display = "none";
-      });
-    }
-  }, 1000);
+
+  const cdkOverlayTaskId = Symbol.for("cdk-overlay-style-hooks") as any;
+  if (!window[cdkOverlayTaskId]) {
+    let cdkOverlayContainer: HTMLDivElement | null;
+    let off = () => {};
+    (window as any)[cdkOverlayTaskId] = setInterval(() => {
+      const newCdkOverlayContainer = findCdkOverlayContainer();
+      if (newCdkOverlayContainer !== cdkOverlayContainer && newCdkOverlayContainer) {
+        off();
+        off = aFollowedByB(
+          (cdkOverlayContainer = newCdkOverlayContainer),
+          ".cdk-overlay-backdrop",
+          ".cdk-global-overlay-wrapper:has(.get-code-dialog)",
+          (cdkOverlayBackdropEle) => {
+            console.log("%c隐藏遮罩元素", styles.warn, cdkOverlayBackdropEle);
+            cdkOverlayBackdropEle.style.display = "none";
+          },
+        );
+      }
+    }, 1000);
+  }
 
   // 篡改 get-code 最后的render函数
   const findMustacheKey = () => {
@@ -72,7 +81,7 @@ export const syncOutput = () => {
         if (btn) {
           return btn;
         }
-        await new Promise((cb) => setTimeout(cb, 200));
+        await delay(200);
       }
     };
     waitBtn().then((getCodeButtonEle) => {
@@ -95,6 +104,9 @@ async function runFileCreation(b: any, targetFilename = getTargetNamespace() + "
 
   try {
     const rootDirHandle = await prepareDirHandle();
+    if (!rootDirHandle) {
+      return;
+    }
     const fileHandle = await rootDirHandle.getFileHandle(targetFilename, {
       create: true,
     });
@@ -113,6 +125,7 @@ async function runFileCreation(b: any, targetFilename = getTargetNamespace() + "
     } else {
       console.error("%c❌ 发生意外错误:", styles.error, error);
     }
+  } finally {
+    writting = false;
   }
-  writting = false;
 }

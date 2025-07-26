@@ -64,7 +64,14 @@ const fillFunctionCall = async () => {
 export const syncInput = async () => {
   void (async () => {
     while (true) {
-      await fillFunctionCall().catch(console.error);
+      const aborted = await fillFunctionCall().catch((e) => {
+        if (e instanceof Error && e.name === "AbortError") {
+          return true;
+        }
+      });
+      if (aborted) {
+        break;
+      }
       await delay(500);
     }
   })();

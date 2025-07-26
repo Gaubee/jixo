@@ -1,13 +1,32 @@
 let rootDirHandle: FileSystemDirectoryHandle | undefined;
-export const prepareDirHandle = async () => {
+export const prepareDirHandle = async (): Promise<FileSystemDirectoryHandle> => {
   if (rootDirHandle) {
     return rootDirHandle;
   }
   // 1. 请求用户选择一个 *根* 文件夹
-  console.log("%c awaiting user action: Please select a parent directory in the dialog.", styles.info);
-  rootDirHandle = await window.showDirectoryPicker();
-  console.log(`%c✅ 根文件夹已选择: %c${rootDirHandle.name}`, styles.success, styles.code);
-  return rootDirHandle;
+  const ti = setTimeout(() => {
+    console.log("%c等待用户动作: 请选择一个文件夹，用来作为内容导入导出的协作目录.", styles.info);
+  }, 100);
+  try {
+    rootDirHandle = await window.showDirectoryPicker({mode: "readwrite"});
+    console.log(`%c✅ 根文件夹已选择: %c${rootDirHandle.name}`, styles.success, styles.code);
+    return rootDirHandle;
+  } catch (e) {
+    clearTimeout(ti);
+    if (e instanceof Error) {
+      if (e.name === "SecurityError" || e.name === "NotAllowedError") {
+        console.log("%c请将鼠标聚焦到窗口视图中", styles.info);
+        await delay(1000);
+        return prepareDirHandle();
+      }
+      if (e.name === "AbortError") {
+        throw new DOMException("用户取消了文件夹选择", "AbortError");
+        // console.log("%c用户取消了文件夹选择", styles.error);
+        // return;
+      }
+    }
+    throw e;
+  }
 };
 
 export const styles = {
@@ -43,7 +62,7 @@ export const raq = () => new Promise((cb) => requestAnimationFrame(cb));
  */
 export const aFollowedByB = (el: HTMLElement, aSelector: string, bSelector: string, cb: (aEle: HTMLElement, bEle: HTMLElement) => void) => {
   const run = () => {
-    console.log("QAQ",el)
+    console.log("QAQ", el);
     for (const bEle of el.querySelectorAll(`:scope > ${aSelector} + ${bSelector}`)) {
       const aEle = bEle.previousElementSibling as HTMLElement;
       cb(aEle, bEle as HTMLElement);

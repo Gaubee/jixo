@@ -1,13 +1,14 @@
-import {blue, green} from "@gaubee/nodekit";
+import {blue, gray, green} from "@gaubee/nodekit";
 import {iter_map_not_null} from "@gaubee/util";
+import {type ParseOptions} from "@std/cli/parse-args";
 import {globbySync} from "globby";
 import {createHash} from "node:crypto";
 import {statSync} from "node:fs";
 import {mkdir, rm, writeFile} from "node:fs/promises";
 import path from "node:path";
+import z from "zod";
 import {reactiveFs} from "../../reactive-fs/reactive-fs.js";
 import {zContentSchema} from "../node/types.js";
-
 export const sync = async (basePath: string, outDir?: string) => {
   const s = statSync(basePath);
   if (s.isDirectory()) {
@@ -70,4 +71,36 @@ export const sync = async (basePath: string, outDir?: string) => {
   await Promise.all(model_files.filter((file) => addFileNames.has(file.name)).map((file) => writeFile(path.join(resolvedOutDir, file.name), file.content)));
 
   console.log(blue(new Date().toLocaleTimeString()), green("sync"), path.relative(process.cwd(), basePath));
+};
+
+// 定义与 yargs 兼容的参数选项类型
+// 这样可以确保 doSync 的参数与 yargs 的解析结果兼容
+export interface SyncOptions extends ParseOptions {
+  outDir?: string;
+  watch?: boolean;
+  // yargs 解析后的位置参数会放在 `_` 数组中
+  _: (string | number)[];
+}
+
+/**
+ * 封装了 sync 命令的核心执行逻辑
+ * @param args - 命令行参数，符合 yargs 解析后的结构
+ */
+export const doSync = (args: SyncOptions) => {
+  reactiveFs.use(
+    async () => {
+      // 从 yargs 的 `_` 数组中获取位置参数
+      // z.string().safeParse(args._[0]).data ?? process.cwd() 的写法是健壮的，
+      // 它处理了用户未提供路径的情况，优雅地降级到当前工作目录。
+      const targetPath = z.string().safeParse(args._[0]).data ?? process.cwd();
+      await sync(targetPath, args.outDir);
+    },
+    {
+      once: !args.watch,
+    },
+  );
+
+  if (args.watch) {
+    console.log(gray("\nWatching for file changes... Press Ctrl+C to exit."));
+  }
 };

@@ -4,12 +4,12 @@ import {mkdirSync} from "node:fs";
 import path, {dirname} from "node:path";
 import {parseArgs} from "node:util";
 import {reactiveFs} from "../src/reactive-fs/reactive-fs.ts";
+import {assetsResolver} from "../src/utils/resolver.ts";
 
 const doGenAssets = async () => {
-  const projectResolver = createResolverByRootFile(import.meta.url);
   const rootResolver = createResolverByRootFile(import.meta.url, "pnpm-workspace.yaml");
 
-  const promptJsonFilepath = projectResolver("assets/prompt.json");
+  const promptJsonFilepath = assetsResolver("prompt.json");
   mkdirSync(dirname(promptJsonFilepath), {recursive: true});
 
   writeJson(promptJsonFilepath, {
