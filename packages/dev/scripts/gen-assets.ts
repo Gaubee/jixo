@@ -12,8 +12,10 @@ const doGenAssets = async () => {
   const promptJsonFilepath = assetsResolver("prompt.json");
   mkdirSync(dirname(promptJsonFilepath), {recursive: true});
 
+  const system_coder = reactiveFs.getFile(rootResolver(".jixo/meta.tmp.md")).get();
   writeJson(promptJsonFilepath, {
-    system: reactiveFs.getFile(rootResolver(".jixo/meta.tmp.md")).get(),
+    system: system_coder,
+    coder: system_coder,
   });
   console.log(blue(new Date().toLocaleTimeString()), green(`[gen-assets]`), "Generated assets in", path.relative(process.cwd(), promptJsonFilepath));
 };
