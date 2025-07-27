@@ -1,10 +1,10 @@
-import {aFollowedByB, delay, getTargetNamespace, prepareDirHandle, styles} from "./utils.js";
+import {$, aFollowedByB, delay, getTargetNamespace, prepareDirHandle, styles} from "./utils.js";
 
 //@ts-check
 export const syncOutput = () => {
   // 修改前端 get code 按钮 和 面板
   const styleEle = document.createElement("style");
-  const headEle = document.querySelector("head")!;
+  const headEle = $("head")!;
   const css = String.raw;
   // 隐藏 GetCode 面板，禁止 GetCode 按钮被用户点击
   styleEle.innerText = css`
@@ -17,7 +17,7 @@ export const syncOutput = () => {
   `.replaceAll("\n", "");
   headEle.appendChild(styleEle);
 
-  const findCdkOverlayContainer = () => document.querySelector<HTMLDivElement>(".cdk-overlay-container");
+  const findCdkOverlayContainer = () => $<HTMLDivElement>(".cdk-overlay-container");
 
   const cdkOverlayTaskId = Symbol.for("cdk-overlay-style-hooks") as any;
   if (!window[cdkOverlayTaskId]) {
@@ -32,8 +32,10 @@ export const syncOutput = () => {
           ".cdk-overlay-backdrop",
           ".cdk-global-overlay-wrapper:has(.get-code-dialog)",
           (cdkOverlayBackdropEle) => {
-            console.log("%c隐藏遮罩元素", styles.warn, cdkOverlayBackdropEle);
-            cdkOverlayBackdropEle.style.display = "none";
+            if (cdkOverlayBackdropEle.style.display !== "none") {
+              console.log("%c隐藏遮罩元素", styles.warn, cdkOverlayBackdropEle);
+              cdkOverlayBackdropEle.style.display = "none";
+            }
           },
         );
       }
@@ -70,11 +72,14 @@ export const syncOutput = () => {
       // return render(...args);
       return "";
     };
+
+    const findInput = () => $<HTMLTextAreaElement>(`textarea[aria-label="Start typing a prompt"]`);
+    findInput()?.dispatchEvent(new Event("input"));
   }
 
   // 打开 GetCode 面板且不再关闭
-  if (!document.querySelector(".cdk-overlay-container:has(.get-code-dialog)")) {
-    const findBtn = () => document.querySelector<HTMLButtonElement>(`button[aria-label="Get code"]`);
+  if (!$(".cdk-overlay-container:has(.get-code-dialog)")) {
+    const findBtn = () => $<HTMLButtonElement>(`button[aria-label="Get code"]`);
     const waitBtn = async () => {
       while (true) {
         const btn = findBtn();

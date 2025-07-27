@@ -74,3 +74,6 @@ export const aFollowedByB = (el: HTMLElement, aSelector: string, bSelector: stri
   run(); // 立即跑一遍
   return () => mo.disconnect();
 };
+
+export const $ = document.querySelector.bind(document) as typeof document.querySelector;
+export const $$ = document.querySelectorAll.bind(document) as typeof document.querySelectorAll;

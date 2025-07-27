@@ -61,18 +61,11 @@ const fillFunctionCall = async () => {
   //   await rootDirHandle.getFileHandle(callDoneTaskname, {create: true});
   await rootDirHandle.removeEntry(callTaskname);
 };
-export const syncInput = async () => {
+export const syncInput = async (fps = 2) => {
   void (async () => {
     while (true) {
-      const aborted = await fillFunctionCall().catch((e) => {
-        if (e instanceof Error && e.name === "AbortError") {
-          return true;
-        }
-      });
-      if (aborted) {
-        break;
-      }
-      await delay(500);
+      await fillFunctionCall();
+      await delay(1000 / fps);
     }
   })();
 };
