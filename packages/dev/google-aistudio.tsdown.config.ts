@@ -13,6 +13,7 @@ export default defineConfig(() => {
     format: "esm",
     dts: false,
     minify: "dce-only",
+    noExternal: /./,
     ignoreWatch: [/[\\/]assets[\\/]/, /[\\/]bundle[\\/]/, /[\\/]dist[\\/]/] as any,
     hooks: {
       "build:done": async () => {
