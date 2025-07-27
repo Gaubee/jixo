@@ -1,5 +1,4 @@
-import {type infer as Infer, array, boolean, looseObject, number, object, optional, partial, string, union, unknown} from "zod/v4-mini";
-const z = {object, boolean, string, array, union, unknown, number, optional, partial, looseObject};
+import {type output, z} from "./z-min.js";
 
 export const zContentSchema = z.looseObject({
   generationConfiguration: z.looseObject({
@@ -85,4 +84,4 @@ export const zContentSchema = z.looseObject({
   }),
 });
 
-export type ContentSchema = Infer<typeof zContentSchema>;
+export type ContentSchema = output<typeof zContentSchema>;
