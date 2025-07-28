@@ -1,6 +1,6 @@
 {
   "name": "@jixo/dev",
-  "version": "1.14.1",
+  "version": "1.14.2",
   "description": "",
   "type": "module",
   "exports": {
@@ -17,10 +17,10 @@
     "jixo-A": "./dist/bin/apply-ai-response.js",
     "jixo-gen-prompt": "./dist/bin/gen-prompt.js",
     "jixo-G": "./dist/bin/gen-prompt.js",
-    "jixo-mcp-inspector": "./dist/mcp-inspector.js",
-    "jixo-I": "./dist/mcp-inspector.js",
-    "jixo-run-test": "./dist/run-test.js",
-    "jixo-T": "./dist/run-test.js"
+    "jixo-mcp-inspector": "./dist/bin/mcp-inspector.js",
+    "jixo-I": "./dist/bin/mcp-inspector.js",
+    "jixo-run-test": "./dist/bin/run-test.js",
+    "jixo-T": "./dist/bin/run-test.js"
   },
   "files": [
     "assets",

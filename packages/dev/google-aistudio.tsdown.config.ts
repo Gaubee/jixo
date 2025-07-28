@@ -23,7 +23,7 @@ export default defineConfig(() => {
           return;
         }
         /// 做一次强制的unlink，因为windows系统的一些奇怪行为:junction的原始对象被删除了之后，留下symbol是没法通过 existsSync 或者 statSync 查询出来的。
-        await unlink(target).then(() => {});
+        await unlink(target).catch(() => {});
         symlinkSync(source, target, "junction");
       },
     },

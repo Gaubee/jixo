@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import {parseArgs} from "@std/cli/parse-args";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import {doSync} from "./index.js";

@@ -1,6 +1,6 @@
 {
   "name": "@jixo/cli",
-  "version": "0.23.1",
+  "version": "0.23.4",
   "type": "module",
   "bin": {
     "jixo": "./bundle/index.js"
@@ -11,6 +11,8 @@
     "dist"
   ],
   "scripts": {
+    "prepack": "node scripts/prepack.ts",
+    "postpack": "node scripts/postpack.ts",
     "build": "pnpm run \"/^b\\:.*/\"",
     "b:ts": "tsc --build",
     "b:bundle": "tsdown",

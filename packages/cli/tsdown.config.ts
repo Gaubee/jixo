@@ -29,7 +29,7 @@ export default defineConfig(() => {
                 return;
               }
             }
-            await unlink(target).then(() => {});
+            await unlink(target).catch(() => {});
             await symlink(source, target, "junction");
           } catch (e) {
             console.warn(canRetry, e);

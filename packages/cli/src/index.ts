@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 process.removeAllListeners("warning");
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import {runCli} from "./runCli.js";
