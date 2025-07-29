@@ -57,7 +57,7 @@ describe("gen_prompt FILE/FILE_TREE modes and parameter parsing", () => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     // Expect the file to be ignored due to gitignore=true
@@ -70,7 +70,7 @@ describe("gen_prompt FILE/FILE_TREE modes and parameter parsing", () => {
 [test-file.txt](@FILE?gitignore=false)
     `;
     createMarkdownFile(mdContent2);
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent2 = fs.readFileSync(outputFilePath, "utf-8");
 
     // Expect the file to be included due to gitignore=false
@@ -91,7 +91,7 @@ describe("gen_prompt FILE/FILE_TREE modes and parameter parsing", () => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     // Corrected expectations based on new tree generation logic
@@ -118,7 +118,7 @@ describe("gen_prompt FILE/FILE_TREE modes and parameter parsing", () => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     // Expect only top-level files/directories

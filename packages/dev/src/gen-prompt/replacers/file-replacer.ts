@@ -4,7 +4,7 @@ import {globbySync, isDynamicPattern} from "globby";
 import fs from "node:fs";
 import path from "node:path";
 import {match, P} from "ts-pattern";
-import {getFileState} from "../../reactive-fs/reactive-fs.js";
+import {reactiveFs} from "../../reactive-fs/reactive-fs.js";
 import {assetsResolver} from "../../utils/resolver.js";
 import {generateFileTree} from "../file-tree.js";
 import {paramsToGlobbyOptions} from "./params-to-globby-options.js";
@@ -52,7 +52,7 @@ function useFileOrInject(mode: string, filepath: string, filecontent: string, op
 /**
  * Handles replacements for file-based sources like local file system, URLs, and internal jixo protocol.
  */
-export const handleFileReplacement: Replacer = async ({globOrFilepath, mode, params, once, rootResolver, baseDir}) => {
+export const handleFileReplacement: Replacer = async ({globOrFilepath, mode, params, rootResolver, baseDir}) => {
   // Handle internal-symbol like `jixo:system/prompt.md`
   if (globOrFilepath.startsWith("jixo:")) {
     const jixo_url = new URL(globOrFilepath);
@@ -111,7 +111,7 @@ export const handleFileReplacement: Replacer = async ({globOrFilepath, mode, par
       if (!fs.statSync(fullFilepath).isFile()) {
         continue;
       }
-      const fileContent = getFileState(fullFilepath, once).get();
+      const fileContent = reactiveFs.readFile(fullFilepath);
       const ext = path.parse(filepath).ext.slice(1);
 
       lines.push(

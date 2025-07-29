@@ -58,7 +58,7 @@ describe("gen_prompt GIT modes", (t) => {
 
     // Execute gen_prompt
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     // Assert the output content
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
@@ -87,7 +87,7 @@ describe("gen_prompt GIT modes", (t) => {
 
     // Execute gen_prompt
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
 
     // Assert the output content
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
@@ -127,7 +127,7 @@ describe("gen_prompt GIT modes", (t) => {
 
     // Execute gen_prompt
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
 
     // Assert the output content - should contain initialContent
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
@@ -165,7 +165,7 @@ describe("gen_prompt GIT modes", (t) => {
 
     // Execute gen_prompt
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
 
     // Assert the output content
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
@@ -206,7 +206,7 @@ describe("gen_prompt GIT modes", (t) => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     expect(outputContent).toContain(file1Path);
@@ -230,7 +230,7 @@ describe("gen_prompt GIT modes", (t) => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     expect(outputContent).toContain(`<!-- No files found for pattern: ${testFilePath} in working directory -->`);
@@ -252,7 +252,7 @@ describe("gen_prompt GIT modes", (t) => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     expect(outputContent).toContain(testFilePath);
@@ -278,7 +278,7 @@ describe("gen_prompt GIT modes", (t) => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     expect(outputContent).toContain(`<!-- No files found for pattern: ${ignoredFilePath} in working directory -->`);
@@ -300,7 +300,7 @@ describe("gen_prompt GIT modes", (t) => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     expect(outputContent).toContain("```diff");
@@ -322,7 +322,7 @@ describe("gen_prompt GIT modes", (t) => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     expect(outputContent).toContain("```diff");
@@ -362,7 +362,7 @@ describe("gen_prompt GIT modes", (t) => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     expect(outputContent).toContain(file1Path);
@@ -399,7 +399,7 @@ describe("gen_prompt GIT modes", (t) => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     // Expect no content for the file from that commit, as it didn't exist then.
@@ -429,7 +429,7 @@ describe("gen_prompt GIT modes", (t) => {
     createMarkdownFile(mdContent);
 
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");
 
     // Expect no diff for the file from that commit, as it didn't exist then.
@@ -464,7 +464,7 @@ describe("gen_prompt GIT modes", (t) => {
 
     // Execute gen_prompt
     const outputFilePath = path.join(tempDir, "test.gen.md");
-    await gen_prompt(mdFilePath, true, outputFilePath);
+    await gen_prompt(mdFilePath, outputFilePath);
 
     // Assert the output content - should contain contentV1 (from HEAD~1)
     const outputContent = fs.readFileSync(outputFilePath, "utf-8");

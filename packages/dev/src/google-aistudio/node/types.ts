@@ -19,8 +19,6 @@ export const zContentSchema = z.looseObject({
         role: z.string(),
         parts: z.array(
           z.union([
-            // 异常对象块
-            z.object({isLast: z.boolean()}),
             // 普通文本
             z.object({isLast: z.boolean(), text: z.string()}),
             // FunctionCall 请求
@@ -53,6 +51,8 @@ export const zContentSchema = z.looseObject({
                 fileName: z.string(),
               }),
             }),
+            // 异常对象块
+            z.object({isLast: z.boolean()}),
           ]),
         ),
         isLast: z.optional(z.boolean()),
