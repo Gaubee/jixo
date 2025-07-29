@@ -12,7 +12,7 @@ const doGenAssets = async () => {
   const promptJsonFilepath = assetsResolver("prompt.json");
   mkdirSync(dirname(promptJsonFilepath), {recursive: true});
 
-  const system_coder = reactiveFs.getFile(rootResolver(".jixo/meta.tmp.md")).get();
+  const system_coder = reactiveFs.readFile(rootResolver(".jixo/meta.tmp.md"));
   writeJson(promptJsonFilepath, {
     system: system_coder,
     coder: system_coder,

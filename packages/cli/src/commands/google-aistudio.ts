@@ -1,5 +1,5 @@
+import {prompts} from "@gaubee/nodekit";
 import {doGoogleAiStudioAutomation, doInit, doSync, type InitOptions, type SyncOptions} from "@jixo/dev/google-aistudio";
-import path from "node:path";
 import type {Arguments, CommandModule} from "yargs";
 
 // 定义 yargs builder 所需的参数接口
@@ -62,7 +62,10 @@ const browserCommand: CommandModule<object, BrowserArgs> = {
     doGoogleAiStudioAutomation(argv.dir);
   },
 };
-
+interface InitOptions {
+  dir?: string;
+  force?: boolean;
+}
 const initCommand: CommandModule<object, InitOptions> = {
   command: "init [dir]",
   aliases: ["i", "I"],
@@ -72,7 +75,6 @@ const initCommand: CommandModule<object, InitOptions> = {
       .positional("dir", {
         describe: "Directory for aistudio input/output contents",
         type: "string",
-        default: path.resolve(process.cwd(), ".ai"),
       })
       .option("force", {
         alias: "F",
@@ -80,7 +82,17 @@ const initCommand: CommandModule<object, InitOptions> = {
         describe: "override exits files",
       }),
   handler: async (argv) => {
-    doInit(argv);
+    let {dir} = argv;
+    if (dir == null) {
+      dir = await prompts.input({
+        message: "No directory specified. Do you want to use the default '.ai' directory?",
+        default: ".ai", // 默认值为 Yes
+      });
+    }
+    doInit({
+      ...argv,
+      dir,
+    });
   },
 };
 

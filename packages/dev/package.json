@@ -31,7 +31,7 @@
     "build": "pnpm run \"/^b\\:.*/\"",
     "b:bundle-google-aistudio": "tsdown --config ./google-aistudio.tsdown.config.ts",
     "b:ts": "tsc --build",
-    "b:gen-assets": "node ./scripts/gen-assets.ts",
+    "b:gen-assets": "tsx ./scripts/gen-assets.ts",
     "fmt": "prettier --write src",
     "test:watch": "vitest --watch",
     "test": "vitest --run"
