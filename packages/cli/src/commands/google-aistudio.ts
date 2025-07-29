@@ -1,5 +1,5 @@
 import {prompts} from "@gaubee/nodekit";
-import {doGoogleAiStudioAutomation, doInit, doSync, type InitOptions, type SyncOptions} from "@jixo/dev/google-aistudio";
+import {doGoogleAiStudioAutomation, doInit, doSync, type SyncOptions} from "@jixo/dev/google-aistudio";
 import type {Arguments, CommandModule} from "yargs";
 
 // 定义 yargs builder 所需的参数接口
