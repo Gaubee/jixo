@@ -53,13 +53,20 @@ const browserCommand: CommandModule<object, BrowserArgs> = {
   aliases: ["B", "b"],
   describe: "browser-kit for aistudio.google.com",
   builder: (yargs) =>
-    yargs.positional("dir", {
-      describe: "Directory for aistudio output contents",
-      type: "string",
-      default: process.cwd(),
-    }),
+    yargs
+      .positional("dir", {
+        describe: "Directory for aistudio output contents",
+        type: "string",
+        default: process.cwd(),
+      })
+      .option("watch", {
+        alias: "W",
+        type: "boolean",
+        describe: "Watch for browser response automatically",
+        default: true,
+      }),
   handler: async (argv) => {
-    doGoogleAiStudioAutomation(argv.dir);
+    doGoogleAiStudioAutomation(argv);
   },
 };
 interface InitOptions {

@@ -5,15 +5,14 @@ import {z, type output} from "./z-min.js";
 
 const zFunctionCallConfig = z.object({
   name: z.string(),
-  description: z.string(),
+  description: z.optional(z.string()),
+  safeDescription: z.string(),
   paramsSchema: z.optional(z.unknown()),
 });
 // z.toJSONSchema()
 
-const zFunctionCallFn = z.function({
-  input: [z.looseObject({})],
-  output: z.any(),
-});
+const zFunctionCallFn = z.instanceof(Function);
+export type FunctionCallFn = (parameters: object) => unknown;
 
 /**
  * 标准版本
@@ -23,7 +22,9 @@ const zFunctionCallStandardModule = z.looseObject({
   name: z.optional(z.string()),
   functionCall: zFunctionCallFn,
 });
-type FunctionCallStandardModule = output<typeof zFunctionCallStandardModule>;
+type FunctionCallStandardModule = output<typeof zFunctionCallStandardModule> & {
+  functionCall: FunctionCallFn;
+};
 /**
  * 极简版本，只导出一个 functionCall 函数即可
  * name 默认使用 `${infer name}.function.ts`
@@ -32,12 +33,6 @@ type FunctionCallStandardModule = output<typeof zFunctionCallStandardModule>;
 const zFunctionCallMiniModule = z.extend(z.partial(zFunctionCallConfig), {
   functionCall: zFunctionCallFn,
 });
-const zFunctionCallTool = z.extend(zFunctionCallConfig, {
-  handler: zFunctionCallFn,
-});
-
-type FunctionCallTool = output<typeof zFunctionCallTool>;
-const allFunctionCallTools = new Map<string, FunctionCallTool>();
 
 const safeParseModule = (unsafeModule: any) => {
   if (unsafeModule.default) {
@@ -64,9 +59,10 @@ const esmImporter = async (codeEntry: CodeEntry) => {
   }
   return {
     name: safeModule.name ?? codeEntry.filename,
-    description: safeModule.description ?? String(safeModule.functionCall),
+    description: safeModule.description,
+    safeDescription: safeModule.description ?? String(safeModule.functionCall),
     paramsSchema: safeModule.paramsSchema,
-    functionCall: safeModule.functionCall,
+    functionCall: safeModule.functionCall as FunctionCallFn,
   } satisfies FunctionCallStandardModule;
 };
 
@@ -99,7 +95,7 @@ type CodeEntry = {
   fullpath: string;
   stat: Stats;
 };
-export const defineFunctionCall = async (dir: string) => {
+export const defineFunctionCalls = async (dir: string) => {
   const codeEntries = new Map<
     string,
     {
@@ -111,7 +107,7 @@ export const defineFunctionCall = async (dir: string) => {
     const fullpath = path.join(dir, filename);
     const stat = statSync(fullpath);
     if (!stat.isFile()) {
-      return;
+      continue;
     }
 
     let key: string | undefined;
@@ -130,4 +126,7 @@ export const defineFunctionCall = async (dir: string) => {
       }
     }
   }
+  return codeEntries;
 };
+
+export type FunctionCallsMap = Awaited<ReturnType<typeof defineFunctionCalls>>;

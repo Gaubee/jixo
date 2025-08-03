@@ -4,6 +4,6 @@ export default defineConfig(() => {
     entry: "index.ts",
     outDir: "bundle",
     platform: "node",
-    format: "cjs",
+    format: "esm",
   } satisfies UserConfig;
 });
