@@ -5,6 +5,7 @@ import packageJson from "../package.json" with {type: "json"};
 import {applyCommand} from "./commands/apply.js";
 import {genCommand} from "./commands/gen.js";
 import {googleAistudioCommand} from "./commands/google-aistudio.js";
+import {groqCommand} from "./commands/groq.js";
 
 export const runCli = async (args: string[] = process.argv) => {
   let cli = yargs(hideBin(args))
@@ -16,7 +17,8 @@ export const runCli = async (args: string[] = process.argv) => {
     .help()
     .command(applyCommand)
     .command(genCommand)
-    .command(googleAistudioCommand);
+    .command(googleAistudioCommand)
+    .command(groqCommand);
 
   const argv = await cli.parse();
 

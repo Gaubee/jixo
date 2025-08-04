@@ -61,7 +61,7 @@ const fillFunctionCall = async () => {
   //   await rootDirHandle.getFileHandle(callDoneTaskname, {create: true});
   await rootDirHandle.removeEntry(callTaskname);
 };
-export const syncInput = async (fps = 2) => {
+export const syncInput = async (fps = 3) => {
   void (async () => {
     while (true) {
       await fillFunctionCall();

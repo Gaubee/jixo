@@ -1,6 +1,5 @@
 import {$, aFollowedByB, delay, getTargetNamespace, prepareDirHandle, styles} from "./utils.js";
 
-//@ts-check
 export const syncOutput = () => {
   // 修改前端 get code 按钮 和 面板
   const styleEle = document.createElement("style");

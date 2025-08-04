@@ -8,8 +8,7 @@ export interface InitOptions {
   dir: string;
   force?: boolean;
 }
-export const doInit = async ({dir, force}: InitOptions) => {
-  const cpAssets = ["google-aistudio.browser.js"];
+export const commonInit = async (cpAssets: string[], {dir, force}: InitOptions) => {
   const sourceEntries = cpAssets.map((entrypath) => ({relativepath: entrypath, fullpath: assetsResolver(`bundle`, entrypath)}));
   const targetEntries = cpAssets.map((entrypath) => ({relativepath: entrypath, fullpath: path.resolve(dir, entrypath)}));
   const existEntries = targetEntries.filter((targetEntry) => existsSync(targetEntry.fullpath));
@@ -51,4 +50,7 @@ export const doInit = async ({dir, force}: InitOptions) => {
       return copyFile(sourceEntry.fullpath, targetEntries[index].fullpath);
     }),
   );
+};
+export const doInit = (opts: InitOptions) => {
+  return commonInit(["google-aistudio.browser.js"], opts);
 };
