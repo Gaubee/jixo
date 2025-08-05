@@ -1,5 +1,4 @@
 import type {SuperJSON} from "superjson";
-import type {Task} from "./types.js";
 
 type Events = "open" | "data" | "close";
 type Listener<T> = (data: T) => void;
@@ -16,7 +15,7 @@ type Listener<T> = (data: T) => void;
  *
  * @template T The type of the data object being exchanged (e.g., a `Task`).
  */
-export abstract class FsDuplex<T extends Task> {
+export abstract class FsDuplex<T> {
   protected _currentData: T | undefined;
   protected _isClosed = false;
   private _events: Record<Events, Set<Listener<T>>> = {

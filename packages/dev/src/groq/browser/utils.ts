@@ -9,5 +9,7 @@ export const getWindowId = func_remember((): string => {
       } catch {}
     }
   }
-  return crypto.randomUUID();
+  const windowId = crypto.randomUUID();
+  sessionStorage.setItem(`groq_2_jixo_window_id`, windowId);
+  return windowId;
 });

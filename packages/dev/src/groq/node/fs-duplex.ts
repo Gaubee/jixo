@@ -8,7 +8,7 @@ import type {Task} from "../common/types.js";
  * It uses `fs/promises` to interact with the local filesystem and a polling
  * mechanism with `setTimeout` to watch for file changes.
  */
-export class NodeFsDuplex<T extends Task> extends FsDuplex<T> {
+export class NodeFsDuplex<T > extends FsDuplex<T> {
   private _lastMtime = 0;
   private _taskFilepath: string;
   private _pollTimeoutId: NodeJS.Timeout | null = null;

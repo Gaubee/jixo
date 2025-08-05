@@ -1,14 +1,13 @@
 import type {SuperJSON} from "superjson";
 import type {EasyFS} from "../../google-aistudio/browser/utils.js";
 import {FsDuplex} from "../common/fs-duplex.js";
-import type {Task} from "../common/types.js";
 
 /**
  * Browser implementation of FsDuplex.
  * It uses a provided `EasyFS` instance to interact with the sandboxed filesystem
  * and `requestIdleCallback` for efficient, non-blocking polling.
  */
-export class BrowserFsDuplex<T extends Task> extends FsDuplex<T> {
+export class BrowserFsDuplex<T> extends FsDuplex<T> {
   private _lastContent: string | undefined;
   private _isDestroyed = false;
   private _idleCallbackId: number | null = null;

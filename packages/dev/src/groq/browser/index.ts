@@ -1,4 +1,5 @@
 import {prepareDirHandle} from "../../google-aistudio/browser/utils.js";
+import {keepWeakup} from "./keepWeakup.js";
 import {sync} from "./sync.js";
 
 (async () => {
@@ -18,4 +19,5 @@ import {sync} from "./sync.js";
 
   // 启动同步循环
   void sync();
+  void keepWeakup();
 })();
