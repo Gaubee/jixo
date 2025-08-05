@@ -8,6 +8,8 @@ import type {Task} from "../common/types.js";
 import {NodeFsDuplex} from "./fs-duplex.js";
 import {findActiveGroqSession} from "./session.js";
 
+import Debug from "debug";
+export const debug = Debug("jixo:groq");
 /**
  * The options for creating a task channel with a browser tab.
  */
@@ -22,13 +24,15 @@ export interface RunTaskOptions<T extends Task> {
 async function runTaskInBrowser<T extends Task>(options: RunTaskOptions<T>): Promise<FsDuplex<T>> {
   const {dir, initialTask} = options;
 
-  // Use the robust session management to find an active session
-  const session = await findActiveGroqSession(dir);
+  // FIX: Always work with absolute paths to avoid confusion.
+  const absoluteDir = path.resolve(dir);
+  const session = await findActiveGroqSession(absoluteDir);
 
-  const taskFilepath = path.join(dir, `${session.windowId}.${initialTask.type}-${initialTask.taskId}.groq-task.json`);
+  // Now `session.windowId` is clean, and we join it with an absolute directory path.
+  const taskFilepath = path.join(absoluteDir, `${session.windowId}.${initialTask.type}-${initialTask.taskId}.groq-task.json`);
 
   // Create the Node.js side of the duplex channel with the initial task data.
-  const duplex = new NodeFsDuplex<T>(superjson, taskFilepath, initialTask);
+  const duplex = await NodeFsDuplex.create<T>(superjson, taskFilepath, `node-${initialTask.type}`, initialTask);
 
   // Start the duplex channel's polling mechanism.
   duplex.start();

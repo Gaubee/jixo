@@ -78,7 +78,7 @@ const processTasks = async () => {
     active_duplexes.add(filename);
 
     // Create a new duplex channel for this task file.
-    const duplex = new BrowserFsDuplex(superjson, fs, filename);
+    const duplex = new BrowserFsDuplex<Task>(superjson, fs, filename);
 
     // Start listening for file changes.
     duplex.start();

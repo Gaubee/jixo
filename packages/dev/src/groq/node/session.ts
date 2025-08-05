@@ -1,19 +1,21 @@
 import {gray, green, red} from "@gaubee/nodekit";
 import {delay, func_remember} from "@gaubee/util";
-import Debug from "debug";
 import {globby} from "globby";
 import fsp from "node:fs/promises";
+import path from "node:path";
 import type {Session} from "../common/types.js";
 import {zSession} from "../common/types.js";
-export const debug = Debug("jixo:groq");
+import {debug} from "./utils.js";
 
 export type GroqSession = Session & {windowId: string; sessionFile: string};
 
 // --- Session Management ---
 export const findActiveGroqSession = func_remember(async (dir: string): Promise<GroqSession> => {
+  const absoluteDir = path.resolve(dir);
+
   /**查找可用会话 */
   const lookupSession = async (log = false) => {
-    const sessionFiles = await globby("*.groq-session.json", {cwd: dir, absolute: true});
+    const sessionFiles = await globby("*.groq-session.json", {cwd: absoluteDir, absolute: true});
     for (const sessionFile of sessionFiles) {
       log && debug(gray("尝试与 groq 建立会话..."), sessionFile);
       try {
@@ -26,7 +28,8 @@ export const findActiveGroqSession = func_remember(async (dir: string): Promise<
         }
         const diffTime = Date.now() - session.time;
         if (diffTime <= 5000) {
-          const windowId = sessionFile.replace(".groq-session.json", "");
+          // FIX: Use path.basename to get just the filename part for the ID
+          const windowId = path.basename(sessionFile, ".groq-session.json");
           return {
             windowId,
             sessionFile,
@@ -57,7 +60,7 @@ export const findActiveGroqSession = func_remember(async (dir: string): Promise<
   const session = await waitSession();
 
   /// 初次建立连接，删除tasks文件，因为这些任务文件是与上次运行的内存promise关联，所以已经失去意义
-  const taskFiles = await globby(`${session.windowId}.*.groq-task.json`, {cwd: dir, absolute: true});
+  const taskFiles = await globby(`${session.windowId}.*.groq-task.json`, {cwd: absoluteDir, absolute: true});
   for (const taskfile of taskFiles) {
     await fsp.unlink(taskfile);
   }
