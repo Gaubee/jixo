@@ -3,10 +3,16 @@ import type {SuperJSON} from "superjson";
 import {FsDuplex} from "../common/fs-duplex.js";
 import {debug} from "./utils.js";
 
+type Closeable =
+  | {
+      closed?: boolean;
+    }
+  | {};
+
 /**
  * Node.js implementation of FsDuplex.
  */
-export class NodeFsDuplex<T extends {closed?: boolean}> extends FsDuplex<T> {
+export class NodeFsDuplex<T extends Closeable> extends FsDuplex<T> {
   private _lastMtime = 0;
   private _taskFilepath: string;
   private _pollTimeoutId: NodeJS.Timeout | null = null;
@@ -25,7 +31,7 @@ export class NodeFsDuplex<T extends {closed?: boolean}> extends FsDuplex<T> {
     this._id = `FsDuplex-${id}`;
   }
 
-  public static async create<T extends {closed?: boolean}>(superjson: SuperJSON, filepath: string, id: string, initialTask?: T): Promise<NodeFsDuplex<T>> {
+  public static async create<T extends Closeable>(superjson: SuperJSON, filepath: string, id: string, initialTask?: T): Promise<NodeFsDuplex<T>> {
     const duplex = new NodeFsDuplex<T>(superjson, filepath, id);
     if (initialTask) {
       duplex._currentData = initialTask;
@@ -42,10 +48,10 @@ export class NodeFsDuplex<T extends {closed?: boolean}> extends FsDuplex<T> {
     this._poll();
   }
 
-  protected _onData(data: T) {
+  protected override _onData(data: T) {
     super._onData(data);
     // New close protocol: if the data itself says it's closed, we close.
-    if (data.closed) {
+    if ("closed" in data && data.closed) {
       debug(this._id, "_onData: Received closed:true flag. Closing channel.");
       this._onClose();
     }
@@ -94,7 +100,7 @@ export class NodeFsDuplex<T extends {closed?: boolean}> extends FsDuplex<T> {
   public async write(payload: Partial<T>): Promise<void> {
     if (this._isDestroyed) {
       // Allow writing the final "closed" message even if locally destroyed
-      if (!payload.closed) {
+      if ("closed" in payload && !payload.closed) {
         throw new Error("Cannot write to a destroyed FsDuplex.");
       }
     }
@@ -124,7 +130,7 @@ export class NodeFsDuplex<T extends {closed?: boolean}> extends FsDuplex<T> {
     }
 
     // New protocol: write a final message to signal closure.
-    await this.write({closed: true} as Partial<T>);
+    await this.write({closed: true} as unknown as Partial<T>);
 
     // The remote side will call _onClose() upon receiving this message.
     // We also call it locally to terminate any pending promises.
