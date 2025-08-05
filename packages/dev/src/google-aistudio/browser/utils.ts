@@ -166,6 +166,7 @@ export const getEasyFs = func_remember(async () => {
     rm,
   };
 });
+export type EasyFS = Awaited< ReturnType<typeof getEasyFs>>;
 export const styles = {
   header: "color: #4CAF50; font-size: 18px; font-weight: bold; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;",
   info: "color: #2196F3; font-style: italic;",

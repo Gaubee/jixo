@@ -83,32 +83,38 @@ export const createRunEventStreamInBrowser = (runner: TaskRunner) => {
       result: null,
       done: false,
     };
-    let currentTask = await runner<EventStreamTask>({
-      dir,
-      initialTask,
-      waitUntil: (task) => task.status === "streaming" || task.done,
-    });
-    if (currentTask.status !== "streaming") {
-      throw currentTask.result || new Error(`Failed to establish event stream. Final status: ${currentTask.status}`);
-    }
+
+    const duplex = await runner<EventStreamTask>({dir, initialTask});
     let yieldedCount = 0;
-    while (!currentTask.done) {
-      for (let i = yieldedCount; i < currentTask.messages.length; i++) {
-        yield currentTask.messages[i];
+    let finalTask: EventStreamTask | undefined;
+
+    try {
+      for await (const task of duplex.stream()) {
+        finalTask = task; // Keep track of the latest task state
+
+        if (yieldedCount === 0 && task.status === "streaming") {
+          // The stream is confirmed to be open.
+        } else if (task.status !== "streaming" && !task.done) {
+          // If status changes from streaming and it's not done, it's an error.
+          throw task.result || new Error(`Event stream failed. Status: ${task.status}`);
+        }
+
+        for (let i = yieldedCount; i < task.messages.length; i++) {
+          yield task.messages[i];
+        }
+        yieldedCount = task.messages.length;
+
+        if (task.done) {
+          break;
+        }
       }
-      yieldedCount = currentTask.messages.length;
-      currentTask = await runner<EventStreamTask>({
-        dir,
-        // Use the new, cleaner 'poll' option
-        poll: {taskId, type: "event-stream"},
-        waitUntil: (task) => task.messages.length > yieldedCount || task.done,
-      });
+    } finally {
+      await duplex.destroy();
     }
-    for (let i = yieldedCount; i < currentTask.messages.length; i++) {
-      yield currentTask.messages[i];
-    }
-    if (currentTask.status === "rejected") {
-      throw currentTask.result;
+
+    // After the loop, check the final status.
+    if (finalTask?.status === "rejected") {
+      throw finalTask.result || new Error("Event stream ended with a rejection.");
     }
   };
 };

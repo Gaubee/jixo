@@ -39,12 +39,28 @@ export const createRunCodeInBrowser = (runner: TaskRunner) => {
       result: null,
       done: false,
     };
-    // For simple tasks, we just wait until they are done.
-    const finalTask = await runner<EvalTask>({
-      dir,
-      initialTask,
-      waitUntil: (task) => task.done,
+
+    const duplex = await runner<EvalTask>({dir, initialTask});
+
+    return new Promise((resolve, reject) => {
+      const offData = duplex.on("data", (task) => {
+        if (task.done) {
+          if (task.status === "rejected") {
+            reject(task.result);
+          } else {
+            resolve(task.result);
+          }
+          offData();
+          offClose();
+          duplex.destroy();
+        }
+      });
+
+      const offClose = duplex.on("close", () => {
+        reject(new Error(`Task ${initialTask.taskId} closed unexpectedly.`));
+        offData();
+        offClose();
+      });
     });
-    return finalTask.result;
   };
 };
