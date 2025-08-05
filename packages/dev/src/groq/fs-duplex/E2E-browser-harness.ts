@@ -12,24 +12,34 @@ declare global {
 const fileHandleCache = new Map<string, FileSystemFileHandle>();
 
 /**
- * Implements the FsDuplexBrowserHelper using a directory handle
- * obtained via the File System Access API.
+ * Implements the FsDuplexBrowserHelper interface required by BrowserFsDuplex.
+ * This implementation now correctly uses the Origin Private File System (OPFS),
+ * which will be mapped to a real directory by Playwright's launch arguments.
  */
 class BrowserHelper implements FsDuplexBrowserHelper {
-  constructor(private directoryHandle: FileSystemDirectoryHandle) {
-    if (!directoryHandle) {
-      throw new Error("BrowserHelper requires a valid DirectoryHandle.");
+  private root: FileSystemDirectoryHandle | null = null;
+
+  private async getRoot() {
+    if (!this.root) {
+      console.log("[Browser Helper] Getting navigator.storage.getDirectory()...");
+      this.root = await navigator.storage.getDirectory();
+      console.log("[Browser Helper] Root directory handle obtained.");
     }
+    return this.root;
   }
 
   async getFileHandle(filename: string): Promise<FileSystemFileHandle> {
-    if (fileHandleCache.has(filename)) {
-      return fileHandleCache.get(filename)!;
-    }
-    // We only care about the basename as the directory is already handled.
     const name = filename.split("/").pop()!;
-    const handle = await this.directoryHandle.getFileHandle(name, {create: true});
-    fileHandleCache.set(filename, handle);
+    console.log(`[Browser Helper] getFileHandle called for filename: "${filename}", using basename: "${name}"`);
+    if (fileHandleCache.has(name)) {
+      console.log(`[Browser Helper] Cache hit for "${name}".`);
+      return fileHandleCache.get(name)!;
+    }
+    console.log(`[Browser Helper] Cache miss for "${name}", getting handle from root.`);
+    const root = await this.getRoot();
+    const handle = await root.getFileHandle(name, {create: true});
+    fileHandleCache.set(name, handle);
+    console.log(`[Browser Helper] Got and cached handle for "${name}".`);
     return handle;
   }
 }
@@ -39,34 +49,20 @@ class BrowserHelper implements FsDuplexBrowserHelper {
  */
 class BrowserTestHarness {
   public duplex: BrowserFsDuplex<any, "handler"> | null = null;
-  private directoryHandle: FileSystemDirectoryHandle | null = null;
+  private helper: BrowserHelper | null = null;
 
   constructor() {
     console.log("[Browser Harness] Initialized.");
   }
 
-  /**
-   * Prompts the user for a directory and stores the handle.
-   * This MUST be called from a user gesture in a real app,
-   * but Playwright will pre-authorize it for us in the test.
-   */
-  public async getDirectoryHandle() {
-    console.log("[Browser Harness] Requesting directory handle...");
-    this.directoryHandle = await window.showDirectoryPicker({mode: "readwrite"});
-    console.log("[Browser Harness] Directory handle obtained.");
-    return true; // Signal success to Playwright
-  }
-
   public async setup(filenamePrefix: string) {
-    if (!this.directoryHandle) {
-      throw new Error("Directory handle not available. Call getDirectoryHandle() first.");
-    }
     console.log(`[Browser Harness] Setting up BrowserFsDuplex with prefix: ${filenamePrefix}`);
     if (this.duplex) {
       await this.duplex.stop();
     }
-    const helper = new BrowserHelper(this.directoryHandle);
-    this.duplex = new BrowserFsDuplex("handler", superjson, filenamePrefix, helper);
+    // The helper is now stateless and can be created on the fly.
+    this.helper = new BrowserHelper();
+    this.duplex = new BrowserFsDuplex("handler", superjson, filenamePrefix, this.helper);
 
     this.duplex.onOpen.on(() => this.logEvent("open"));
     this.duplex.onClose.on((reason) => this.logEvent("close", reason));
@@ -78,6 +74,7 @@ class BrowserTestHarness {
   }
 
   public logEvent(event: string, payload?: any) {
+    // This specific format is what the Node.js test runner waits for.
     console.log(`__HARNESS_EVENT__:${JSON.stringify({event, payload})}`);
   }
 }

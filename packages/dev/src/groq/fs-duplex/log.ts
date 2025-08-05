@@ -85,6 +85,7 @@ export class BrowserAppendOnlyLog implements AppendOnlyLog {
   constructor(filename: string, helper: FsDuplexBrowserHelper) {
     this.filename = filename;
     this.helper = helper;
+    console.log(`[Browser Log] Constructed for file: ${filename}`);
   }
 
   public async start(): Promise<void> {
@@ -101,12 +102,14 @@ export class BrowserAppendOnlyLog implements AppendOnlyLog {
   }
 
   public async append(line: string): Promise<void> {
+    console.log(`[Browser Log] Appending to ${this.filename}: "${line.substring(0, 50)}..."`);
     const handle = await this.helper.getFileHandle(this.filename);
     const file = await handle.getFile();
     const writer = await handle.createWritable({keepExistingData: true});
     await writer.seek(file.size);
     await writer.write(line + "\n");
     await writer.close();
+    console.log(`[Browser Log] Append to ${this.filename} complete.`);
   }
 
   public async readNewLines(): Promise<string[]> {
@@ -118,6 +121,7 @@ export class BrowserAppendOnlyLog implements AppendOnlyLog {
         return [];
       }
 
+      console.log(`[Browser Log] Reading new lines from ${this.filename}. Current size: ${file.size}, offset: ${this.readOffset}`);
       const newContent = await file.slice(this.readOffset).text();
       this.readOffset = file.size;
 
@@ -131,11 +135,13 @@ export class BrowserAppendOnlyLog implements AppendOnlyLog {
         lines.pop();
       }
 
+      console.log(`[Browser Log] Read ${lines.length} new lines from ${this.filename}.`);
       return lines;
     } catch (e: any) {
       if (e.name === "NotFoundError") {
         return [];
       }
+      console.error(`[Browser Log] Error reading ${this.filename}:`, e);
       throw e;
     }
   }
