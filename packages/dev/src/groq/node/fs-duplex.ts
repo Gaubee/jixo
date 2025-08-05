@@ -10,7 +10,8 @@ type Closeable =
   | {};
 
 /**
- * Node.js implementation of FsDuplex.
+ * @deprecated This class is part of the old file-based communication protocol.
+ * It will be replaced by the new `fs-duplex` module implementation.
  */
 export class NodeFsDuplex<T extends Closeable> extends FsDuplex<T> {
   private _lastMtime = 0;

@@ -3,9 +3,8 @@ import type {EasyFS} from "../../google-aistudio/browser/utils.js";
 import {FsDuplex} from "../common/fs-duplex.js";
 
 /**
- * Browser implementation of FsDuplex.
- * It uses a provided `EasyFS` instance to interact with the sandboxed filesystem
- * and `requestIdleCallback` for efficient, non-blocking polling.
+ * @deprecated This class is part of the old file-based communication protocol.
+ * It will be replaced by the new `fs-duplex` module implementation.
  */
 export class BrowserFsDuplex<T> extends FsDuplex<T> {
   private _lastContent: string | undefined;

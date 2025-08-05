@@ -77,6 +77,8 @@
     "@types/unist": "^3.0.3",
     "@types/wicg-file-system-access": "^2023.10.6",
     "micromatch": "^4.0.8",
+    "playwright": "^1.54.2",
+    "vite": "^7.0.6",
     "vitest": "^3.2.4"
   }
 }
