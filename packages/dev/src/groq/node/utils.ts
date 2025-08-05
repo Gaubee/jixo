@@ -1,5 +1,4 @@
 import {delay} from "@gaubee/util";
-import {globby} from "globby";
 import {readFile, rm, stat, writeFile} from "node:fs/promises";
 import path from "node:path";
 import {superjson} from "../common/coding.js";
@@ -8,24 +7,9 @@ import {createRunEventStreamInBrowser} from "../common/eventStream.js";
 import {createRunFetchInBrowser} from "../common/fetch.js";
 import type {Task} from "../common/types.js";
 
-async function findActiveSession(dir: string): Promise<string | null> {
-  const sessionFiles = await globby("*.groq-session.json", {cwd: dir, absolute: true});
-  for (const sessionFile of sessionFiles) {
-    try {
-      const content = await readFile(sessionFile, "utf-8");
-      const session = JSON.parse(content);
-      const windowId = path.basename(sessionFile, ".groq-session.json");
-      if (Date.now() - session.time < 2000) {
-        return windowId;
-      } else {
-        await rm(sessionFile, {force: true});
-      }
-    } catch (e) {
-      // Ignore errors
-    }
-  }
-  return null;
-}
+import Debug from "debug";
+import {findActiveGroqSession} from "./session.js";
+export const debug = Debug("jixo:groq");
 
 export interface RunTaskOptions<T extends Task> {
   dir: string;
@@ -38,20 +22,20 @@ export interface RunTaskOptions<T extends Task> {
 async function runTaskInBrowser<T extends Task>(options: RunTaskOptions<T>): Promise<T> {
   const {dir, initialTask, update, poll, waitUntil} = options;
 
-  const windowId = await findActiveSession(dir);
-  if (!windowId) throw new Error("No active browser session found in browser.");
+  const session = await findActiveGroqSession(dir);
+  if (!session) throw new Error("No active browser session found in browser.");
 
   let taskFilepath: string;
   let taskId: string;
 
   if (initialTask) {
     taskId = initialTask.taskId;
-    taskFilepath = path.join(dir, `${windowId}.${initialTask.type}-${taskId}.groq-task.json`);
+    taskFilepath = path.join(dir, `${session.windowId}.${initialTask.type}-${taskId}.groq-task.json`);
     await writeFile(taskFilepath, superjson.stringify(initialTask));
   } else if (update || poll) {
     const info = update || poll!;
     taskId = info.taskId;
-    taskFilepath = path.join(dir, `${windowId}.${info.type}-${taskId}.groq-task.json`);
+    taskFilepath = path.join(dir, `${session.windowId}.${info.type}-${taskId}.groq-task.json`);
     if (update) {
       const currentContent = await readFile(taskFilepath, "utf-8");
       const currentTask = superjson.parse(currentContent);

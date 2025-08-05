@@ -39,6 +39,7 @@ export const zSession = z.object({
   headers: z.record(z.string(), z.string()),
   models: zModels.shape.data,
 });
+export type Session = z.infer<typeof zSession>;
 
 export const zTask = z.union([z.lazy(() => zEvalTask), z.lazy(() => zFetchTask), z.lazy(() => zEventStreamTask)]);
 

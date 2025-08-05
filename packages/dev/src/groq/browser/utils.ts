@@ -1,6 +1,6 @@
 import {func_remember} from "@gaubee/util";
 
-export const getWindowId = func_remember((): string | undefined => {
+export const getWindowId = func_remember((): string => {
   for (let i = 0; i < sessionStorage.length; i++) {
     const key = sessionStorage.key(i);
     if (key && key.endsWith("_window_id")) {
@@ -9,4 +9,5 @@ export const getWindowId = func_remember((): string | undefined => {
       } catch {}
     }
   }
+  return crypto.randomUUID();
 });

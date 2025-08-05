@@ -82,10 +82,6 @@ export const initializeSession = func_remember(async () => {
     const {headers, models} = await captureAndHold();
     const fs = await getEasyFs();
     const windowId = getWindowId();
-    if (!windowId) {
-      console.error("Session heartbeat failed: windowId not found.");
-      return;
-    }
 
     // Start the heartbeat interval
     setInterval(() => {

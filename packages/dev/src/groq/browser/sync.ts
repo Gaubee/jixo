@@ -16,7 +16,6 @@ const processing_locks: Record<string, boolean | void> = {};
 const processTasks = async () => {
   const fs = await getEasyFs();
   const windowId = getWindowId();
-  if (!windowId) return;
 
   const taskFiles = (await fs.readdir("")).filter((name) => name.startsWith(`${windowId}.`) && name.endsWith(".groq-task.json"));
   if (taskFiles.length) {
