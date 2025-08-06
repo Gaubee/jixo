@@ -10,7 +10,7 @@ export interface FsDuplexBrowserHelper {
 
 export class BrowserFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> {
   private readonly heartbeatWriter: BrowserHeartbeatWriter;
-  private pollerId: number | null = null;
+  private pollerId: any | null = null;
   private isPolling = false;
 
   constructor(party: P, json: JsonLike, filenamePrefix: string, helper: FsDuplexBrowserHelper) {
@@ -19,6 +19,7 @@ export class BrowserFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> 
     const writeFile = party === "handler" ? `${prefixBasename}.out.jsonl` : `${prefixBasename}.in.jsonl`;
     const heartbeatFile = `${prefixBasename}.heartbeat.json`;
 
+    // Correctly instantiate logs before passing them to super()
     const readerLog = new BrowserAppendOnlyLog(readFile, helper);
     const writerLog = new BrowserAppendOnlyLog(writeFile, helper);
 

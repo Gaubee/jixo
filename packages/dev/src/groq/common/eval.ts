@@ -13,7 +13,7 @@ export const zEvalTask = z.object({
 export type EvalTask = z.output<typeof zEvalTask>;
 
 // 2. Browser 状态处理函数 (The Browser-side Logic)
-export async function* doEval(input: EvalTask): AsyncGenerator<{changed: boolean; output: EvalTask}> {
+export async function* doEval(input: EvalTask): AsyncGenerator<{changed: boolean; output: EvalTask}, void, EvalTask | undefined> {
   const output = {...input};
   try {
     const result = await (async () => eval(output.code))();
@@ -43,24 +43,27 @@ export const createRunCodeInBrowser = (runner: TaskRunner) => {
     const duplex = await runner<EvalTask>({dir, initialTask});
 
     return new Promise((resolve, reject) => {
-      const offData = duplex.on("data", (task) => {
+      const offData = duplex.onData.on((task) => {
         if (task.done) {
+          cleanup();
           if (task.status === "rejected") {
             reject(task.result);
           } else {
             resolve(task.result);
           }
-          offData();
-          offClose();
-          duplex.destroy();
+          duplex.close();
         }
       });
 
-      const offClose = duplex.on("close", () => {
-        reject(new Error(`Task ${initialTask.taskId} closed unexpectedly.`));
+      const offClose = duplex.onClose.on((reason) => {
+        cleanup();
+        reject(new Error(`Task ${initialTask.taskId} closed unexpectedly. Reason: ${reason}`));
+      });
+
+      const cleanup = () => {
         offData();
         offClose();
-      });
+      };
     });
   };
 };

@@ -6,35 +6,30 @@
  *   off();                            // 取消保持
  */
 export async function keepWeakup() {
-  // 1. Web-Worker 里跑定时器，Chrome 不会对它做后台节流
+  // 1.用 Worker 做心跳
   const workerCode = `
-    let counter = 0;
-    setInterval(() => {
-      // 每 1 秒发一次消息，防止 Worker 被挂起
-      self.postMessage(++counter);
-    }, 1000);
+    setInterval(() => self.postMessage('tick'), 1000);
   `;
-  const blob = new Blob([workerCode], {type: "application/javascript"});
-  const worker = new Worker(URL.createObjectURL(blob));
-  worker.onmessage = () => {}; // 只要接收即可，防止报错
+  const worker = new Worker(URL.createObjectURL(new Blob([workerCode], { type: 'application/javascript' })));
+  worker.onmessage = () => {};
 
-  // 2. 打开一个「静音」AudioContext，让标签页被认为在播放音频
+  // 2. 播放一个 200 ms 的白噪声片段，音量很小但非 0
   const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const buf = ctx.createBuffer(1, 1, 22050); // 1 帧静音
-  const node = ctx.createBufferSource();
-  node.buffer = buf;
-  node.loop = true;
-  node.connect(ctx.destination);
-  node.start();
+  const length = ctx.sampleRate * 0.2; // 200 ms
+  const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < length; i++) data[i] = Math.random() * 0.02 - 0.01; // 极小声
 
-  // 3. 返回一个一次性关闭函数
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+  source.connect(ctx.destination);
+  source.start();
+
+  // 3. 返回关闭函数
   return () => {
     worker.terminate();
-    try {
-      node.stop();
-    } catch {}
-    try {
-      ctx.close();
-    } catch {}
+    try { source.stop(); } catch {}
+    try { ctx.close(); } catch {}
   };
 }

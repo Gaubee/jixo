@@ -28,7 +28,6 @@ export const findActiveGroqSession = func_remember(async (dir: string): Promise<
         }
         const diffTime = Date.now() - session.time;
         if (diffTime <= 5000) {
-          // FIX: Use path.basename to get just the filename part for the ID
           const windowId = path.basename(sessionFile, ".groq-session.json");
           return {
             windowId,
@@ -60,7 +59,8 @@ export const findActiveGroqSession = func_remember(async (dir: string): Promise<
   const session = await waitSession();
 
   /// 初次建立连接，删除tasks文件，因为这些任务文件是与上次运行的内存promise关联，所以已经失去意义
-  const taskFiles = await globby(`${session.windowId}.*.groq-task.json`, {cwd: absoluteDir, absolute: true});
+  // The new glob pattern matches all files related to a task prefix.
+  const taskFiles = await globby(`${session.windowId}.*.groq-task.*`, {cwd: absoluteDir, absolute: true});
   for (const taskfile of taskFiles) {
     await fsp.unlink(taskfile);
   }

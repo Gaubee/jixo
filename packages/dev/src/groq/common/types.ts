@@ -1,6 +1,5 @@
 import {z} from "zod/v4-mini";
 import {zEvalTask} from "./eval.js";
-import {zEventStreamTask} from "./eventStream.js";
 import {zFetchTask} from "./fetch.js";
 
 export const zModels = z.object({
@@ -41,6 +40,6 @@ export const zSession = z.object({
 });
 export type Session = z.infer<typeof zSession>;
 
-export const zTask = z.union([z.lazy(() => zEvalTask), z.lazy(() => zFetchTask), z.lazy(() => zEventStreamTask)]);
+export const zTask = z.union([z.lazy(() => zEvalTask), z.lazy(() => zFetchTask)]);
 
 export type Task = z.output<typeof zTask>;
