@@ -1,4 +1,5 @@
 import {prepareDirHandle} from "../../google-aistudio/browser/utils.js";
+import {extractChat} from "./export.js";
 import {keepWeakup} from "./keepWeakup.js";
 import {sync} from "./sync.js";
 
@@ -20,4 +21,5 @@ import {sync} from "./sync.js";
   // 启动同步循环
   void sync();
   void keepWeakup();
+  Object.assign(window, {extractChat});
 })();
