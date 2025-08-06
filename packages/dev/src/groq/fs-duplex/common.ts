@@ -1,20 +1,11 @@
-import {pureEvent, type PureEvent} from "@gaubee/util";
+import {pureEvent} from "@gaubee/util";
 import Debug from "debug";
 import type {JsonLike} from "./json.js";
 import type {AppendOnlyLog} from "./log.js";
 import type {Action} from "./processor.js";
 import {MessageProcessor} from "./processor.js";
-import type {FsDuplexMessage, FsDuplexMessageType, FsDuplexParty, FsDuplexPayloads} from "./protocol.js";
+import type {FsDuplexMessage, FsDuplexMessageType, FsDuplexParty} from "./protocol.js";
 
-export type {FsDuplexBrowserHelper} from "./browser.js";
-
-/**
- * An abstract base class for a duplex communication channel over a filesystem.
- * It is generic over the application data type `T` and the party `P`.
- *
- * It handles the protocol state machine, message sequencing, and serialization,
- * while delegating platform-specific file I/O to subclasses.
- */
 export abstract class FsDuplex<T, P extends FsDuplexParty> {
   public readonly party: P;
   protected json: JsonLike;
@@ -27,29 +18,11 @@ export abstract class FsDuplex<T, P extends FsDuplexParty> {
   private localAck = 0;
   protected readonly log: Debug.Debugger;
 
-  // --- Public Events ---
+  // --- Public Events (Minimized API) ---
   public readonly onOpen = pureEvent<void>();
   public readonly onClose = pureEvent<string>(); // reason
   public readonly onError = pureEvent<Error>();
   public readonly onData = pureEvent<T>();
-
-  // --- Protocol-level Events (for advanced use cases) ---
-  public readonly onInit = pureEvent<FsDuplexPayloads<T>["init"]>();
-  public readonly onAck = pureEvent<FsDuplexPayloads<T>["ack"]>();
-  public readonly onFin = pureEvent<FsDuplexPayloads<T>["fin"]>();
-  public readonly onFinAck = pureEvent<FsDuplexPayloads<T>["fin_ack"]>();
-  public readonly onPing = pureEvent<FsDuplexPayloads<T>["ping"]>();
-  public readonly onPong = pureEvent<FsDuplexPayloads<T>["pong"]>();
-
-  private readonly protocolEvents: Record<FsDuplexMessageType, PureEvent<any>> = {
-    init: this.onInit,
-    ack: this.onAck,
-    fin: this.onFin,
-    fin_ack: this.onFinAck,
-    ping: this.onPing,
-    pong: this.onPong,
-    data: this.onData,
-  };
 
   public get currentState() {
     return this.state;
@@ -67,6 +40,7 @@ export abstract class FsDuplex<T, P extends FsDuplexParty> {
 
   abstract start(): Promise<void>;
   abstract stop(): Promise<void>;
+  abstract destroy(): Promise<void>;
 
   protected async handleIncomingData(): Promise<void> {
     const lines = await this.readerLog.readNewLines();
@@ -113,7 +87,7 @@ export abstract class FsDuplex<T, P extends FsDuplexParty> {
     }
   }
 
-  private _sendMessage<M extends FsDuplexMessageType>(type: M, payload: FsDuplexPayloads<T>[M]): void {
+  private _sendMessage<M extends FsDuplexMessageType>(type: M, payload: any): void {
     if (this.state === "closed") return;
     if (this.state === "closing" && type !== "fin" && type !== "fin_ack") return;
     this.localSeq++;
@@ -124,19 +98,22 @@ export abstract class FsDuplex<T, P extends FsDuplexParty> {
   }
 
   private _executeAction(action: Action<T>): void {
+    this.log("Executing action: %o", action);
     if (action.type === "emit") {
-      this.log("Emitting event: %s with payload: %o", action.event, action.payload);
-      if (action.event === "open") {
-        this.onOpen.emit();
-      } else if (action.event === "close") {
-        this.state = "closed";
-        this.log("State change: %s", this.state);
-        this.onClose.emit("graceful");
-      } else {
-        const event_emitter = this.protocolEvents[action.event as FsDuplexMessageType];
-        if (event_emitter) {
-          event_emitter.emit(action.payload);
-        }
+      switch (action.event) {
+        case "open":
+          this.onOpen.emit();
+          break;
+        case "close":
+          this.state = "closed";
+          this.log("State change: %s", this.state);
+          this.onClose.emit("graceful");
+          break;
+        case "data":
+          this.onData.emit(action.payload);
+          break;
+        // All other low-level protocol events are now handled internally
+        // and do not need to be emitted publicly.
       }
     } else if (action.type === "send") {
       this._sendMessage(action.messageType, action.payload);

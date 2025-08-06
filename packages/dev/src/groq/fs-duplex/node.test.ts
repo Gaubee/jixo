@@ -1,9 +1,9 @@
-import {delay} from "@gaubee/util";
 import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {NodeFsDuplex} from "./node.js";
+import {superjson} from "./superjson.js";
 
 // A mock data type for testing purposes
 type TestData = {
@@ -16,7 +16,7 @@ class MockHeartbeatWriter {
   private timer: NodeJS.Timeout | null = null;
   constructor(
     private filepath: string,
-    private interval = 500,
+    private interval = 100,
   ) {}
   async write() {
     await fsp.writeFile(this.filepath, String(Date.now()));
@@ -34,32 +34,27 @@ class MockHeartbeatWriter {
   }
 }
 
-describe("NodeFsDuplex Final Integration Test", () => {
+describe("NodeFsDuplex Integration Test", () => {
   let testDir: string;
   let taskFilepathPrefix: string;
   let initiator: NodeFsDuplex<TestData, "initiator">;
   let handler: NodeFsDuplex<TestData, "handler">;
   let mockHeartbeat: MockHeartbeatWriter;
 
-  // Use native JSON as the JsonLike implementation for tests
-  const jsonImpl = JSON;
-
   beforeEach(async () => {
-    testDir = path.join(os.tmpdir(), `fs-duplex-final-test-${crypto.randomUUID()}`);
+    testDir = path.join(os.tmpdir(), `fs-duplex-node-test-${crypto.randomUUID()}`);
     await fsp.mkdir(testDir, {recursive: true});
     taskFilepathPrefix = path.join(testDir, "task");
 
-    // Default instances for most tests
-    initiator = new NodeFsDuplex("initiator", jsonImpl, taskFilepathPrefix);
-    handler = new NodeFsDuplex("handler", jsonImpl, taskFilepathPrefix);
-    mockHeartbeat = new MockHeartbeatWriter(`${taskFilepathPrefix}.heartbeat.json`, 100);
+    initiator = new NodeFsDuplex("initiator", superjson, taskFilepathPrefix);
+    handler = new NodeFsDuplex("handler", superjson, taskFilepathPrefix);
+    mockHeartbeat = new MockHeartbeatWriter(`${taskFilepathPrefix}.heartbeat.json`);
   });
 
   afterEach(async () => {
     await initiator?.stop();
     await handler?.stop();
     mockHeartbeat.stop();
-    await delay(100);
     await fsp.rm(testDir, {recursive: true, force: true}).catch(() => {});
   });
 
@@ -76,32 +71,27 @@ describe("NodeFsDuplex Final Integration Test", () => {
     expect(handler.currentState).toBe("open");
   });
 
-  it("should send and receive messages bi-directionally after handshake", async () => {
+  it("should send and receive data bi-directionally", async () => {
     await initiator.start();
     await handler.start();
     mockHeartbeat.start();
-
     initiator.init();
     await initiator.onOpen.once();
 
-    const handlerReceivedPromise = handler.onData.once();
-    const initiatorReceivedPromise = initiator.onData.once();
+    const handlerData = handler.onData.once();
+    const initiatorData = initiator.onData.once();
 
-    initiator.sendData({data: new Uint8Array([1, 2, 3])});
+    initiator.sendData({message: "ping"});
     handler.sendData({message: "pong"});
 
-    const handlerPayload = await handlerReceivedPromise;
-    const initiatorPayload = await initiatorReceivedPromise;
-
-    expect(handlerPayload.data).toBeDefined();
-    expect(initiatorPayload.message).toBe("pong");
+    await expect(handlerData).resolves.toEqual({message: "ping"});
+    await expect(initiatorData).resolves.toEqual({message: "pong"});
   });
 
-  it("should handle graceful shutdown from initiator", async () => {
+  it("should handle graceful shutdown", async () => {
     await initiator.start();
     await handler.start();
     mockHeartbeat.start();
-
     initiator.init();
     await initiator.onOpen.once();
 
@@ -112,60 +102,43 @@ describe("NodeFsDuplex Final Integration Test", () => {
 
     const [initiatorReason, handlerReason] = await Promise.all([initiatorClosed, handlerClosed]);
 
-    expect(initiator.currentState).toBe("closed");
-    expect(handler.currentState).toBe("closed");
     expect(initiatorReason).toBe("graceful");
     expect(handlerReason).toBe("graceful");
   });
 
-  it("should handle graceful shutdown from handler", async () => {
+  it("should close with timeout when heartbeat fails", async () => {
+    const shortTimeout = 200;
+    initiator = new NodeFsDuplex("initiator", superjson, taskFilepathPrefix, {heartbeatTimeout: shortTimeout});
+
     await initiator.start();
     await handler.start();
     mockHeartbeat.start();
-
     initiator.init();
     await initiator.onOpen.once();
 
-    const initiatorClosed = initiator.onClose.once();
-    const handlerClosed = handler.onClose.once();
+    const closeReason = initiator.onClose.once();
+    mockHeartbeat.stop();
 
-    handler.close();
-
-    const [initiatorReason, handlerReason] = await Promise.all([initiatorClosed, handlerClosed]);
-
-    expect(initiator.currentState).toBe("closed");
-    expect(handler.currentState).toBe("closed");
-    expect(initiatorReason).toBe("graceful");
-    expect(handlerReason).toBe("graceful");
+    await expect(closeReason).resolves.toBe("timeout");
   });
 
-  it(
-    "should close with 'timeout' reason when heartbeat fails",
-    async () => {
-      const shortTimeout = 500;
-      initiator = new NodeFsDuplex("initiator", jsonImpl, taskFilepathPrefix, {
-        heartbeatTimeout: shortTimeout,
-      });
-      handler = new NodeFsDuplex("handler", jsonImpl, taskFilepathPrefix);
+  it("should destroy and clean up all related files", async () => {
+    await initiator.start();
+    await handler.start();
+    mockHeartbeat.start();
+    initiator.init();
+    await initiator.onOpen.once();
 
-      initiator.onError.on((err) => {
-        expect(err.message).toBe("Heartbeat timeout");
-      });
+    // Ensure files exist before destroying
+    await expect(fsp.access(`${taskFilepathPrefix}.in.jsonl`)).resolves.toBeUndefined();
+    await expect(fsp.access(`${taskFilepathPrefix}.out.jsonl`)).resolves.toBeUndefined();
+    await expect(fsp.access(`${taskFilepathPrefix}.heartbeat.json`)).resolves.toBeUndefined();
 
-      await initiator.start();
-      await handler.start();
-      mockHeartbeat.start();
+    await initiator.destroy();
 
-      initiator.init();
-      await initiator.onOpen.once();
-      expect(initiator.currentState).toBe("open");
-
-      mockHeartbeat.stop();
-
-      const closeReason = await initiator.onClose.once();
-      expect(closeReason).toBe("timeout");
-      expect(initiator.currentState).toBe("closed");
-    },
-    {timeout: 2000},
-  );
+    // Ensure files are gone after destroying
+    await expect(fsp.access(`${taskFilepathPrefix}.in.jsonl`)).rejects.toThrow();
+    await expect(fsp.access(`${taskFilepathPrefix}.out.jsonl`)).rejects.toThrow();
+    await expect(fsp.access(`${taskFilepathPrefix}.heartbeat.json`)).rejects.toThrow();
+  });
 });

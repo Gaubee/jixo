@@ -12,8 +12,14 @@ class BrowserHelper implements FsDuplexBrowserHelper {
   constructor(private directoryHandle: FileSystemDirectoryHandle) {
     if (!directoryHandle) throw new Error("BrowserHelper requires a valid DirectoryHandle.");
   }
+
   async getFileHandle(filename: string): Promise<FileSystemFileHandle> {
     return this.directoryHandle.getFileHandle(filename, {create: true});
+  }
+
+  async removeFile(filename: string): Promise<void> {
+    // Use the directory handle to remove the file entry.
+    await this.directoryHandle.removeEntry(filename);
   }
 }
 
@@ -45,7 +51,8 @@ class BrowserTestHarness {
       this.updateStatus(`Initializing FsDuplex for "${this.directoryHandle.name}"...`, "ready");
 
       if (this.duplex) {
-        await this.duplex.stop();
+        // Destroy the old instance completely before creating a new one
+        await this.duplex.destroy();
       }
       const helper = new BrowserHelper(this.directoryHandle);
       this.duplex = new BrowserFsDuplex("handler", superjson, filenamePrefix, helper);
@@ -73,11 +80,19 @@ class BrowserTestHarness {
 
       await this.duplex.start();
       this.logEventToUI("BrowserFsDuplex started, waiting for handshake.", "event");
-      this.logEvent("initialized"); // Signal to Node.js
+      this.logEvent("initialized");
     } catch (err: any) {
       this.updateStatus(`Error: ${err.message}`, "closed");
       this.logEventToUI(`Initialization failed: ${err.message}`, "event");
       this.actionButton!.disabled = false;
+    }
+  }
+
+  // Expose a destroy method for completeness, although not used by the current script.
+  public async destroy() {
+    if (this.duplex) {
+      await this.duplex.destroy();
+      this.logEventToUI("Duplex destroyed.", "event");
     }
   }
 

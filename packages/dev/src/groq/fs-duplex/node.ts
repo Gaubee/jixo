@@ -1,3 +1,4 @@
+import fsp from "node:fs/promises";
 import {FsDuplex} from "./common.js";
 import {NodeHeartbeatReader} from "./heartbeat.js";
 import type {JsonLike} from "./json.js";
@@ -12,6 +13,7 @@ export class NodeFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> {
   private heartbeatPoller: NodeJS.Timeout | null = null;
   private readonly pollInterval: number;
   private readonly heartbeatTimeout: number;
+  private readonly filepaths: {read: string; write: string; heartbeat: string};
 
   constructor(party: P, json: JsonLike, filepathPrefix: string, options?: {pollInterval?: number; heartbeatTimeout?: number}) {
     const readFile = party === "initiator" ? `${filepathPrefix}.out.jsonl` : `${filepathPrefix}.in.jsonl`;
@@ -25,6 +27,7 @@ export class NodeFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> {
     this.heartbeatReader = new NodeHeartbeatReader(heartbeatFile);
     this.pollInterval = options?.pollInterval ?? 200;
     this.heartbeatTimeout = options?.heartbeatTimeout ?? HEARTBEAT_TIMEOUT;
+    this.filepaths = {read: readFile, write: writeFile, heartbeat: heartbeatFile};
   }
 
   public async start(): Promise<void> {
@@ -56,5 +59,16 @@ export class NodeFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> {
     await this.readerLog.stop();
     await this.writerLog.stop();
     this.log("Stopped.");
+  }
+
+  public async destroy(): Promise<void> {
+    this.log("Destroying...");
+    await this.stop();
+    await Promise.all([
+      fsp.rm(this.filepaths.read, {force: true}).catch(() => {}),
+      fsp.rm(this.filepaths.write, {force: true}).catch(() => {}),
+      fsp.rm(this.filepaths.heartbeat, {force: true}).catch(() => {}),
+    ]);
+    this.log("Destroyed.");
   }
 }

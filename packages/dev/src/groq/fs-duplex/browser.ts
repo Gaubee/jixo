@@ -6,12 +6,16 @@ import type {FsDuplexParty} from "./protocol.js";
 
 export interface FsDuplexBrowserHelper {
   getFileHandle(filename: string): Promise<FileSystemFileHandle>;
+  // Add a remove method to the helper interface
+  removeFile(filename: string): Promise<void>;
 }
 
 export class BrowserFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> {
   private readonly heartbeatWriter: BrowserHeartbeatWriter;
   private pollerId: any | null = null;
   private isPolling = false;
+  private readonly filepaths: {read: string; write: string; heartbeat: string};
+  private helper: FsDuplexBrowserHelper;
 
   constructor(party: P, json: JsonLike, filenamePrefix: string, helper: FsDuplexBrowserHelper) {
     const prefixBasename = filenamePrefix.split("/").pop()!;
@@ -19,12 +23,13 @@ export class BrowserFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> 
     const writeFile = party === "handler" ? `${prefixBasename}.out.jsonl` : `${prefixBasename}.in.jsonl`;
     const heartbeatFile = `${prefixBasename}.heartbeat.json`;
 
-    // Correctly instantiate logs before passing them to super()
     const readerLog = new BrowserAppendOnlyLog(readFile, helper);
     const writerLog = new BrowserAppendOnlyLog(writeFile, helper);
 
     super(party, json, readerLog, writerLog);
+    this.helper = helper;
     this.heartbeatWriter = new BrowserHeartbeatWriter(heartbeatFile, helper);
+    this.filepaths = {read: readFile, write: writeFile, heartbeat: heartbeatFile};
   }
 
   public async start(): Promise<void> {
@@ -51,16 +56,25 @@ export class BrowserFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> 
     super.close(reason);
   }
 
+  public async destroy(): Promise<void> {
+    this.log("Destroying...");
+    await this.stop();
+    await Promise.all([
+      this.helper.removeFile(this.filepaths.read).catch(() => {}),
+      this.helper.removeFile(this.filepaths.write).catch(() => {}),
+      this.helper.removeFile(this.filepaths.heartbeat).catch(() => {}),
+    ]);
+    this.log("Destroyed.");
+  }
+
   private _poll(): void {
     if (this.currentState === "closed") {
       return;
     }
-
     this.pollerId = setTimeout(async () => {
       if (!this.pollerId || this.isPolling) {
         return;
       }
-
       this.isPolling = true;
       try {
         await this.handleIncomingData();
