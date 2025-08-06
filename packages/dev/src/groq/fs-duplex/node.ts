@@ -23,7 +23,7 @@ export class NodeFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> {
 
     super(party, json, readerLog, writerLog);
     this.heartbeatReader = new NodeHeartbeatReader(heartbeatFile);
-    this.pollInterval = options?.pollInterval ?? 50;
+    this.pollInterval = options?.pollInterval ?? 200;
     this.heartbeatTimeout = options?.heartbeatTimeout ?? HEARTBEAT_TIMEOUT;
   }
 
@@ -36,13 +36,12 @@ export class NodeFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> {
     this.poller = setInterval(() => this.handleIncomingData(), this.pollInterval);
 
     this.heartbeatPoller = setInterval(async () => {
-      // Only check for heartbeat if the channel is supposed to be active.
       if (this.currentState === "open") {
         const alive = await this.heartbeatReader.isAlive(this.heartbeatTimeout);
         this.log("Heartbeat check: isAlive=%s", alive);
         if (!alive) {
           this.onError.emit(new Error("Heartbeat timeout"));
-          this.close("timeout"); // Use the formal close method
+          this.close("timeout");
         }
       }
     }, this.heartbeatTimeout / 2);

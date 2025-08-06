@@ -14,9 +14,10 @@ export class BrowserFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> 
   private isPolling = false;
 
   constructor(party: P, json: JsonLike, filenamePrefix: string, helper: FsDuplexBrowserHelper) {
-    const readFile = party === "initiator" ? `${filenamePrefix}.out.jsonl` : `${filenamePrefix}.in.jsonl`;
-    const writeFile = party === "initiator" ? `${filenamePrefix}.in.jsonl` : `${filenamePrefix}.out.jsonl`;
-    const heartbeatFile = `${filenamePrefix}.heartbeat.json`;
+    const prefixBasename = filenamePrefix.split("/").pop()!;
+    const readFile = party === "handler" ? `${prefixBasename}.in.jsonl` : `${prefixBasename}.out.jsonl`;
+    const writeFile = party === "handler" ? `${prefixBasename}.out.jsonl` : `${prefixBasename}.in.jsonl`;
+    const heartbeatFile = `${prefixBasename}.heartbeat.json`;
 
     const readerLog = new BrowserAppendOnlyLog(readFile, helper);
     const writerLog = new BrowserAppendOnlyLog(writeFile, helper);
@@ -35,7 +36,7 @@ export class BrowserFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> 
 
   public async stop(): Promise<void> {
     if (this.pollerId) {
-      cancelIdleCallback(this.pollerId);
+      clearTimeout(this.pollerId);
       this.pollerId = null;
     }
     this.heartbeatWriter.stop();
@@ -54,8 +55,7 @@ export class BrowserFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> 
       return;
     }
 
-    this.pollerId = requestIdleCallback(async () => {
-      // Check again inside the callback in case stop() was called.
+    this.pollerId = setTimeout(async () => {
       if (!this.pollerId || this.isPolling) {
         return;
       }
@@ -65,14 +65,13 @@ export class BrowserFsDuplex<T, P extends FsDuplexParty> extends FsDuplex<T, P> 
         await this.handleIncomingData();
       } catch (e) {
         this.onError.emit(e instanceof Error ? e : new Error(String(e)));
-        this.close("error"); // Close on error
+        this.close("error");
       } finally {
         this.isPolling = false;
-        // Schedule the next poll only if not closed
         if (this.currentState !== "closed") {
           this._poll();
         }
       }
-    });
+    }, 200);
   }
 }

@@ -8,76 +8,97 @@ declare global {
   }
 }
 
-// A simple in-memory cache for file handles to improve performance
-const fileHandleCache = new Map<string, FileSystemFileHandle>();
-
-/**
- * Implements the FsDuplexBrowserHelper interface required by BrowserFsDuplex.
- * This implementation now correctly uses the Origin Private File System (OPFS),
- * which will be mapped to a real directory by Playwright's launch arguments.
- */
 class BrowserHelper implements FsDuplexBrowserHelper {
-  private root: FileSystemDirectoryHandle | null = null;
-
-  private async getRoot() {
-    if (!this.root) {
-      console.log("[Browser Helper] Getting navigator.storage.getDirectory()...");
-      this.root = await navigator.storage.getDirectory();
-      console.log("[Browser Helper] Root directory handle obtained.");
-    }
-    return this.root;
+  constructor(private directoryHandle: FileSystemDirectoryHandle) {
+    if (!directoryHandle) throw new Error("BrowserHelper requires a valid DirectoryHandle.");
   }
-
   async getFileHandle(filename: string): Promise<FileSystemFileHandle> {
-    const name = filename.split("/").pop()!;
-    console.log(`[Browser Helper] getFileHandle called for filename: "${filename}", using basename: "${name}"`);
-    if (fileHandleCache.has(name)) {
-      console.log(`[Browser Helper] Cache hit for "${name}".`);
-      return fileHandleCache.get(name)!;
-    }
-    console.log(`[Browser Helper] Cache miss for "${name}", getting handle from root.`);
-    const root = await this.getRoot();
-    const handle = await root.getFileHandle(name, {create: true});
-    fileHandleCache.set(name, handle);
-    console.log(`[Browser Helper] Got and cached handle for "${name}".`);
-    return handle;
+    return this.directoryHandle.getFileHandle(filename, {create: true});
   }
 }
 
-/**
- * The main test harness class that runs in the browser.
- */
 class BrowserTestHarness {
   public duplex: BrowserFsDuplex<any, "handler"> | null = null;
-  private helper: BrowserHelper | null = null;
+  private directoryHandle: FileSystemDirectoryHandle | null = null;
+  private logContainer: HTMLElement | null = null;
+  private statusHeader: HTMLElement | null = null;
+  private actionButton: HTMLButtonElement | null = null;
 
   constructor() {
-    console.log("[Browser Harness] Initialized.");
+    this.logContainer = document.getElementById("log-container");
+    this.statusHeader = document.getElementById("status-header");
+    this.actionButton = document.getElementById("action-button") as HTMLButtonElement;
+    this.logEventToUI("Harness Initialized. Waiting for Node.js.", "event");
   }
 
-  public async setup(filenamePrefix: string) {
-    console.log(`[Browser Harness] Setting up BrowserFsDuplex with prefix: ${filenamePrefix}`);
-    if (this.duplex) {
-      await this.duplex.stop();
+  public async initialize(filenamePrefix: string) {
+    this.actionButton!.disabled = true;
+
+    try {
+      if (!this.directoryHandle) {
+        this.updateStatus("Requesting directory access...", "ready");
+        this.logEventToUI("Waiting for user to select directory...", "event");
+        this.directoryHandle = await window.showDirectoryPicker({mode: "readwrite"});
+        this.logEventToUI(`Directory handle for "${this.directoryHandle.name}" obtained.`, "event");
+      }
+
+      this.updateStatus(`Initializing FsDuplex for "${this.directoryHandle.name}"...`, "ready");
+
+      if (this.duplex) {
+        await this.duplex.stop();
+      }
+      const helper = new BrowserHelper(this.directoryHandle);
+      this.duplex = new BrowserFsDuplex("handler", superjson, filenamePrefix, helper);
+
+      this.duplex.onOpen.on(() => {
+        this.logEvent("open");
+        this.logEventToUI("Connection OPEN.", "event");
+        this.updateStatus("Connection Active", "running");
+      });
+      this.duplex.onClose.on((reason) => {
+        this.logEvent("close", reason);
+        this.logEventToUI(`Connection CLOSED. Reason: ${reason}`, "event");
+        this.updateStatus(`Connection Closed. Ready for next step.`, "closed");
+        this.actionButton!.disabled = false;
+      });
+      this.duplex.onData.on((payload) => {
+        this.logEvent("data", payload);
+        this.logEventToUI(JSON.stringify(payload), "in");
+      });
+      this.duplex.onError.on((error) => {
+        this.logEvent("error", {message: error.message});
+        this.logEventToUI(`ERROR: ${error.message}`, "event");
+        this.updateStatus(`Error: ${error.message}`, "closed");
+      });
+
+      await this.duplex.start();
+      this.logEventToUI("BrowserFsDuplex started, waiting for handshake.", "event");
+      this.logEvent("initialized"); // Signal to Node.js
+    } catch (err: any) {
+      this.updateStatus(`Error: ${err.message}`, "closed");
+      this.logEventToUI(`Initialization failed: ${err.message}`, "event");
+      this.actionButton!.disabled = false;
     }
-    // The helper is now stateless and can be created on the fly.
-    this.helper = new BrowserHelper();
-    this.duplex = new BrowserFsDuplex("handler", superjson, filenamePrefix, this.helper);
+  }
 
-    this.duplex.onOpen.on(() => this.logEvent("open"));
-    this.duplex.onClose.on((reason) => this.logEvent("close", reason));
-    this.duplex.onData.on((payload) => this.logEvent("data", payload));
-    this.duplex.onError.on((error) => this.logEvent("error", {message: error.message}));
+  private logEventToUI(message: string, type: "in" | "out" | "event") {
+    if (!this.logContainer) return;
+    const entry = document.createElement("div");
+    entry.className = `log-entry ${type}`;
+    entry.textContent = message;
+    this.logContainer.appendChild(entry);
+    this.logContainer.scrollTop = this.logContainer.scrollHeight;
+  }
 
-    await this.duplex.start();
-    console.log("[Browser Harness] BrowserFsDuplex started.");
+  private updateStatus(message: string, state: "ready" | "running" | "closed") {
+    if (!this.statusHeader) return;
+    this.statusHeader.textContent = message;
+    this.statusHeader.className = `status-${state}`;
   }
 
   public logEvent(event: string, payload?: any) {
-    // This specific format is what the Node.js test runner waits for.
     console.log(`__HARNESS_EVENT__:${JSON.stringify({event, payload})}`);
   }
 }
 
-// Expose the harness instance to the global scope
 window.harness = new BrowserTestHarness();
