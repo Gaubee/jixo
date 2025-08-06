@@ -1,8 +1,10 @@
 import {z} from "zod/v4-mini";
 import type {NodeFsDuplex} from "../fs-duplex/node.js";
 import type {TaskRunner} from "../node/utils.js";
+import type {TaskHandler} from "./task-handlers.js";
+import {TaskError, waitNextTask} from "./utils.js";
 
-// 1. Zod 定义 (The Contract)
+// 1. Zod 定义 (The Contract) - no changes
 export const zFetchTask = z.object({
   type: z.literal("fetch"),
   taskId: z.string(),
@@ -17,13 +19,15 @@ export const zFetchTask = z.object({
 });
 export type FetchTask = z.output<typeof zFetchTask>;
 
-// 2. Browser 状态处理函数
-export async function* doFetch(input: FetchTask): AsyncGenerator<{changed: boolean; output: FetchTask}, void, FetchTask | undefined> {
-  let output = {...input};
+// 2. Browser 状态处理函数 (The Browser-side Logic)
+export const doFetch: TaskHandler<FetchTask> = async (duplex, initialTask) => {
+  let output = {...initialTask};
   try {
     const response = await fetch(output.url, output.init);
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((value, key) => (responseHeaders[key] = value));
+
+    // Send the initial response headers and status back to Node.js
     output.status = "responded";
     output.response = {
       headers: responseHeaders,
@@ -31,53 +35,65 @@ export async function* doFetch(input: FetchTask): AsyncGenerator<{changed: boole
       status: response.status,
       statusText: response.statusText,
     };
+    duplex.sendData(output);
 
-    const update = yield {changed: true, output};
-    if (update) Object.assign(output, update);
-
+    // If the response was not OK, we still send the headers, but then we are done.
     if (!response.ok) {
-    }
-
-    switch (output.responseType) {
-      case "json":
-        output.result = await response.json();
-        break;
-      case "text":
-        output.result = await response.text();
-        break;
-      case "arrayBuffer":
-        output.result = await response.arrayBuffer();
-        break;
-      case "stream":
-        const reader = response.body?.getReader();
-        if (!reader) throw new Error("Response body is not readable.");
-
-        output.status = "streaming";
-        yield {changed: true, output};
-
-        while (true) {
-          const {done, value} = await reader.read();
-          if (done) break;
-          output.chunks.push(new Uint8Array(value));
-          yield {changed: true, output};
-        }
-        break;
-    }
-
-    output.status = response.ok ? "fulfilled" : "rejected";
-    if (output.status === "rejected" && !output.result) {
+      output.status = "rejected";
       output.result = `Request failed with status ${response.status}`;
+      // No need to wait for further instructions, the task is complete.
+    } else {
+      // Wait for Node.js to tell us how to process the body.
+      const update = await waitNextTask(duplex);
+      Object.assign(output, update);
+
+      switch (output.responseType) {
+        case "json":
+          output.result = await response.json();
+          break;
+        case "text":
+          output.result = await response.text();
+          break;
+        case "arrayBuffer":
+          output.result = await response.arrayBuffer();
+          break;
+        case "stream":
+          const reader = response.body?.getReader();
+          if (!reader) throw new Error("Response body is not readable.");
+
+          output.status = "streaming";
+          duplex.sendData(output); // Inform Node that streaming has started
+
+          while (true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            // Send chunks as they arrive.
+            output.chunks.push(new Uint8Array(value));
+            duplex.sendData(output);
+          }
+          break;
+      }
+      output.status = "fulfilled";
     }
   } catch (e) {
+    // Catch errors from fetch() itself, waitNextTask() (TaskError), or body processing.
     output.status = "rejected";
-    output.result = e instanceof Error ? {message: e.message, stack: e.stack} : e;
+    if (e instanceof TaskError) {
+      // This is a controlled shutdown from the other side, no need to report an error payload.
+      console.log(`Fetch task for ${output.taskId} aborted by initiator.`);
+    } else {
+      output.result = e instanceof Error ? {message: e.message, name: e.name, stack: e.stack} : e;
+    }
   } finally {
     output.done = true;
-    yield {changed: true, output};
+    // Send the final state to Node.js, unless it was a remote close.
+    if (output.status !== "rejected" || output.result) {
+      duplex.sendData(output);
+    }
   }
-}
+};
 
-// 3. Node 状态处理函数
+// 3. Node 状态处理函数 (The Node-side Initiator Factory) - no changes yet
 class BrowserResponse {
   public readonly headers: Headers;
   public readonly ok: boolean;

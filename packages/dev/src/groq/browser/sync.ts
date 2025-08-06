@@ -1,21 +1,22 @@
-import type {EasyFS} from "../../google-aistudio/browser/utils.js";
 import {delay, getEasyFs, styles} from "../../google-aistudio/browser/utils.js";
 import {doEval} from "../common/eval.js";
 import {doFetch} from "../common/fetch.js";
+import type {TaskHandler} from "../common/task-handlers.js";
 import type {Task} from "../common/types.js";
 import {BrowserFsDuplex, type FsDuplexBrowserHelper} from "../fs-duplex/browser.js";
 import {superjson} from "../fs-duplex/superjson.js";
 import {initializeSession} from "./session.js";
 import {getWindowId} from "./utils.js";
 
-const taskHandlers = {
+// Map task types to their corresponding handler functions.
+const taskHandlers: {[key in Task["type"]]: TaskHandler<any>} = {
   eval: doEval,
   fetch: doFetch,
 };
 
 // --- Browser-side FsDuplex Helper Implementation ---
 class FsHelper implements FsDuplexBrowserHelper {
-  constructor(private fs: EasyFS) {}
+  constructor(private fs: import("../../google-aistudio/browser/utils.js").EasyFS) {}
   async getFileHandle(filename: string): Promise<FileSystemFileHandle> {
     const dirHandle = (this.fs as any)._dirHandle as FileSystemDirectoryHandle;
     if (!dirHandle) {
@@ -23,12 +24,21 @@ class FsHelper implements FsDuplexBrowserHelper {
     }
     return dirHandle.getFileHandle(filename, {create: true});
   }
+  // This is required by the FsDuplex.destroy() method
+  async removeFile(filename: string): Promise<void> {
+    const dirHandle = (this.fs as any)._dirHandle as FileSystemDirectoryHandle;
+    if (!dirHandle) {
+      throw new Error("EasyFS is not initialized with a DirectoryHandle.");
+    }
+    await dirHandle.removeEntry(filename);
+  }
 }
 
-// Use a Set to keep track of filename prefixes currently being processed.
-const active_tasks = new Set<string>();
+// Use a Map to keep track of active FsDuplex instances by their filename prefix.
+const activeDuplexes = new Map<string, BrowserFsDuplex<Task, "handler">>();
 
-async function handleTask(fs: EasyFS, filenamePrefix: string, initialContent: string) {
+async function handleTask(fs: import("../../google-aistudio/browser/utils.js").EasyFS, filenamePrefix: string, initialContent: string) {
+  let duplex: BrowserFsDuplex<Task, "handler"> | undefined;
   try {
     console.log(`Processing task for prefix: ${filenamePrefix}`);
     const initialTask: Task = superjson.parse(initialContent);
@@ -36,59 +46,44 @@ async function handleTask(fs: EasyFS, filenamePrefix: string, initialContent: st
     const handler = taskHandlers[initialTask.type];
     if (!handler) {
       console.warn(`No handler for task type: ${initialTask.type}`);
+      // Clean up the initial task file if no handler is found.
+      await fs.rm(`${filenamePrefix}.in.jsonl`);
       return;
     }
 
     const helper = new FsHelper(fs);
-    // Provide the explicit generic type <Task>
-    const duplex = new BrowserFsDuplex<Task, "handler">("handler", superjson, filenamePrefix, helper);
+    duplex = new BrowserFsDuplex<Task, "handler">("handler", superjson, filenamePrefix, helper);
+    activeDuplexes.set(filenamePrefix, duplex);
 
     duplex.onClose.on((reason) => {
-      console.log(`Connection for ${filenamePrefix} closed. Reason: ${reason}. Cleaning up.`);
-      active_tasks.delete(filenamePrefix);
-      fs.rm(`${filenamePrefix}.in.jsonl`).catch(() => {});
-      fs.rm(`${filenamePrefix}.out.jsonl`).catch(() => {});
-      fs.rm(`${filenamePrefix}.heartbeat.json`).catch(() => {});
+      console.log(`Connection for ${filenamePrefix} closed. Reason: ${reason}.`);
+      activeDuplexes.delete(filenamePrefix);
+      // No need to manually delete files here, destroy() handles it.
     });
 
     duplex.onError.on((err) => {
       console.error(`Error on duplex for ${filenamePrefix}:`, err);
+      activeDuplexes.delete(filenamePrefix);
     });
 
     await duplex.start();
 
-    const taskProcessor = handler(initialTask as any);
+    // The handler is a simple async function that takes control.
+    // Its completion signifies the end of the task.
+    await handler(duplex, initialTask);
 
-    // The first .next() call on a generator does not take an argument.
-    let result = await taskProcessor.next();
-
-    while (!result.done) {
-      if (result.value) {
-        const {output, changed} = result.value;
-        if (changed) {
-          duplex.sendData(output);
-        }
-        // Wait for the next update from Node.js
-        const nextTask = await duplex.onData.once();
-        result = await taskProcessor.next(nextTask);
-      } else {
-        // Should not happen if generator is well-behaved, but as a safeguard:
-        const nextTask = await duplex.onData.once();
-        result = await taskProcessor.next(nextTask);
-      }
-    }
-    // Final value might need processing
-    if (result.value) {
-      const {output, changed} = result.value;
-      if (changed) {
-        duplex.sendData(output);
-      }
-    }
-
-    duplex.close();
+    // Once the handler is done, gracefully close the connection.
+    duplex.close("done");
   } catch (e) {
     console.error(`Error processing task ${filenamePrefix}:`, e);
-    active_tasks.delete(filenamePrefix);
+    // If an error occurs, ensure we attempt to clean up the duplex.
+  } finally {
+    // The finally block is CRITICAL to prevent resource leaks.
+    if (duplex && duplex.currentState !== "closed") {
+      // If the duplex wasn't closed gracefully, destroy it to clean up files.
+      await duplex.destroy();
+    }
+    activeDuplexes.delete(filenamePrefix);
   }
 }
 
@@ -96,23 +91,36 @@ const processTasks = async () => {
   const fs = await getEasyFs();
   const windowId = getWindowId();
 
+  // Find initial task files created by Node.js
   const taskFiles = (await fs.readdir("")).filter((name) => name.startsWith(`${windowId}.`) && name.endsWith(".groq-task.in.jsonl"));
 
   for (const filename of taskFiles) {
     const filenamePrefix = filename.replace(/\.in\.jsonl$/, "");
-    if (active_tasks.has(filenamePrefix)) {
-      continue;
+    if (activeDuplexes.has(filenamePrefix)) {
+      continue; // This task is already being handled.
     }
-    active_tasks.add(filenamePrefix);
 
-    const content = await fs.readFileText(filename);
-    const firstLine = content.split("\n")[0];
+    // Mark as active immediately by adding a placeholder to the map.
+    // This is a simple lock to prevent race conditions.
+    activeDuplexes.set(filenamePrefix, null as any);
 
-    if (firstLine) {
-      void handleTask(fs, filenamePrefix, firstLine);
-    } else {
-      active_tasks.delete(filenamePrefix);
-      fs.rm(filename).catch(() => {});
+    try {
+      const content = await fs.readFileText(filename);
+      // We only read the first line because that's the initial task payload.
+      // The rest of the file is handled by the FsDuplex log reader.
+      const firstLine = content.split("\n")[0];
+
+      if (firstLine) {
+        // Start handling the task, but don't wait for it to complete.
+        void handleTask(fs, filenamePrefix, firstLine);
+      } else {
+        // If the file is empty, it's an anomaly. Clean it up.
+        activeDuplexes.delete(filenamePrefix);
+        await fs.rm(filename);
+      }
+    } catch (e) {
+      console.error(`Failed to start task for ${filenamePrefix}`, e);
+      activeDuplexes.delete(filenamePrefix);
     }
   }
 };

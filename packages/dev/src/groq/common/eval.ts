@@ -1,7 +1,8 @@
 import {z} from "zod/v4-mini";
 import type {TaskRunner} from "../node/utils.js";
+import type {TaskHandler} from "./task-handlers.js";
 
-// 1. Zod 定义 (The Contract)
+// 1. Zod 定义 (The Contract) - no changes
 export const zEvalTask = z.object({
   type: z.literal("eval"),
   taskId: z.string(),
@@ -13,22 +14,25 @@ export const zEvalTask = z.object({
 export type EvalTask = z.output<typeof zEvalTask>;
 
 // 2. Browser 状态处理函数 (The Browser-side Logic)
-export async function* doEval(input: EvalTask): AsyncGenerator<{changed: boolean; output: EvalTask}, void, EvalTask | undefined> {
-  const output = {...input};
+export const doEval: TaskHandler<EvalTask> = async (duplex, initialTask) => {
+  const output = {...initialTask};
   try {
+    // Directly evaluate the code.
     const result = await (async () => eval(output.code))();
     output.status = "fulfilled";
     output.result = result;
   } catch (e) {
     output.status = "rejected";
-    output.result = e;
+    // Ensure the error is serializable by superjson
+    output.result = e instanceof Error ? {message: e.message, name: e.name, stack: e.stack} : e;
   } finally {
     output.done = true;
+    // Send the final state back to Node.js
+    duplex.sendData(output);
   }
-  yield {changed: true, output};
-}
+};
 
-// 3. Node 状态处理函数 (The Node-side Initiator Factory)
+// 3. Node 状态处理函数 (The Node-side Initiator Factory) - no changes yet
 export const createRunCodeInBrowser = (runner: TaskRunner) => {
   return async (dir: string, code: string): Promise<any> => {
     const initialTask: EvalTask = {
