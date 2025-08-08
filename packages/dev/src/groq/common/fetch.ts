@@ -1,99 +1,101 @@
 import {z} from "zod/v4-mini";
+import type {FsDuplex} from "../fs-duplex/common.js";
 import type {NodeFsDuplex} from "../fs-duplex/node.js";
 import type {TaskRunner} from "../node/utils.js";
-import type {TaskHandler} from "./task-handlers.js";
-import {TaskError, waitNextTask} from "./utils.js";
+import {waitNextTask} from "./utils.js";
 
-// 1. Zod 定义 (The Contract) - no changes
+// 1. Zod 定义 (The Contract) - Cleaned up for the new protocol
 export const zFetchTask = z.object({
   type: z.literal("fetch"),
   taskId: z.string(),
+  // Fields sent from Node to Browser
   url: z.string(),
-  init: z.any(),
-  responseType: z.optional(z.enum(["json", "text", "arrayBuffer", "stream"])),
-  status: z.enum(["initial", "pending", "responded", "streaming", "updating", "fulfilled", "rejected"]),
-  response: z.any(),
-  result: z.any(),
-  chunks: z.array(z.instanceof(Uint8Array)),
+  init: z.any().optional(),
+  sub_command: z.optional(z.enum(["getFullBody", "requestChunk"])),
+  format: z.optional(z.enum(["json", "text"])), // For getFullBody command
+
+  // Fields sent from Browser to Node
+  status: z.enum([
+    "initial", // Not used in active comms
+    "pending", // Not used in active comms
+    "responded", // Headers and status are ready
+    "fulfilled", // Full body response is ready
+    "rejected", // An error occurred
+    "chunk", // A single data chunk for streaming
+    "chunk_end", // Streaming is complete
+    "chunk_error", // An error occurred during streaming
+  ]),
+  response: z.any().optional(), // Holds headers, status, etc.
+  result: z.any().optional(), // Holds final full body
+  payload: z.any().optional(), // Holds chunk data
+  error: z.any().optional(), // Holds error info
   done: z.boolean(),
 });
 export type FetchTask = z.output<typeof zFetchTask>;
 
-// 2. Browser 状态处理函数 (The Browser-side Logic)
-export const doFetch: TaskHandler<FetchTask> = async (duplex, initialTask) => {
-  let output = {...initialTask};
+// 2. Browser 状态处理函数 (The Browser-side Logic - Active Service Loop)
+export async function doFetch(duplex: FsDuplex<FetchTask, "handler">, initialTask: FetchTask): Promise<void> {
+  let bodyReader: ReadableStreamDefaultReader<Uint8Array> | undefined;
   try {
-    const response = await fetch(output.url, output.init);
+    const response = await fetch(initialTask.url, initialTask.init);
+    bodyReader = response.body?.getReader();
+
     const responseHeaders: Record<string, string> = {};
     response.headers.forEach((value, key) => (responseHeaders[key] = value));
 
-    // Send the initial response headers and status back to Node.js
-    output.status = "responded";
-    output.response = {
-      headers: responseHeaders,
-      ok: response.ok,
-      status: response.status,
-      statusText: response.statusText,
-    };
-    duplex.sendData(output);
+    // 1. Send initial response with headers
+    duplex.sendData({
+      ...initialTask,
+      status: "responded",
+      response: {
+        headers: responseHeaders,
+        ok: response.ok,
+        status: response.status,
+        statusText: response.statusText,
+      },
+      done: false,
+    });
 
-    // If the response was not OK, we still send the headers, but then we are done.
-    if (!response.ok) {
-      output.status = "rejected";
-      output.result = `Request failed with status ${response.status}`;
-      // No need to wait for further instructions, the task is complete.
-    } else {
-      // Wait for Node.js to tell us how to process the body.
-      const update = await waitNextTask(duplex);
-      Object.assign(output, update);
+    // 2. Enter the service loop, waiting for commands from Node.js
+    while (duplex.currentState === "open") {
+      const commandTask = await waitNextTask(duplex, {timeout: 60000}); // 60s timeout for next command
 
-      switch (output.responseType) {
-        case "json":
-          output.result = await response.json();
-          break;
-        case "text":
-          output.result = await response.text();
-          break;
-        case "arrayBuffer":
-          output.result = await response.arrayBuffer();
-          break;
-        case "stream":
-          const reader = response.body?.getReader();
-          if (!reader) throw new Error("Response body is not readable.");
+      switch (commandTask.sub_command) {
+        case "getFullBody":
+          const body = commandTask.format === "json" ? await response.json() : await response.text();
+          duplex.sendData({...initialTask, status: "fulfilled", result: body, done: true});
+          return; // Task complete
 
-          output.status = "streaming";
-          duplex.sendData(output); // Inform Node that streaming has started
-
-          while (true) {
-            const {done, value} = await reader.read();
-            if (done) break;
-            // Send chunks as they arrive.
-            output.chunks.push(new Uint8Array(value));
-            duplex.sendData(output);
+        case "requestChunk":
+          if (!bodyReader) {
+            duplex.sendData({...initialTask, status: "chunk_error", error: "Response body is not readable.", done: true});
+            return;
           }
-          break;
+          const {done, value} = await bodyReader.read();
+          if (done) {
+            duplex.sendData({...initialTask, status: "chunk_end", done: true});
+            return; // Stream finished
+          }
+          // Send just the chunk payload
+          duplex.sendData({...initialTask, status: "chunk", payload: value, done: false});
+          break; // Continue loop, wait for next requestChunk
       }
-      output.status = "fulfilled";
     }
-  } catch (e) {
-    // Catch errors from fetch() itself, waitNextTask() (TaskError), or body processing.
-    output.status = "rejected";
-    if (e instanceof TaskError) {
-      // This is a controlled shutdown from the other side, no need to report an error payload.
-      console.log(`Fetch task for ${output.taskId} aborted by initiator.`);
-    } else {
-      output.result = e instanceof Error ? {message: e.message, name: e.name, stack: e.stack} : e;
-    }
+  } catch (e: any) {
+    duplex.sendData({
+      ...initialTask,
+      status: "rejected",
+      error: e instanceof Error ? {message: e.message, stack: e.stack} : e,
+      done: true,
+    });
   } finally {
-    output.done = true;
-    // Send the final state to Node.js, unless it was a remote close.
-    if (output.status !== "rejected" || output.result) {
-      duplex.sendData(output);
-    }
+    // Ensure resources are released if the duplex closes or an error occurs
+    if (bodyReader) bodyReader.cancel().catch(() => {});
+    duplex.close("done");
   }
-};
+}
 
-// 3. Node 状态处理函数 (The Node-side Initiator Factory) - no changes yet
+// 3. Node 状态处理函数 (The Node-side Client)
 class BrowserResponse {
   public readonly headers: Headers;
   public readonly ok: boolean;
@@ -102,45 +104,28 @@ class BrowserResponse {
 
   #duplex: NodeFsDuplex<FetchTask, "initiator">;
   #bodyUsed = false;
-  #currentTask: FetchTask;
+  #initialTask: FetchTask;
 
   constructor(duplex: NodeFsDuplex<FetchTask, "initiator">, initialTask: FetchTask) {
     this.#duplex = duplex;
-    this.#currentTask = initialTask;
+    this.#initialTask = initialTask;
     this.headers = new Headers(initialTask.response.headers);
     this.ok = initialTask.response.ok;
     this.status = initialTask.response.status;
     this.statusText = initialTask.response.statusText;
   }
 
-  async #readBody(responseType: FetchTask["responseType"]): Promise<any> {
+  async #readFullBody(format: "json" | "text"): Promise<any> {
     if (this.#bodyUsed) throw new TypeError(`Body has already been used.`);
     this.#bodyUsed = true;
-
-    // Explicitly cast to FetchTask to satisfy the type checker
-    this.#duplex.sendData({responseType, status: "updating"} as FetchTask);
-
-    return new Promise((resolve, reject) => {
-      const offData = this.#duplex.onData.on((task) => {
-        this.#currentTask = task;
-        if (task.done) {
-          cleanup();
-          if (task.status === "rejected") {
-            reject(task.result);
-          } else {
-            resolve(task.result);
-          }
-        }
-      });
-      const offClose = this.#duplex.onClose.on((reason) => {
-        cleanup();
-        reject(new Error(`Connection closed while reading body. Reason: ${reason}`));
-      });
-      const cleanup = () => {
-        offData();
-        offClose();
-      };
-    });
+    try {
+      this.#duplex.sendData({...this.#initialTask, sub_command: "getFullBody", format});
+      const finalTask = await waitNextTask(this.#duplex, {filter: (t) => t.done, timeout: 60000});
+      if (finalTask.status === "rejected") throw finalTask.error;
+      return finalTask.result;
+    } finally {
+      this.#duplex.close();
+    }
   }
 
   get body(): ReadableStream<Uint8Array> | null {
@@ -148,47 +133,44 @@ class BrowserResponse {
     this.#bodyUsed = true;
     if (!this.ok) return null;
 
-    this.#duplex.sendData({responseType: "stream", status: "updating"} as FetchTask);
-
-    let yieldedCount = 0;
+    const duplex = this.#duplex;
+    const initialTask = this.#initialTask;
 
     return new ReadableStream({
-      start: (controller) => {
-        const offData = this.#duplex.onData.on((task) => {
-          this.#currentTask = task;
-          for (let i = yieldedCount; i < task.chunks.length; i++) {
-            controller.enqueue(task.chunks[i]);
+      async pull(controller) {
+        try {
+          duplex.sendData({...initialTask, sub_command: "requestChunk"});
+          const nextMessage = await waitNextTask(duplex, {timeout: 60000});
+
+          if (nextMessage.status === "chunk") {
+            controller.enqueue(nextMessage.payload);
+          } else if (nextMessage.status === "chunk_end") {
+            controller.close();
+            duplex.close("done");
+          } else {
+            const error = nextMessage.error || new Error("Unknown streaming error");
+            controller.error(error);
+            duplex.close("error");
           }
-          yieldedCount = task.chunks.length;
-          if (task.done) {
-            cleanup();
-            if (task.status === "rejected") controller.error(task.result);
-            else controller.close();
-          }
-        });
-        const offClose = this.#duplex.onClose.on((reason) => {
-          cleanup();
-          controller.error(new Error(`Connection closed during streaming. Reason: ${reason}`));
-        });
-        const cleanup = () => {
-          offData();
-          offClose();
-        };
+        } catch (e) {
+          controller.error(e);
+          duplex.close("error");
+        }
       },
-      cancel: (reason) => {
-        this.#duplex.close();
+      cancel() {
+        duplex.close("done");
       },
     });
   }
 
   async json(): Promise<any> {
-    return this.#readBody("json");
+    return this.#readFullBody("json");
   }
   async text(): Promise<string> {
-    return this.#readBody("text");
+    return this.#readFullBody("text");
   }
   async arrayBuffer(): Promise<ArrayBuffer> {
-    return this.#readBody("arrayBuffer");
+    throw new Error("arrayBuffer() is not yet implemented in the new protocol. Use the streaming body instead.");
   }
 }
 
@@ -201,32 +183,22 @@ export const createRunFetchInBrowser = (runner: TaskRunner) => {
       url,
       init,
       status: "initial",
-      response: null,
-      result: null,
-      chunks: [],
       done: false,
     };
 
     const duplex = await runner<FetchTask>({dir, initialTask});
 
-    return new Promise((resolve, reject) => {
-      const offData = duplex.onData.on((task) => {
-        if (task.status === "responded") {
-          cleanup();
-          resolve(new BrowserResponse(duplex, task));
-        } else if (task.done) {
-          cleanup();
-          reject(task.result || new Error("Task finished before responding."));
-        }
+    try {
+      // Wait for the initial "responded" message from the browser
+      const respondedTask = await waitNextTask(duplex, {
+        filter: (task) => task.status === "responded",
+        timeout: 30000,
       });
-      const offClose = duplex.onClose.on((reason) => {
-        cleanup();
-        reject(new Error(`Connection closed before fetch responded. Reason: ${reason}`));
-      });
-      const cleanup = () => {
-        offData();
-        offClose();
-      };
-    });
+      return new BrowserResponse(duplex, respondedTask);
+    } catch (error) {
+      // If we timeout or the connection closes before getting the response, destroy the channel.
+      duplex.destroy();
+      throw error;
+    }
   };
 };
