@@ -1,23 +1,38 @@
-import {normalizeFilePath, readJson} from "@gaubee/nodekit";
-import {func_remember, map_get_or_put_async} from "@gaubee/util";
+import {normalizeFilePath} from "@gaubee/nodekit";
+import {map_get_or_put_async} from "@gaubee/util";
 import {globbySync, isDynamicPattern} from "globby";
 import fs from "node:fs";
 import path from "node:path";
 import {match, P} from "ts-pattern";
 import {reactiveFs} from "../../reactive-fs/reactive-fs.js";
-import {assetsResolver} from "../../utils/resolver.js";
 import {generateFileTree} from "../file-tree.js";
+import {jixoProvider} from "./jixo-provider.js";
 import {paramsToGlobbyOptions} from "./params-to-globby-options.js";
 import type {Replacer} from "./types.js";
 
 const fetchCache = new Map<string, {res: Response; text: string}>();
-const GET_JIXO_PROMPT = func_remember(() => readJson<Record<string, string>>(assetsResolver("prompt.json")));
+const tryStr = (value: unknown) => {
+  if (typeof value === "string") {
+    return value;
+  }
+};
 
 /**
  * A utility function to format the file content output in a standardized way.
  * It handles markdown code blocks and optional prefixes.
  */
-function useFileOrInject(mode: string, filepath: string, filecontent: string, opts: {lang?: unknown; prefix?: unknown} = {}): string {
+function useFileOrInject(
+  mode: string,
+  filepath: string,
+  filecontent: string,
+  opts: {
+    ext?: unknown;
+    lang?: unknown;
+
+    prefix?: unknown;
+    filepath?: unknown;
+  } = {},
+): string {
   const lines: Array<string[] | string> = [];
   const prefixStr = match(opts.prefix)
     .with(P.number, (len) => " ".repeat(len))
@@ -26,19 +41,20 @@ function useFileOrInject(mode: string, filepath: string, filecontent: string, op
 
   const contentLines = prefixStr.length ? filecontent.split("\n").map((line) => prefixStr + line) : [filecontent];
 
+  filepath = tryStr(opts.filepath) ?? filepath;
+
   if (mode === "FILE") {
     const split = filecontent.includes("```") ? "````" : "```";
     const ext = path.parse(filepath).ext.slice(1);
+    if (filepath.length) {
+      lines.push(`${prefixStr}\`${filepath}\``, "");
+    }
+    const lang = tryStr(opts.ext ?? opts.lang) ?? ext;
     lines.push(
-      `${prefixStr}\`${filepath}\``,
-      "",
-      prefixStr +
-        split +
-        match(opts.lang)
-          .with(P.string, (v) => v)
-          .otherwise(() => ext),
+      //
+      `${prefixStr}${split}${lang}`,
       ...contentLines,
-      prefixStr + split,
+      `${prefixStr}${split}`,
       "",
     );
   } else if (mode === "INJECT") {
@@ -52,19 +68,17 @@ function useFileOrInject(mode: string, filepath: string, filecontent: string, op
 /**
  * Handles replacements for file-based sources like local file system, URLs, and internal jixo protocol.
  */
-export const handleFileReplacement: Replacer = async ({globOrFilepath, mode, params, rootResolver, baseDir}) => {
+export const handleFileReplacement: Replacer = async (options) => {
+  const {globOrFilepath, mode, params, rootResolver, baseDir} = options;
   // Handle internal-symbol like `jixo:system/prompt.md`
-  if (globOrFilepath.startsWith("jixo:")) {
-    const jixo_url = new URL(globOrFilepath);
-    const filepath = (jixo_url.pathname || jixo_url.hostname).replace(/^\//, "");
-    const content = (await GET_JIXO_PROMPT())[filepath];
+  if (globOrFilepath.toLocaleLowerCase().startsWith("jixo:")) {
+    const jixo_uri = new URL(globOrFilepath);
+    const specifier = (jixo_uri.pathname || jixo_uri.hostname).replace(/^\//, "");
+    const content = await jixoProvider(specifier, options);
     if (content) {
-      return useFileOrInject(mode, `${filepath}.md`, content, {
-        prefix: params.prefix,
-        lang: params.lang,
-      });
+      return useFileOrInject(mode, `${specifier}.md`, content, params);
     }
-    return `<!-- unknown jixo content ${filepath} -->`;
+    return `<!-- unknown jixo content ${specifier} -->`;
   }
 
   // Handle web-url
@@ -76,7 +90,7 @@ export const handleFileReplacement: Replacer = async ({globOrFilepath, mode, par
       return {res, text};
     });
     return useFileOrInject(mode, urlRes.res.url, urlRes.text, {
-      prefix: params.prefix,
+      ...params,
       lang: params[`mime_${urlRes.res.headers.get("content-type")?.split(";")}_lang`] ?? params.lang,
     });
   }
@@ -98,13 +112,21 @@ export const handleFileReplacement: Replacer = async ({globOrFilepath, mode, par
       );
 
   if (files.length === 0) {
-    return `<!-- No files found for pattern: ${globOrFilepath} -->`;
+    const errorMsg = `No files found for pattern: ${globOrFilepath}`;
+
+    return (
+      tryStr(params.noFound) ??
+      //
+      `${tryStr(params["noFound.prefix"]) ?? "<!-- "}${tryStr(params["noFound.msg"]) ?? errorMsg}${tryStr(params["noFound.suffix"]) ?? " -->"}`
+    );
   }
 
   const lines: string[] = [];
   if (mode === "FILE_TREE") {
     const expandDirectories = params.expandDirectories !== false;
     lines.push("\n```\n", generateFileTree(files, expandDirectories), "\n```\n");
+  } else if (mode === "FILE_LIST") {
+    lines.push(...files);
   } else {
     for (const filepath of files) {
       const fullFilepath = rootResolver(filepath);
@@ -116,7 +138,7 @@ export const handleFileReplacement: Replacer = async ({globOrFilepath, mode, par
 
       lines.push(
         useFileOrInject(mode, filepath, fileContent, {
-          prefix: params.prefix,
+          ...params,
           lang: params[`map_ext_${ext}_lang`] ?? params.lang,
         }),
       );

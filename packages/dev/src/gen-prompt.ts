@@ -15,7 +15,14 @@ import {removeMarkdownComments} from "./utils/markdown-remove-comment.js";
 
 export const debug = Debug("gen-prompt");
 
-async function processReplacement(globOrFilepath: string, mode: string, paramString: string | undefined, rootResolver: PathResolver, baseDir: string): Promise<string> {
+async function processReplacement(
+  codeName: string,
+  globOrFilepath: string,
+  mode: string,
+  paramString: string | undefined,
+  rootResolver: PathResolver,
+  baseDir: string,
+): Promise<string> {
   if (globOrFilepath.startsWith("`") && globOrFilepath.endsWith("`")) {
     globOrFilepath = globOrFilepath.replace(/^`+(.*)`+$/, "$1");
   }
@@ -25,7 +32,7 @@ async function processReplacement(globOrFilepath: string, mode: string, paramStr
 
   const params = defaultParseSearch(paramString || "");
 
-  const options: ReplacerOptions = {globOrFilepath, mode: normalizedMode, params, rootResolver, baseDir};
+  const options: ReplacerOptions = {codeName, globOrFilepath, mode: normalizedMode, params, rootResolver, baseDir};
 
   debug("Dispatching replacement for:", {globOrFilepath, mode: normalizedMode, params});
 
@@ -42,6 +49,7 @@ export async function gen_prompt(input: string, _output?: string, cwd?: string) 
   console.log(blue("gen_prompt"), input);
 
   const inputSource = reactiveFs.readFile(input);
+  const codeName = path.parse(input).name;
   let {data: inputData, content: inputContent} = matter(inputSource);
   inputContent = removeMarkdownComments(inputContent).trim();
 
@@ -64,12 +72,20 @@ export async function gen_prompt(input: string, _output?: string, cwd?: string) 
         .otherwise(() => input.replace(/\.md$/, ".gen.md")),
   );
 
+  const outputContent = await _gen_content(codeName, inputContent, currentRootResolver);
+
+  mkdirSync(path.dirname(output), {recursive: true});
+  writeFileSync(output, outputContent);
+  console.log(blue(new Date().toLocaleTimeString()), green(`✅ ${path.parse(output).name} updated`));
+}
+
+export async function _gen_content(codeName: string, inputContent: string, rootResolver: PathResolver) {
   const regex = /\[(.+?)\]\(@([\w-_:]+)(\?.+)?\)/g;
   const matches = [...inputContent.matchAll(regex)];
 
   const replacementPromises = matches.map((match) => {
     const [_, globOrFilepath, mode, paramString] = match;
-    return processReplacement(globOrFilepath, mode, paramString, currentRootResolver, currentRootResolver.dirname);
+    return processReplacement(codeName, globOrFilepath, mode, paramString, rootResolver, rootResolver.dirname);
   });
 
   const replacements = await Promise.all(replacementPromises);
@@ -82,10 +98,7 @@ export async function gen_prompt(input: string, _output?: string, cwd?: string) 
       outputContent = outputContent.substring(0, match.index) + replacement + outputContent.substring(match.index + match[0].length);
     }
   }
-
-  mkdirSync(path.dirname(output), {recursive: true});
-  writeFileSync(output, outputContent);
-  console.log(blue(new Date().toLocaleTimeString()), green(`✅ ${path.parse(output).name} updated`));
+  return outputContent;
 }
 
 export interface GenOptions {

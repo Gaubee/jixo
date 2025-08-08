@@ -1,5 +1,5 @@
-[.jixo/meta.tmp.md](@INJECT)
+[.jixo/coder.jixo.md](@INJECT)
 
 ---
 
-[.jixo/mcp-meta.tmp.md](@INJECT)
+[.jixo/mcp-coder.jixo.md](@INJECT)

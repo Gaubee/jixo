@@ -186,7 +186,7 @@ export const arrayFromAsync = async <T>(iter: AsyncIterableIterator<T>) => {
 
 export const getTargetNamespace = () => location.pathname.split("/").at(-1)!;
 export const delay = (ms: number) => new Promise((cb) => setTimeout(cb, ms));
-export const raq = () => new Promise((cb) => requestAnimationFrame(cb));
+export const raf = () => new Promise((cb) => requestAnimationFrame(cb));
 
 /**
  * aFollowedByB

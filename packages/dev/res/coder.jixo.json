@@ -1,0 +1,205 @@
+{
+  "description": "定义了AI软件工程师与架构师伙伴的完整响应结构。根据'response_type'的值，会选择性地填充对应的载荷字段。",
+  "type": "object",
+  "properties": {
+    "response_type": {
+      "description": "标识本次响应的核心类型，用于区分不同协作模式下的输出内容。",
+      "type": "string",
+      "enum": [
+        "PROGRAMMING_INITIAL_PLAN",
+        "PROGRAMMING_DELIVERY",
+        "PLANNING_PRD",
+        "PLANNING_AUDIT_REPORT",
+        "REFLECTION"
+      ]
+    },
+    "reflection_log": {
+      "description": "【反思日志】在收到代码审查反馈后提供的反思。此字段为可选。",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "description": "单条反思记录，通常以Emoji开头，总结一个或一组改动点。"
+      }
+    },
+    "initial_plan_payload": {
+      "description": "当 response_type 为 'PROGRAMMING_INITIAL_PLAN' 时使用。包含变更日志和行动地图。",
+      "type": "object",
+      "properties": {
+        "change_log": {
+          "description": "【变更日志】严格遵守Git Commit Message规范，以用户（第一人称）口吻编写。",
+          "type": "string"
+        },
+        "action_map": {
+          "description": "【行动地图】预告后续响应的计划。其内容根据'mode'的值而变化。",
+          "type": "object",
+          "properties": {
+            "mode": {
+              "description": "宣告本次多轮响应遵循的模式。",
+              "type": "string",
+              "enum": [
+                "精确输出",
+                "范围输出",
+                "螺旋前进"
+              ]
+            },
+            "steps": {
+              "description": "当 mode 为 '精确输出' 时使用，提供一个有序的步骤列表。",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "mermaid_flowchart": {
+              "description": "当 mode 为 '范围输出' 或 '螺旋前进' 时使用，提供一个Mermaid流程图。",
+              "type": "string",
+              "format": "multiline"
+            }
+          },
+          "required": [
+            "mode"
+          ]
+        }
+      },
+      "required": [
+        "change_log",
+        "action_map"
+      ]
+    },
+    "delivery_payload": {
+      "description": "当 response_type 为 'PROGRAMMING_DELIVERY' 时使用。包含具体的文件变更。",
+      "type": "object",
+      "properties": {
+        "opening_remark": {
+          "description": "简要说明本次交付内容的开场白。",
+          "type": "string"
+        },
+        "file_changes": {
+          "description": "一个包含所有文件变更的数组。",
+          "type": "array",
+          "items": {
+            "description": "代表对单个文件的变更操作，包含文件路径和具体操作。",
+            "type": "object",
+            "properties": {
+              "path": {
+                "description": "被操作文件的完整路径。",
+                "type": "string"
+              },
+              "operation": {
+                "description": "描述对单个文件的具体操作。",
+                "type": "object",
+                "properties": {
+                  "summary": {
+                    "description": "以列表形式清晰、简要地说明该文件的核心改动点。",
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "action": {
+                    "description": "对文件的具体操作类型。",
+                    "type": "string",
+                    "enum": [
+                      "UPDATE",
+                      "DELETE",
+                      "RENAME"
+                    ]
+                  },
+                  "new_path": {
+                    "description": "当 'action' 为 'RENAME' 时必须提供此字段，表示文件的新路径。",
+                    "type": "string"
+                  },
+                  "content": {
+                    "description": "文件的完整内容。当 'action' 为 'UPDATE' 或 'RENAME'(且带内容修改) 时提供。对于 'DELETE' 则省略。",
+                    "type": "string",
+                    "format": "multiline"
+                  }
+                },
+                "required": [
+                  "summary",
+                  "action"
+                ]
+              }
+            },
+            "required": [
+              "path",
+              "operation"
+            ]
+          }
+        }
+      },
+      "required": [
+        "file_changes"
+      ]
+    },
+    "planning_prd_payload": {
+      "description": "当 response_type 为 'PLANNING_PRD' 时使用。包含PRD文档。",
+      "type": "object",
+      "properties": {
+        "prd_document": {
+          "type": "string",
+          "format": "markdown"
+        }
+      },
+      "required": [
+        "prd_document"
+      ]
+    },
+    "audit_report_payload": {
+      "description": "当 response_type 为 'PLANNING_AUDIT_REPORT' 时使用。包含代码审计报告。",
+      "type": "object",
+      "properties": {
+        "audit_report": {
+          "type": "string",
+          "format": "markdown"
+        }
+      },
+      "required": [
+        "audit_report"
+      ]
+    },
+    "export_memory_payload": {
+      "description": "在多轮交付的最后一轮，用于导出包含“研发报告”的记忆文件。此字段为可选。",
+      "type": "object",
+      "properties": {
+        "path": {
+          "description": "记忆文件导出的目标路径。通常约定为'$PWD/.jixo/memory'目录下的一个markdown文件。",
+          "type": "string",
+          "example": "$PWD/.jixo/memory/xx.meta/2025-08-08.01.md"
+        },
+        "content": {
+          "description": "串联了对话和思考过程的完整研发报告内容。",
+          "type": "string",
+          "format": "markdown"
+        }
+      },
+      "required": [
+        "path",
+        "content"
+      ]
+    },
+    "multi_step_progress": {
+      "description": "在多轮响应中用于流程控制的结构化信号。此字段为可选。",
+      "type": "object",
+      "properties": {
+        "is_complete": {
+          "description": "标识所有步骤是否已完成。",
+          "type": "boolean"
+        },
+        "current_step": {
+          "description": "当前完成的是第几步。当 is_complete 为 false 时提供。",
+          "type": "integer"
+        },
+        "total_steps": {
+          "description": "计划的总步数。当 is_complete 为 false 时提供。",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "is_complete"
+      ]
+    }
+  },
+  "required": [
+    "response_type"
+  ]
+}

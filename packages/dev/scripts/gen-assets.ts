@@ -7,16 +7,21 @@ import {reactiveFs} from "../src/reactive-fs/reactive-fs.ts";
 import {assetsResolver} from "../src/utils/resolver.ts";
 
 const doGenAssets = async () => {
-  const rootResolver = createResolverByRootFile(import.meta.url, "pnpm-workspace.yaml");
+  const projectResolver = createResolverByRootFile(import.meta.url, "package.json");
 
   const promptJsonFilepath = assetsResolver("prompt.json");
   mkdirSync(dirname(promptJsonFilepath), {recursive: true});
 
-  const system_coder = reactiveFs.readFile(rootResolver(".jixo/meta.tmp.md"));
-  writeJson(promptJsonFilepath, {
-    system: system_coder,
-    coder: system_coder,
-  });
+  const system_coder = reactiveFs.readFile(projectResolver("res/coder.jixo.md"));
+  const system_coder_json = JSON.parse(reactiveFs.readFile(projectResolver("res/coder.jixo.json")));
+  writeJson(
+    promptJsonFilepath,
+    {
+      [`coder`]: system_coder,
+      [`coder_json`]: system_coder_json,
+    },
+    {space: 0},
+  );
   console.log(blue(new Date().toLocaleTimeString()), green(`[gen-assets]`), "Generated assets in", path.relative(process.cwd(), promptJsonFilepath));
 };
 

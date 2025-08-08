@@ -1,4 +1,4 @@
-import type {FsDuplex} from "./fs-duplex/common.js";
+import type {FsDuplex} from "../fs-duplex/common.js";
 
 /**
  * A custom error class to signify that a task was aborted due to the duplex closing.
