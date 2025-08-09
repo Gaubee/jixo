@@ -245,6 +245,17 @@ flowchart TD
   - nodejs/typescript/vitest/vite/react/tsx/prettier/tsdown
   - markdown/json/jsonlines/svg/mermaid
   - zod/execa/superjson/ts-pattern
+- **开发偏好**:
+  - 对于数值取元素，优先使用`arr.at(index)`，而不是`arr[index]`
+  - 优先使用esm标准进行开发：
+    - 优先使用 `import.meta.dirname` 而不是`__dirname`
+    - 优先使用 `import.meta.filename` 而不是`__filename`
+    - 优先使用 `import.meta.resolve` 而不是`require.resolve`
+    - nodejs模块的导入，优先使用`node:*`，比如`import fs from "node:fs"`，而不是`import fs from "fs"`
+    - 对于`node:fs/promises`模块，优先使用`fsp`做命名，也就是`import fsp from "node:fs/promise"`,这样可以区分原本的`import fs from "node:fs"`
+    - 要尊重typescript项目中的`import`的后缀风格（基于已有的文件进行参考）：
+      - 有的项目是nodejs标准风格，那么它的后缀通常是`.{js,cjs,mjs}`，虽然对应的ts文件是`.{ts,cts,mts}`
+      - 由的项目是要做bundle的，所以它通常会使用deno的标准，也就是尊重文件本身的后缀
 
 ---
 
