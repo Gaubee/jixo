@@ -21,7 +21,7 @@ const tryStr = (value: unknown) => {
  * A utility function to format the file content output in a standardized way.
  * It handles markdown code blocks and optional prefixes.
  */
-function useFileOrInject(
+export function useFileOrInject(
   mode: string,
   filepath: string,
   filecontent: string,
@@ -70,15 +70,11 @@ function useFileOrInject(
  */
 export const handleFileReplacement: Replacer = async (options) => {
   const {globOrFilepath, mode, params, rootResolver, baseDir} = options;
-  // Handle internal-symbol like `jixo:system/prompt.md`
+  // Handle internal-symbol like `jixo:coder`
   if (globOrFilepath.toLocaleLowerCase().startsWith("jixo:")) {
     const jixo_uri = new URL(globOrFilepath);
     const specifier = (jixo_uri.pathname || jixo_uri.hostname).replace(/^\//, "");
-    const content = await jixoProvider(specifier, options);
-    if (content) {
-      return useFileOrInject(mode, `${specifier}.md`, content, params);
-    }
-    return `<!-- unknown jixo content ${specifier} -->`;
+    return await jixoProvider(specifier, options);
   }
 
   // Handle web-url
@@ -95,6 +91,17 @@ export const handleFileReplacement: Replacer = async (options) => {
     });
   }
 
+  // Handle local file system paths
+  return await localFileReplacement(options);
+};
+
+/**
+ * local file system paths
+ * @param options
+ * @returns
+ */
+export const localFileReplacement: Replacer = async (options) => {
+  const {globOrFilepath, mode, params, rootResolver, baseDir} = options;
   // Handle local file system paths
   const isGlob = isDynamicPattern(globOrFilepath);
   const isInsideBaseDir = (targetPath: string) => normalizeFilePath(path.resolve(baseDir, targetPath)).startsWith(normalizeFilePath(baseDir) + "/");
@@ -124,9 +131,11 @@ export const handleFileReplacement: Replacer = async (options) => {
   const lines: string[] = [];
   if (mode === "FILE_TREE") {
     const expandDirectories = params.expandDirectories !== false;
-    lines.push("\n```\n", generateFileTree(files, expandDirectories), "\n```\n");
+
+    lines.push(useFileOrInject("FILE", "", generateFileTree(files, expandDirectories), params));
   } else if (mode === "FILE_LIST") {
-    lines.push(...files);
+    debugger
+    lines.push(useFileOrInject("INJECT", "", files.join("\n"), params));
   } else {
     for (const filepath of files) {
       const fullFilepath = rootResolver(filepath);

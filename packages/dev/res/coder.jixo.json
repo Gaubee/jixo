@@ -162,9 +162,9 @@
       "type": "object",
       "properties": {
         "path": {
-          "description": "记忆文件导出的目标路径。通常约定为'$PWD/.jixo/memory'目录下的一个markdown文件。",
+          "description": "记忆文件导出的目标路径。通常约定为'.jixo/memory'目录下的一个markdown文件。",
           "type": "string",
-          "example": "$PWD/.jixo/memory/xx.meta/2025-08-08.01.md"
+          "example": ".jixo/memory/xx.meta/2025-08-08.01.md"
         },
         "content": {
           "description": "串联了对话和思考过程的完整研发报告内容。",

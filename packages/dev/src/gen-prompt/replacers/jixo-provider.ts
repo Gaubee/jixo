@@ -1,6 +1,5 @@
 import {readJson} from "@gaubee/nodekit";
 import {func_remember} from "@gaubee/util";
-import {match, P} from "ts-pattern";
 import z from "zod";
 import {assetsResolver} from "../../utils/resolver.js";
 import type {ReplacerOptions} from "./types.js";
@@ -15,20 +14,18 @@ export const jixoProvider = async (specifier: string, options: ReplacerOptions) 
   if (specifier === "code_name") {
     return options.codeName;
   }
+  if (specifier === "datetime") {
+    return new Date().toLocaleString();
+  }
   if (specifier === "memory") {
-    const {handleFileReplacement} = await import("./file-replacer.js");
+    const {localFileReplacement} = await import("./file-replacer.js");
     const memoryOptions = {
       ...options,
       globOrFilepath: `.jixo/memory/${options.codeName}/*.md`,
-      mode: match(options.params.mode)
-        .with(P.string, (v) => v)
-        .otherwise(() => options.mode),
+      params: {gitignore: false, ...options.params},
     };
 
-    return handleFileReplacement(memoryOptions);
-  }
-  if (specifier === "datetime") {
-    return new Date().toLocaleString();
+    return localFileReplacement(memoryOptions);
   }
 
   /// 通用的文件读取方式
@@ -37,7 +34,7 @@ export const jixoProvider = async (specifier: string, options: ReplacerOptions) 
   }
   let content = (await GET_JIXO_PROMPT())[specifier];
 
-  if (specifier.includes("_json")) {
+  if (specifier.includes(".json")) {
     /// 如果是JSON文件，那么序列化后再输出
     content = JSON.stringify(content, null, z.int().optional().safeParse(options.params.spaces).data ?? 2);
   } else {
@@ -46,5 +43,9 @@ export const jixoProvider = async (specifier: string, options: ReplacerOptions) 
     content = await _gen_content(options.codeName, content, options.rootResolver);
   }
 
-  return content;
+  if (content) {
+    const {useFileOrInject} = await import("./file-replacer.js");
+    return useFileOrInject(options.mode, `${specifier}.md`, content, options.params);
+  }
+  return `<!-- unknown jixo content ${specifier} -->`;
 };

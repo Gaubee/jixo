@@ -18,7 +18,7 @@ const doGenAssets = async () => {
     promptJsonFilepath,
     {
       [`coder`]: system_coder,
-      [`coder_json`]: system_coder_json,
+      [`coder.json`]: system_coder_json,
     },
     {space: 0},
   );
