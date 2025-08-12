@@ -107,9 +107,11 @@ export async function doApplyAiResponse(markdownFilePaths: string[] | string, {y
         logger.warn("No Git commit message found in markdown. Skipping commit.");
       } else {
         const git = simpleGit(cwd);
-        const changedFiles = [...new Set(filesToUpdate.flatMap((f) => [f.fullSourcePath, f.fullTargetPath]))];
-        await git.add(changedFiles);
-        const commitRes = await git.commit(combinedGitCommit.all, changedFiles);
+        const changedFiles = new Set(filesToUpdate.flatMap((f) => [f.fullSourcePath, f.fullTargetPath]));
+        const ignoredFiles = new Set(await git.checkIgnore([...changedFiles]));
+        const commitFiles = changedFiles.difference(ignoredFiles);
+        await git.add([...commitFiles]);
+        const commitRes = await git.commit(combinedGitCommit.all, [...commitFiles]);
         logger.success(`Changes committed successfully! ${logger.file(commitRes.commit)}`);
       }
     }
