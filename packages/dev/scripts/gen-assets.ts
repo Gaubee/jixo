@@ -1,4 +1,4 @@
-import {blue, createResolverByRootFile, green, writeJson} from "@gaubee/nodekit";
+import {blue, createResolverByRootFile, green, normalizeFilePath, writeJson} from "@gaubee/nodekit";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import {mkdirSync} from "node:fs";
 import path, {dirname} from "node:path";
@@ -12,16 +12,21 @@ const doGenAssets = async () => {
   const promptJsonFilepath = assetsResolver("prompt.json");
   mkdirSync(dirname(promptJsonFilepath), {recursive: true});
 
-  const system_coder = reactiveFs.readFile(projectResolver("res/coder.jixo.md"));
-  const system_coder_json = JSON.parse(reactiveFs.readFile(projectResolver("res/coder.jixo.json")));
-  writeJson(
-    promptJsonFilepath,
-    {
-      [`coder`]: system_coder,
-      [`coder.json`]: system_coder_json,
-    },
-    {space: 0},
-  );
+  const filepaths = reactiveFs.readDirByGlob(projectResolver.dirname, "res/**");
+  console.log("QAQ", filepaths);
+  const prompt_json_content: Record<string, any> = {};
+  for (const filepath of filepaths) {
+    const filename_info = path.parse(filepath);
+    const file_content = reactiveFs.readFile(filepath);
+    if (filename_info.base.endsWith(".jixo.md")) {
+      prompt_json_content[filename_info.base.replace(".jixo.md", "")] = file_content;
+    } else if (filename_info.ext === ".json") {
+      prompt_json_content[normalizeFilePath(path.relative(projectResolver.dirname, filepath))] = JSON.parse(file_content);
+    } else {
+      prompt_json_content[normalizeFilePath(path.relative(projectResolver.dirname, filepath))] = file_content;
+    }
+  }
+  writeJson(promptJsonFilepath, prompt_json_content, {space: 0});
   console.log(blue(new Date().toLocaleTimeString()), green(`[gen-assets]`), "Generated assets in", path.relative(process.cwd(), promptJsonFilepath));
 };
 
