@@ -200,7 +200,6 @@ export const raf = () => new Promise((cb) => requestAnimationFrame(cb));
  */
 export const aFollowedByB = (el: HTMLElement, aSelector: string, bSelector: string, cb: (aEle: HTMLElement, bEle: HTMLElement) => void) => {
   const run = () => {
-    console.log("QAQ", el);
     for (const bEle of el.querySelectorAll(`:scope > ${aSelector} + ${bSelector}`)) {
       const aEle = bEle.previousElementSibling as HTMLElement;
       cb(aEle, bEle as HTMLElement);

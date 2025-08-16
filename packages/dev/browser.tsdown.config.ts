@@ -13,6 +13,7 @@ export default defineConfig(() => {
     outDir: "./bundle",
     format: "esm",
     dts: false,
+    treeshake: true,
     minify: "dce-only",
     noExternal: /./,
     ignoreWatch: [/[\\/]assets[\\/]/, /[\\/]bundle[\\/]/, /[\\/]dist[\\/]/] as any,

@@ -15,3 +15,7 @@
 ---
 
 [`JIXO:res/_internal/coder/05.md`](@INJECT)
+
+---
+
+[`JIXO:res/_internal/coder/06.md`](@INJECT)

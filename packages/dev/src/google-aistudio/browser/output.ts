@@ -1,106 +1,45 @@
-import {$, aFollowedByB, delay, getTargetNamespace, prepareDirHandle, styles} from "./utils.js";
+import {func_throttle} from "@gaubee/util";
+import {$, delay, getTargetNamespace, prepareDirHandle, styles} from "./utils.js";
 
-export const syncOutput = () => {
-  // 修改前端 get code 按钮 和 面板
-  const styleEle = document.createElement("style");
-  const headEle = $("head")!;
-  const css = String.raw;
-  // 隐藏 GetCode 面板，禁止 GetCode 按钮被用户点击
-  styleEle.innerText = css`
-    .cdk-global-overlay-wrapper:has(.get-code-dialog) {
-      display: none;
+export const syncOutput = async () => {
+  const onChange = func_throttle(runFileCreation, 200, {
+    before: true,
+    waitPromise: true,
+  });
+
+  const arr_push = Array.prototype[Symbol.for("arr_push") as any] || Array.prototype.push;
+  Array.prototype[Symbol.for("arr_push") as any] = arr_push;
+  Array.prototype.push = function push(...args) {
+    const a = args[0];
+    if (
+      a &&
+      /// 确定是普通的object
+      Object.getPrototypeOf(a) === Object.prototype &&
+      // 确定要有必要的属性
+      a.role &&
+      a.id &&
+      typeof a.text === "string"
+    ) {
+      onChange(this);
     }
-    button[aria-label="Get code"] {
-      pointer-events: none;
-    }
-  `.replaceAll("\n", "");
-  headEle.appendChild(styleEle);
-
-  const findCdkOverlayContainer = () => $<HTMLDivElement>(".cdk-overlay-container");
-
-  const cdkOverlayTaskId = Symbol.for("cdk-overlay-style-hooks") as any;
-  if (!window[cdkOverlayTaskId]) {
-    let cdkOverlayContainer: HTMLDivElement | null;
-    let off = () => {};
-    (window as any)[cdkOverlayTaskId] = setInterval(() => {
-      const newCdkOverlayContainer = findCdkOverlayContainer();
-      if (newCdkOverlayContainer !== cdkOverlayContainer && newCdkOverlayContainer) {
-        off();
-        off = aFollowedByB(
-          (cdkOverlayContainer = newCdkOverlayContainer),
-          ".cdk-overlay-backdrop",
-          ".cdk-global-overlay-wrapper:has(.get-code-dialog)",
-          (cdkOverlayBackdropEle) => {
-            if (cdkOverlayBackdropEle.style.display !== "none") {
-              console.log("%c隐藏遮罩元素", styles.warn, cdkOverlayBackdropEle);
-              cdkOverlayBackdropEle.style.display = "none";
-            }
-          },
-        );
-      }
-    }, 1000);
-  }
-
-  // 篡改 get-code 最后的render函数
-  const findMustacheKey = () => {
-    for (const key in default_MakerSuite) {
-      const render = default_MakerSuite[key]?.render;
-      if (render && typeof render === "function") {
-        return key;
-      }
-    }
+    return arr_push.apply(this, args);
   };
-  const waitMustacheKey = async () => {
-    while (true) {
-      const key = findMustacheKey();
-      if (key) {
-        return key;
-      }
-      await new Promise((c) => setTimeout(c, 200));
+
+  const findInput = () => $<HTMLTextAreaElement>(`textarea[aria-label="Start typing a prompt"]`);
+  while (!started) {
+    const input = findInput();
+    if (input) {
+      input.dispatchEvent(new Event("input"));
+      started = true;
     }
-  };
-  async function startInject() {
-    const key = await waitMustacheKey();
-    const _render = default_MakerSuite[key].render;
-    // 请求用户选择一个文件夹
-    default_MakerSuite[key].render = (...args: any[]) => {
-      const b = args[1];
-      void runFileCreation(b);
-
-      // 这里不再调用原来的render，减少性能损耗
-      // return render(...args);
-      return "";
-    };
-
-    const findInput = () => $<HTMLTextAreaElement>(`textarea[aria-label="Start typing a prompt"]`);
-    findInput()?.dispatchEvent(new Event("input"));
-  }
-
-  // 打开 GetCode 面板且不再关闭
-  if (!$(".cdk-overlay-container:has(.get-code-dialog)")) {
-    const findBtn = () => $<HTMLButtonElement>(`button[aria-label="Get code"]`);
-    const waitBtn = async () => {
-      while (true) {
-        const btn = findBtn();
-        if (btn) {
-          return btn;
-        }
-        await delay(200);
-      }
-    };
-    waitBtn().then((getCodeButtonEle) => {
-      getCodeButtonEle.click();
-
-      requestAnimationFrame(startInject);
-    });
-  } else {
-    startInject();
+    await delay(300);
   }
 };
-declare const default_MakerSuite: any;
+let started = false;
 
 let writting = false;
 async function runFileCreation(b: any, targetFilename = getTargetNamespace() + ".contents.json") {
+  started = true;
   if (writting) {
     return;
   }
