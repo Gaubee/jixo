@@ -1,17 +1,26 @@
 import {func_throttle} from "@gaubee/util";
+import {convertMessages} from "./converter.js";
 import {$, delay, getTargetNamespace, prepareDirHandle, styles} from "./utils.js";
 
 export const syncOutput = async () => {
-  const onChange = func_throttle(runFileCreation, 200, {
-    before: true,
-    waitPromise: true,
-  });
+  const onChange = func_throttle(
+    async (raw) => {
+      await runFileCreation(await convertMessages(raw));
+    },
+    200,
+    {
+      before: true,
+      waitPromise: true,
+    },
+  );
 
   const arr_push = Array.prototype[Symbol.for("arr_push") as any] || Array.prototype.push;
   Array.prototype[Symbol.for("arr_push") as any] = arr_push;
   Array.prototype.push = function push(...args) {
     const a = args[0];
+    let isMatched = false;
     if (
+      this.length > 1 &&
       a &&
       /// 确定是普通的object
       Object.getPrototypeOf(a) === Object.prototype &&
@@ -20,9 +29,16 @@ export const syncOutput = async () => {
       a.id &&
       typeof a.text === "string"
     ) {
-      onChange(this);
+      isMatched = true;
     }
-    return arr_push.apply(this, args);
+    const res = arr_push.apply(this, args);
+    if (isMatched) {
+      try {
+        onChange(structuredClone(this));
+      } catch {}
+    }
+
+    return res;
   };
 
   const findInput = () => $<HTMLTextAreaElement>(`textarea[aria-label="Start typing a prompt"]`);

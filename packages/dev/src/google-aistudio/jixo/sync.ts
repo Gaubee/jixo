@@ -9,7 +9,7 @@ import {mkdir, rm, writeFile} from "node:fs/promises";
 import path from "node:path";
 import z from "zod";
 import {reactiveFs} from "../../reactive-fs/reactive-fs.js";
-import {zContentSchema} from "../node/types.js";
+import {zContentsSchema} from "../node/types.js";
 const debug = Debug("jixo:go-sync");
 export const sync = async (basePath: string, outDir?: string) => {
   const s = statSync(basePath);
@@ -22,7 +22,7 @@ export const sync = async (basePath: string, outDir?: string) => {
 
   debug("发现contents.json文件", basePath);
   const rawContents = reactiveFs.readFile(basePath);
-  const safeContents = await zContentSchema.safeParseAsync(
+  const safeContents = await zContentsSchema.safeParseAsync(
     (() => {
       try {
         return JSON.parse(rawContents);
@@ -33,8 +33,7 @@ export const sync = async (basePath: string, outDir?: string) => {
     console.error(safeContents.error.message);
     return;
   }
-  const contentsData = safeContents.data;
-  const {contents} = contentsData.generateContentParameters;
+  const contents = safeContents.data;
 
   let first_index = 0;
   let second_index = -1;

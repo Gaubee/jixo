@@ -1,6 +1,50 @@
 import {type output, z} from "./z-min.js";
+export const zContentsSchema = z.array(
+  z.object({
+    role: z.string(),
+    parts: z.array(
+      z.union([
+        // 普通文本
+        z.object({isLast: z.optional(z.boolean()), text: z.string()}),
+        // FunctionCall 请求
+        z.object({
+          isLast: z.optional(z.boolean()),
+          functionCall: z.object({
+            name: z.string(),
+            parameters: z.string(),
+          }),
+        }),
+        // FunctionCall 返回
+        z.object({
+          isLast: z.optional(z.boolean()),
+          functionResponse: z.object({
+            name: z.string(),
+            response: z.string(),
+          }),
+        }),
+        // 文件
+        z.object({
+          isLast: z.optional(z.boolean()),
+          inlineData: z.object({
+            data: z.string(),
+            splitData: z.array(z.string()),
+            mimeType: z.string(),
+          }),
+          fileData: z.object({
+            mimeType: z.string(),
+            fileIndex: z.number(),
+            fileName: z.string(),
+          }),
+        }),
+        // 空对象块
+        z.object({isLast: z.optional(z.boolean())}),
+      ]),
+    ),
+    isLast: z.optional(z.boolean()),
+  }),
+);
 
-export const zContentSchema = z.looseObject({
+export const zAiStudioContentSchema = z.looseObject({
   generationConfiguration: z.looseObject({
     includeCodeExecutionTypesImport: z.boolean(),
     includeSchemaTypesImport: z.boolean(),
@@ -14,50 +58,7 @@ export const zContentSchema = z.looseObject({
   }),
   generateContentParameters: z.object({
     model: z.string(),
-    contents: z.array(
-      z.object({
-        role: z.string(),
-        parts: z.array(
-          z.union([
-            // 普通文本
-            z.object({isLast: z.boolean(), text: z.string()}),
-            // FunctionCall 请求
-            z.object({
-              isLast: z.boolean(),
-              functionCall: z.object({
-                name: z.string(),
-                parameters: z.string(),
-              }),
-            }),
-            // FunctionCall 返回
-            z.object({
-              isLast: z.boolean(),
-              functionResponse: z.object({
-                name: z.string(),
-                response: z.string(),
-              }),
-            }),
-            // 文件
-            z.object({
-              isLast: z.boolean(),
-              inlineData: z.object({
-                data: z.string(),
-                splitData: z.array(z.string()),
-                mimeType: z.string(),
-              }),
-              fileData: z.object({
-                mimeType: z.string(),
-                fileIndex: z.number(),
-                fileName: z.string(),
-              }),
-            }),
-            // 异常对象块
-            z.object({isLast: z.boolean()}),
-          ]),
-        ),
-        isLast: z.optional(z.boolean()),
-      }),
-    ),
+    contents: zContentsSchema,
     config: z.looseObject({
       thinkingConfig: z.object({thinkingBudget: z.string()}),
       stopSequences: z.array(z.unknown()),
@@ -84,4 +85,4 @@ export const zContentSchema = z.looseObject({
   }),
 });
 
-export type ContentSchema = output<typeof zContentSchema>;
+export type AiStudioContentSchema = output<typeof zAiStudioContentSchema>;

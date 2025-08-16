@@ -5,15 +5,14 @@ import fs from "node:fs";
 import path from "node:path";
 import {reactiveFs} from "../../reactive-fs/reactive-fs.js";
 import {defineFunctionCalls, type FunctionCallsMap} from "./function_call.js";
-import {zContentSchema} from "./types.js";
+import {zContentsSchema} from "./types.js";
 export interface GoogleAiStudioAutomationOptions {
   dir?: string;
 }
 
 const parseContent = async (fcs: FunctionCallsMap, dir: string, basename: string, contentFilepath: string, filenames: string[]) => {
   console.log(magenta("开始处理文件"), path.relative(process.cwd(), contentFilepath));
-  const fileData = await zContentSchema.parse(JSON.parse(reactiveFs.readFile(contentFilepath)));
-  const {contents} = fileData.generateContentParameters;
+  const contents = await zContentsSchema.parse(JSON.parse(reactiveFs.readFile(contentFilepath)));
   const latestContent = contents.at(-1);
   if (!latestContent) {
     return;
