@@ -6,5 +6,5 @@
     "types": ["node", "@types/wicg-file-system-access"]
   },
   "include": ["src/**/*.ts", "src/**/*.json"],
-  "exclude": []
+  "exclude": ["src/groq/"]
 }
