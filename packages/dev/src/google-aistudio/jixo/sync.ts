@@ -11,6 +11,26 @@ import z from "zod";
 import {reactiveFs} from "../../reactive-fs/reactive-fs.js";
 import {zContentsSchema} from "../node/types.js";
 const debug = Debug("jixo:go-sync");
+
+const saveMdFiles = async (baseDir: string, files: Array<{content: string; name: string}>) => {
+  const oldFileNames = new Set(globbySync(`*.md`, {cwd: baseDir}));
+  const newFileNames = new Set(files.map((file) => file.name));
+  const rmFileNameList = [...oldFileNames].filter((x) => !newFileNames.has(x));
+  const addFileNames = new Set([...newFileNames].filter((x) => !oldFileNames.has(x)));
+
+  /// 删除废弃的文件
+  if (rmFileNameList.length) {
+    await Promise.all(rmFileNameList.map((name) => rm(path.join(baseDir, name))));
+  }
+  /// 保存新增的文件
+  await Promise.all(
+    files
+      //
+      .filter((file) => addFileNames.has(file.name))
+      .map((file) => writeFile(path.join(baseDir, file.name), file.content)),
+  );
+};
+
 export const sync = async (basePath: string, outDir?: string) => {
   const s = statSync(basePath);
   if (s.isDirectory()) {
@@ -35,44 +55,58 @@ export const sync = async (basePath: string, outDir?: string) => {
   }
   const contents = safeContents.data;
 
-  let first_index = 0;
-  let second_index = -1;
-  const modelHistory = iter_map_not_null(contents, (content) => {
-    if (content.role === "model") {
-      const textParts = content.parts.filter((p) => "text" in p);
-      return textParts.at(-1)?.text;
-    }
-  });
+  type ContentItem = (typeof contents)[number];
+  const getItemContent = (item: ContentItem) => {
+    const textParts = item.parts.filter((p) => "text" in p);
+    const content = textParts.at(-1)?.text;
+    return content;
+  };
 
   /** 文件名前缀 */
   const name_prefix = path.basename(basePath).split(".")[0];
   const name_len = 2; // 固定长度，避免抖动
-  const model_files = modelHistory.map((content) => {
-    if (/【变更日志】[*\s\n]+/.test(content)) {
-      first_index += 1;
-      second_index = 0;
-    } else {
-      second_index += 1;
+  let first_index = 0;
+  let second_index = -1;
+  const user_files: Array<{content: string; name: string}> = [];
+  const model_files = iter_map_not_null(contents, (item, index) => {
+    if (item.role === "model") {
+      const content = getItemContent(item);
+      if (content) {
+        if (/【变更日志】[*\s\n]+/.test(content)) {
+          first_index += 1;
+          second_index = 0;
+        } else {
+          second_index += 1;
+        }
+        const hash = createHash("sha256").update(content).digest("hex").slice(0, 6);
+        const name = `${first_index}`.padStart(name_len, "0") + "-" + `${second_index}`.padStart(name_len, "0") + `.${hash}.md`;
+
+        {
+          const preItem = contents.at(index - 1);
+          if (preItem?.role === "user") {
+            const userContent = getItemContent(preItem);
+            if (userContent) {
+              const hash = createHash("sha256").update(userContent).digest("hex").slice(0, 6);
+              const userFilename = `${first_index}`.padStart(name_len, "0") + "-" + `${second_index}`.padStart(name_len, "0") + `.${hash}.md`;
+
+              user_files.push({content: userContent, name: userFilename});
+            }
+          }
+        }
+
+        return {content, name};
+      }
     }
-    const hash = createHash("sha256").update(content).digest("hex").slice(0, 6);
-    const name = `${first_index}`.padStart(name_len, "0") + "-" + `${second_index}`.padStart(name_len, "0") + `.${hash}.md`;
-    return {name, content};
   });
 
-  const resolvedOutDir = path.join(outDir ?? path.dirname(basePath), name_prefix);
-  await mkdir(resolvedOutDir, {recursive: true});
+  /// 保存
+  const modelOutputDir = path.join(outDir ?? path.dirname(basePath), name_prefix);
+  await mkdir(modelOutputDir, {recursive: true});
+  const userOutputDir = path.join(modelOutputDir, "user");
+  await mkdir(userOutputDir, {recursive: true});
 
-  const oldFileNames = new Set(globbySync(`*.md`, {cwd: resolvedOutDir}));
-  const newFileNames = new Set(model_files.map((file) => file.name));
-  const rmFileNameList = [...oldFileNames].filter((x) => !newFileNames.has(x));
-  const addFileNames = new Set([...newFileNames].filter((x) => !oldFileNames.has(x)));
-
-  /// 删除废弃的文件
-  if (rmFileNameList.length) {
-    await Promise.all(rmFileNameList.map((name) => rm(path.join(resolvedOutDir, name))));
-  }
-  /// 保存新增的文件
-  await Promise.all(model_files.filter((file) => addFileNames.has(file.name)).map((file) => writeFile(path.join(resolvedOutDir, file.name), file.content)));
+  await saveMdFiles(modelOutputDir, model_files);
+  await saveMdFiles(userOutputDir, user_files);
 
   console.log(blue(new Date().toLocaleTimeString()), green("sync"), path.relative(process.cwd(), basePath));
 };
