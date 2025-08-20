@@ -5,6 +5,131 @@ import {z} from "zod";
 // 1. TYPE DEFINITIONS
 // --------------------------------------------------------------------------
 
+let __TYPE_KEY = "__TYPE_KEY__";
+let __CONTENT_KEY = "__CONTENT_KEY__";
+let __BLOB_URL_KEY = "__BLOB_URL_KEY__";
+let __IMAGE_CONTENT_KEY = "__IMAGE_CONTENT_KEY__";
+let __IMAGE_INLINE_CONTENT_KEY = "__IMAGE_INLINE_CONTENT_KEY__";
+let __FILE_CONTENT_KEY = "__FILE_CONTENT_KEY__";
+let __FC_RESPONSE_KEY = "__FC_RESPONSE_KEY__";
+let sm = [] as any[];
+const KEYS = {
+  get TYPE_KEY(): "__TYPE_KEY__" {
+    if (__TYPE_KEY === "__TYPE_KEY__") {
+      const msg = sm.at(-1);
+      for (const key in msg) {
+        if (/^(role|text|grounding|id|isJson|parts|tokenCount)$/.test(key)) {
+          continue;
+        }
+
+        const val = msg[key];
+        if (/^(text|image|function_call|file)$/.test(val)) {
+          __TYPE_KEY = key;
+          break;
+        }
+      }
+    }
+    return __TYPE_KEY as "__TYPE_KEY__";
+  },
+  get CONTENT_KEY(): "__CONTENT_KEY__" {
+    if (__CONTENT_KEY === "__CONTENT_KEY__") {
+      msgLabel: for (const msg of sm) {
+        const parts = msg.parts;
+        if (Array.isArray(parts) && parts.length > 0) {
+          const part = parts[0];
+          for (const key in part) {
+            const val = part[key];
+            if (Array.isArray(val)) {
+              __CONTENT_KEY = key;
+              break msgLabel;
+            }
+            break;
+          }
+        }
+      }
+    }
+    return __CONTENT_KEY as "__CONTENT_KEY__";
+  },
+  get BLOB_URL_KEY(): "__BLOB_URL_KEY__" {
+    prepareImageKeys();
+    return __BLOB_URL_KEY as "__BLOB_URL_KEY__";
+  },
+  get IMAGE_CONTENT_KEY(): "__IMAGE_CONTENT_KEY__" {
+    prepareImageKeys();
+    return __IMAGE_CONTENT_KEY as "__IMAGE_CONTENT_KEY__";
+  },
+  get IMAGE_INLINE_CONTENT_KEY(): "__IMAGE_INLINE_CONTENT_KEY__" {
+    prepareImageKeys();
+    return __IMAGE_INLINE_CONTENT_KEY as "__IMAGE_INLINE_CONTENT_KEY__";
+  },
+  get FILE_CONTENT_KEY(): "__FILE_CONTENT_KEY__" {
+    if (__FILE_CONTENT_KEY === "__FILE_CONTENT_KEY__") {
+      for (const msg of sm) {
+        if ("file" === msg[KEYS.TYPE_KEY]) {
+          for (const key in msg) {
+            if (/^(role|text|grounding|id|isJson|parts|tokenCount)$/.test(key)) {
+              continue;
+            }
+            const val = msg[key];
+            if (typeof val === "object" && val && "mimeType" in val) {
+              __FILE_CONTENT_KEY = key;
+            }
+          }
+        }
+      }
+    }
+    return __FILE_CONTENT_KEY as "__FILE_CONTENT_KEY__";
+  },
+  get FC_RESPONSE_KEY(): "__FC_RESPONSE_KEY__" {
+    if (__FC_RESPONSE_KEY === "__FC_RESPONSE_KEY__") {
+      for (const msg of sm) {
+        if ("function_call" === msg[KEYS.TYPE_KEY]) {
+          for (const key in msg) {
+            if (/^(role|text|grounding|id|isJson|parts|tokenCount)$/.test(key)) {
+              continue;
+            }
+            const val = msg[key];
+            if (typeof val === "object" && val && "response" in val) {
+              __FC_RESPONSE_KEY = key;
+            }
+          }
+        }
+      }
+    }
+    return __FC_RESPONSE_KEY as "__FC_RESPONSE_KEY__";
+  },
+};
+const prepareImageKeys = () => {
+  if (__BLOB_URL_KEY === "__BLOB_URL_KEY__" || __IMAGE_CONTENT_KEY === "__IMAGE_CONTENT_KEY__" || __IMAGE_INLINE_CONTENT_KEY === "__IMAGE_INLINE_CONTENT_KEY__") {
+    for (const msg of sm) {
+      if ("image" === msg[KEYS.TYPE_KEY]) {
+        for (const key in msg) {
+          if (/^(role|text|grounding|id|isJson|parts|tokenCount)$/.test(key)) {
+            continue;
+          }
+          const val = msg[key];
+          if (typeof val === "object" && val && "mimeType" in val) {
+            if ("id" in val) {
+              __IMAGE_CONTENT_KEY = key;
+            } else {
+              __IMAGE_INLINE_CONTENT_KEY = key;
+            }
+          } else if (typeof val === "string" && val.startsWith("blob:")) {
+            __BLOB_URL_KEY = key;
+          }
+        }
+      }
+    }
+  }
+};
+
+const prepareKey = (sourceMessages: any[]) => {
+  if (sourceMessages.length === 0) {
+    return;
+  }
+  sm = sourceMessages;
+};
+
 // --- Target Schema and Types ---
 const TargetPartSchema = z.union([
   z.object({text: z.string()}),
@@ -39,45 +164,50 @@ type TargetPart = z.infer<typeof TargetPartSchema>;
 type TargetMessage = z.infer<typeof TargetMessageSchema>;
 
 // --- Source Data Types ---
-interface SourceBaseMessage {
+type SourceBaseMessage = {
   id: string;
   role: "user" | "model";
-  Ua: "text" | "image" | "function_call";
-  Ya: number;
   tokenCount: number;
-}
+} & {
+  [key in typeof KEYS.TYPE_KEY]: "text" | "image" | "function_call" | "file";
+};
 
-interface SourceTextMessage extends SourceBaseMessage {
-  Ua: "text";
+type SourceTextMessage = SourceBaseMessage & {
   text: string;
   thought?: boolean;
-}
+} & {
+  [key in typeof KEYS.TYPE_KEY]: "text";
+};
 
 // Updated to handle both embedded (Wd) and blob (Ta/zd) image formats
-interface SourceImageMessage extends SourceBaseMessage {
-  Ua: "image";
-  Wd?: {
+type SourceImageMessage = SourceBaseMessage & {
+  [KEYS.IMAGE_INLINE_CONTENT_KEY]?: {
     mimeType: string;
     Dc: string; // Base64 data
   };
-  Ta?: {
+  [KEYS.IMAGE_CONTENT_KEY]?: {
     id: string;
     name: string;
     mimeType: string;
+    thumbnailLink?: string;
   };
-  zd?: string; // blob URL
-}
+  [KEYS.BLOB_URL_KEY]?: string; // blob URL
+} & {
+  [key in typeof KEYS.TYPE_KEY]: "image";
+};
 
 // (Function call types are unchanged)
 type FunctionCallPartsArray = [null, null, null, null, null, null, null, null, null, null, [string, [[(string | [string, any[]])[]]]], ...any[]];
-interface FunctionCallPartsNc {
-  Nc: any[];
-}
-interface SourceFunctionCallMessage extends SourceBaseMessage {
-  Ua: "function_call";
+type FunctionCallPartsNc = {
+  [key in typeof KEYS.CONTENT_KEY]: any[];
+};
+type SourceFunctionCallMessage = SourceBaseMessage & {
   parts: [FunctionCallPartsArray] | [FunctionCallPartsNc];
-  Qg: {response: any};
-}
+} & {
+  [key in typeof KEYS.FC_RESPONSE_KEY]: {response: any};
+} & {
+  [key in typeof KEYS.CONTENT_KEY]: "function_call";
+};
 
 type SourceMessage = SourceTextMessage | SourceImageMessage | SourceFunctionCallMessage;
 
@@ -146,8 +276,8 @@ interface CanonicalFunctionCall {
 const getCanonicalFunctionCall = (msg: SourceFunctionCallMessage): CanonicalFunctionCall => {
   return match(msg.parts[0])
     .with(P.array(), (part) => ({name: (part[10] as any)[0], argsArray: (part[10] as any)[1][0]}))
-    .with({Nc: P.array()}, (part) => {
-      const functionCallData = part.Nc[10].Nc;
+    .with({[KEYS.CONTENT_KEY]: P.array()}, (part) => {
+      const functionCallData = part[KEYS.CONTENT_KEY][10].Nc;
       const name = functionCallData[0] as string;
       const argsMap = functionCallData[1].Nc[0] as Map<string, {Nc: any[]}>;
       return {name, argsArray: normalizeNcMapToCanonicalArray(argsMap)};
@@ -182,11 +312,12 @@ const parseFunctionArgs = (argList: [string, any[]][]): Record<string, any> => {
  * @returns A Promise resolving to an array of messages in the new, cleaner format.
  */
 export const convertMessages = async (sourceMessages: any[]): Promise<TargetMessage[]> => {
+  prepareKey(sourceMessages);
   // Step 1: Group messages (synchronous)
   const groupedMessages = sourceMessages.reduce<GroupedMessage[]>((acc, msg) => {
     const lastGroup = acc[acc.length - 1];
     const prevMessage = lastGroup?.items[lastGroup.items.length - 1];
-    if (lastGroup && lastGroup.role === msg.role && prevMessage?.Ua !== "function_call") {
+    if (lastGroup && lastGroup.role === msg.role && prevMessage?.[KEYS.TYPE_KEY] !== "function_call") {
       lastGroup.items.push(msg as SourceMessage);
     } else {
       acc.push({role: msg.role, items: [msg as SourceMessage]});
@@ -202,29 +333,35 @@ export const convertMessages = async (sourceMessages: any[]): Promise<TargetMess
     // Asynchronously create parts for the current group
     const partsPromises = group.items.map(async (item): Promise<TargetPart | null> => {
       return match(item)
-        .with({Ua: "text", text: P.string}, (msg) => {
+        .with({[KEYS.TYPE_KEY]: "text", text: P.string}, (msg) => {
           return msg.text.length > 0 ? {text: msg.text} : null;
         })
-        .with({Ua: "image", Wd: P.not(undefined).select()}, (wd) => {
-          // Handle embedded image data (sync)
-          return {inlineData: {mimeType: wd.mimeType, data: wd.Dc}};
-        })
-        .with({Ua: "image", Ta: P.not(undefined).select("ta"), zd: P.not(undefined).select("zd")}, async ({ta, zd}) => {
-          // Handle blob image data (async)
-          try {
-            const data = await blobUrlToBase64(zd);
-            return {inlineData: {mimeType: ta.mimeType, data}};
-          } catch (error) {
-            console.error(`Failed to process blob URL ${zd}:`, error);
-            return null;
+        .with({[KEYS.TYPE_KEY]: "image"}, async (img) => {
+          if (KEYS.IMAGE_INLINE_CONTENT_KEY in img) {
+            const inlineContent = img[KEYS.IMAGE_INLINE_CONTENT_KEY]!;
+            // Handle embedded image data (sync)
+            return {inlineData: {mimeType: inlineContent.mimeType, data: inlineContent.Dc}};
           }
+          if (KEYS.BLOB_URL_KEY in img && KEYS.IMAGE_CONTENT_KEY in img) {
+            const imageConent = img[KEYS.IMAGE_CONTENT_KEY]!;
+            const blobUrl = img[KEYS.BLOB_URL_KEY]!;
+            // Handle blob image data (async)
+            try {
+              const data = await blobUrlToBase64(blobUrl);
+              return {inlineData: {mimeType: imageConent.mimeType, data}};
+            } catch (error) {
+              console.error(`Failed to process blob URL ${blobUrl}:`, error);
+              return null;
+            }
+          }
+          return null;
         })
-        .with({Ua: "function_call"}, (msg) => {
+        .with({[KEYS.TYPE_KEY]: "function_call"}, (msg) => {
           try {
             const {name, argsArray} = getCanonicalFunctionCall(msg);
             const args = parseFunctionArgs(argsArray);
-            if (msg.Qg?.response) {
-              functionResponseData = {name, response: msg.Qg.response};
+            if (msg[KEYS.FC_RESPONSE_KEY]?.response) {
+              functionResponseData = {name, response: msg[KEYS.FC_RESPONSE_KEY].response};
             }
             return {function_call: {name, args}};
           } catch (error) {
