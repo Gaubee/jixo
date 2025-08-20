@@ -2,6 +2,7 @@ import {blue, createResolverByRootFile, green, normalizeFilePath, writeJson} fro
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import {mkdirSync} from "node:fs";
 import path, {dirname} from "node:path";
+import {pathToFileURL} from "node:url";
 import {parseArgs} from "node:util";
 import {reactiveFs} from "../src/reactive-fs/reactive-fs.ts";
 import {assetsResolver} from "../src/utils/resolver.ts";
@@ -20,8 +21,8 @@ const doGenAssets = async () => {
     const file_content = reactiveFs.readFile(filepath);
     if (filename_info.base.endsWith(".jixo.md")) {
       prompt_json_content[filename_info.base.replace(".jixo.md", "")] = file_content;
-    } else if (filename_info.ext === ".json") {
-      prompt_json_content[normalizeFilePath(path.relative(projectResolver.dirname, filepath))] = JSON.parse(file_content);
+    } else if (/^.(json|ts|js|mts|mjs)$/.test(filename_info.ext)) {
+      prompt_json_content[normalizeFilePath(path.relative(projectResolver.dirname, filepath))] = await import(pathToFileURL(filepath).href).then((r) => r.default);
     } else {
       prompt_json_content[normalizeFilePath(path.relative(projectResolver.dirname, filepath))] = file_content;
     }
