@@ -1,0 +1,31 @@
+{
+    "extends": "../../tsconfig.base.json",
+    "compilerOptions": {
+        "outDir": "./dist",
+        "rootDir": "./src",
+        "paths": {
+            "@jixo/dev/*": [
+                "../dev/src/*"
+            ],
+            "@jixo/jun/*": [
+                "../jun/src/*"
+            ],
+            "@jixo/tools/*": [
+                "../tools/src/*"
+            ],
+            "@jixo/tools-uikit/*": [
+                "../tools-uikit/src/*"
+            ]
+        },
+        "types": [
+            "chrome",
+            "vite/client"
+        ],
+        "lib": [
+            "DOM"
+        ]
+    },
+    "include": [
+        "src/"
+    ]
+}

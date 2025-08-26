@@ -1,0 +1,47 @@
+ms-chat-session > ms-autoscroll-container {
+  padding-bottom: 12px;
+}
+
+ms-chat-turn {
+  padding-bottom: 8px !important;
+}
+.chat-turn-container {
+  padding-bottom: 16px !important;
+}
+.chat-turn-container > .actions-container > .actions {
+  top: -28px !important;
+  backdrop-filter: blur(10px);
+  background-color: light-dark(#fff3, #0006) !important;
+  box-shadow: 0 0 5px -3px currentColor;
+  border-radius: 20px !important;
+}
+ms-chat-turn-options {
+  margin-bottom: 0px !important;
+}
+
+.turn-separator {
+  box-shadow: 0 0 6px 0px currentColor;
+  border-color: color-mix(in srgb, currentColor, transparent) !important;
+  scale: 0.7;
+}
+
+.chat-turn-container.user {
+  background-color: #e91e6333;
+}
+.chat-turn-container.model {
+  background-color: #2196f333;
+}
+.chat-turn-container > .turn-footer {
+  backdrop-filter: blur(10px);
+  background-color: light-dark(#fff3, #0006) !important;
+  box-shadow: 0 0 5px -3px currentColor;
+  transition-duration: 250ms;
+  border-radius: 16px;
+  padding: 2px 8px;
+}
+.chat-turn-container:hover > .turn-footer {
+  background-color: light-dark(#fff6, #0009) !important;
+}
+.chat-turn-container > .turn-footer > .model-run-time-pill {
+  background-color: transparent !important;
+}

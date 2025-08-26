@@ -49,6 +49,7 @@
     "@gaubee/nodekit": "^0.12.0",
     "@gaubee/util": "^0.34.2",
     "@hono/node-server": "^1.18.1",
+    "@jixo/tools-uikit": "workspace:^",
     "@parcel/watcher": "^2.5.1",
     "@std/cli": "jsr:^1.0.20",
     "@tanstack/router-core": "^1.129.8",

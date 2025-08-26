@@ -1,0 +1,34 @@
+{
+  "name": "@jixo/chrome-ext",
+  "version": "0.0.0",
+  "private": true,
+  "description": "",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm run \"/^b\\:.*/\"",
+    "b:chrome-ext": "vite build",
+    "dev": "pnpm run \"/^d\\:.*/\"",
+    "d:chrome-ext": "vite dev"
+  },
+  "keywords": [
+    "dev",
+    "kit"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@gaubee/util": "^0.34.2",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "ts-pattern": "^5.7.1",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.12",
+    "@types/chrome": "^0.1.4",
+    "@vitejs/plugin-react": "^5.0.1",
+    "tailwindcss": "^4.1.12",
+    "vite": "^7.0.6",
+    "vitest": "^3.2.4"
+  }
+}

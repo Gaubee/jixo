@@ -1,0 +1,6 @@
+{
+  "name": "@jixo/tools",
+  "type": "module",
+  "private": true,
+  "dependencies": {}
+}

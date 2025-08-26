@@ -1,10 +1,27 @@
 {
   "extends": "../../tsconfig.base.json",
+  "references": [
+    {
+      "path": "../tools-uikit/tsconfig.json"
+    }
+  ],
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
-    "types": ["node", "@types/wicg-file-system-access"]
+    "types": [
+      "node",
+      "@types/wicg-file-system-access",
+      "deno"
+    ]
   },
-  "include": ["src/**/*.ts", "src/**/*.json"],
-  "exclude": ["src/groq/"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.json"
+  ],
+  "exclude": [
+    "src/groq/",
+    "../jun",
+    "../tools",
+    "../tools/uikit"
+  ]
 }

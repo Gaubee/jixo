@@ -1,38 +1,9 @@
+import {createRenderer} from "@jixo/tools-uikit";
 import {readdirSync, statSync, type Stats} from "node:fs";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
-import {z, type output} from "./z-min.js";
-
-const zFunctionCallConfig = z.object({
-  name: z.string(),
-  description: z.optional(z.string()),
-  safeDescription: z.string(),
-  paramsSchema: z.optional(z.unknown()),
-});
-// z.toJSONSchema()
-
-const zFunctionCallFn = z.instanceof(Function);
-export type FunctionCallFn = (parameters: object) => unknown;
-
-/**
- * 标准版本
- */
-const zFunctionCallStandardModule = z.looseObject({
-  ...zFunctionCallConfig.shape,
-  name: z.optional(z.string()),
-  functionCall: zFunctionCallFn,
-});
-type FunctionCallStandardModule = output<typeof zFunctionCallStandardModule> & {
-  functionCall: FunctionCallFn;
-};
-/**
- * 极简版本，只导出一个 functionCall 函数即可
- * name 默认使用 `${infer name}.function.ts`
- * description 默认使用 functionCall.toString() 可以由AI猜测生成对应的params
- */
-const zFunctionCallMiniModule = z.extend(z.partial(zFunctionCallConfig), {
-  functionCall: zFunctionCallFn,
-});
+import {webSocketRenderHandler} from "../jixo/ws-server.js";
+import {zFunctionCallMiniModule, zFunctionCallStandardModule, type FunctionCallFn, type FunctionCallStandardModule, type ToolContext} from "./types.js";
 
 const safeParseModule = (unsafeModule: any) => {
   if (unsafeModule.default) {
@@ -67,22 +38,17 @@ const esmImporter = async (codeEntry: CodeEntry) => {
 };
 
 const supportImports = new Map([
-  //
   [
     /\.function_call\.js$/,
     {
-      getKey: (filename: string) => {
-        return filename.replace(/\.function_call\.js$/, "");
-      },
+      getKey: (filename: string) => filename.replace(/\.function_call\.js$/, ""),
       importer: esmImporter,
     },
   ],
   [
     /\.function_call\.ts$/,
     {
-      getKey: (filename: string) => {
-        return filename.replace(/\.function_call\.ts$/, "");
-      },
+      getKey: (filename: string) => filename.replace(/\.function_call\.ts$/, ""),
       importer: esmImporter,
     },
   ],
@@ -106,17 +72,13 @@ export const defineFunctionCalls = async (dir: string) => {
   for (const filename of readdirSync(dir)) {
     const fullpath = path.join(dir, filename);
     const stat = statSync(fullpath);
-    if (!stat.isFile()) {
-      continue;
-    }
+    if (!stat.isFile()) continue;
 
-    let key: string | undefined;
     for (const [suffix, config] of supportImports) {
       if (suffix.test(filename)) {
-        key = config.getKey(filename).trim();
-
+        const key = config.getKey(filename).trim();
         if (key != "") {
-          const codeEntry = {key, filename, dirname: dir, fullpath, stat} satisfies CodeEntry;
+          const codeEntry = {key, filename, dirname: dir, fullpath, stat};
           const module = await config.importer(codeEntry);
           if (module) {
             codeEntries.set(codeEntry.key, {codeEntry, module});
@@ -130,3 +92,15 @@ export const defineFunctionCalls = async (dir: string) => {
 };
 
 export type FunctionCallsMap = Awaited<ReturnType<typeof defineFunctionCalls>>;
+
+/**
+ * Creates a context object to be passed to a function call.
+ * Crucially, it creates a renderer scoped to the current session.
+ * @param sessionId - The session ID of the user triggering the function call.
+ */
+export function createFunctionCallContext(sessionId: string): ToolContext {
+  // The renderer is created on-demand for each function call,
+  // bound to the specific session that initiated it.
+  const render = createRenderer(webSocketRenderHandler, sessionId);
+  return {render, sessionId};
+}

@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.deno.json",
+  "references": [
+    {
+      "path": "../tools-uikit/tsconfig.json"
+    }
+  ],
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.json",
+  ],
+  "exclude": []
+}

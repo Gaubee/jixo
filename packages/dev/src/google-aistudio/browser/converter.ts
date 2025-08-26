@@ -253,17 +253,17 @@ const blobUrlToBase64 = (blobUrl: string): Promise<string> => {
 
 // --- (All other helpers for function calls are unchanged) ---
 // (normalizeNcValue, normalizeNcMapToCanonicalArray, getCanonicalFunctionCall, parseArgValue, parseFunctionArgs)
-let normalizeNcMapToCanonicalArray: (map: Map<string, {Nc: any[]}>) => [string, any[]][];
-const normalizeNcValue = (ncWrapper: {Nc: any[]}): any[] => {
-  const ncArray = ncWrapper.Nc;
+let normalizeNcMapToCanonicalArray: (map: Map<string, {[key in typeof KEYS.CONTENT_KEY]: any[]}>) => [string, any[]][];
+const normalizeNcValue = (ncWrapper: {[key in typeof KEYS.CONTENT_KEY]: any[]}): any[] => {
+  const ncArray = ncWrapper[KEYS.CONTENT_KEY];
   return match(ncArray)
-    .with([P.any, P.any, P.any, P.any, {Nc: [P.select(P.instanceOf(Map))]}], (innerMap) => {
+    .with([P.any, P.any, P.any, P.any, {[KEYS.CONTENT_KEY]: [P.select(P.instanceOf(Map))]}], (innerMap) => {
       const processedMapArray = normalizeNcMapToCanonicalArray(innerMap as Map<any, any>);
       return [null, null, null, null, [processedMapArray]];
     })
     .otherwise(() => ncArray);
 };
-normalizeNcMapToCanonicalArray = (map: Map<string, {Nc: any[]}>): [string, any[]][] => {
+normalizeNcMapToCanonicalArray = (map: Map<string, {[key in typeof KEYS.CONTENT_KEY]: any[]}>): [string, any[]][] => {
   return Array.from(map.entries()).map(([key, valueWrapper]) => {
     const canonicalValueArray = normalizeNcValue(valueWrapper);
     return [key, canonicalValueArray];
@@ -277,9 +277,9 @@ const getCanonicalFunctionCall = (msg: SourceFunctionCallMessage): CanonicalFunc
   return match(msg.parts[0])
     .with(P.array(), (part) => ({name: (part[10] as any)[0], argsArray: (part[10] as any)[1][0]}))
     .with({[KEYS.CONTENT_KEY]: P.array()}, (part) => {
-      const functionCallData = part[KEYS.CONTENT_KEY][10].Nc;
+      const functionCallData = part[KEYS.CONTENT_KEY][10][KEYS.CONTENT_KEY];
       const name = functionCallData[0] as string;
-      const argsMap = functionCallData[1].Nc[0] as Map<string, {Nc: any[]}>;
+      const argsMap = functionCallData[1][KEYS.CONTENT_KEY][0] as Map<string, {[key in typeof KEYS.CONTENT_KEY]: any[]}>;
       return {name, argsArray: normalizeNcMapToCanonicalArray(argsMap)};
     })
     .otherwise(() => {

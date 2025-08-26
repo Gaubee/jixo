@@ -25,6 +25,18 @@
             "path": "./packages/mcp-pnpm/tsconfig.json"
         },
         // {
+        //     "path": "./packages/tools/tsconfig.json"
+        // },
+        // {
+        //     "path": "./packages/tools-uikit/tsconfig.json"
+        // },
+        // {
+        //     "path": "./packages/jun/tsconfig.json"
+        // },
+        // {
+        //     "path": "./packages/chrome-ext/tsconfig.json"
+        // },
+        // {
         //     "path": "./packages/webui/tsconfig.json"
         // }
     ],

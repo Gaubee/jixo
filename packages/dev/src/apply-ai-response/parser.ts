@@ -60,6 +60,9 @@ export function parseMarkdown(from: string, markdownContent: string, rootResolve
   for (const match of markdownContent.matchAll(fileBlockRegex)) {
     const filePath = match[1].trim();
     let code = match[3].trim();
+    if (code.endsWith("// JIXO_CODER_EOF")) {
+      code = code.replace(/\/\/ JIXO_CODER_EOF$/, "");
+    }
     const fullSourcePath = rootResolver(filePath);
     let fullTargetPath = fullSourcePath;
     let mode: DiffFileMode | undefined;
