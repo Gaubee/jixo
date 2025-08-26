@@ -140,13 +140,13 @@ const TargetPartSchema = z.union([
     }),
   }),
   z.object({
-    function_call: z.object({
+    functionCall: z.object({
       name: z.string(),
-      args: z.any(),
+      parameters: z.any(),
     }),
   }),
   z.object({
-    function_response: z.object({
+    functionResponse: z.object({
       name: z.string(),
       response: z.any(),
     }),
@@ -204,7 +204,7 @@ type FunctionCallPartsNc = {
 type SourceFunctionCallMessage = SourceBaseMessage & {
   parts: [FunctionCallPartsArray] | [FunctionCallPartsNc];
 } & {
-  [key in typeof KEYS.FC_RESPONSE_KEY]: {response: any};
+  [key in typeof KEYS.FC_RESPONSE_KEY]: {response: string};
 } & {
   [key in typeof KEYS.CONTENT_KEY]: "function_call";
 };
@@ -360,10 +360,10 @@ export const convertMessages = async (sourceMessages: any[]): Promise<TargetMess
           try {
             const {name, argsArray} = getCanonicalFunctionCall(msg);
             const args = parseFunctionArgs(argsArray);
-            if (msg[KEYS.FC_RESPONSE_KEY]?.response) {
+            if (typeof msg[KEYS.FC_RESPONSE_KEY]?.response === "string") {
               functionResponseData = {name, response: msg[KEYS.FC_RESPONSE_KEY].response};
             }
-            return {function_call: {name, args}};
+            return {functionCall: {name, parameters: JSON.stringify(args)}};
           } catch (error) {
             console.error("Failed to parse function call:", error, item);
             return null;
@@ -384,9 +384,9 @@ export const convertMessages = async (sourceMessages: any[]): Promise<TargetMess
         role: "user",
         parts: [
           {
-            function_response: {
+            functionResponse: {
               name: functionResponseData.name,
-              response: {output: functionResponseData.response},
+              response: functionResponseData.response,
             },
           },
         ],

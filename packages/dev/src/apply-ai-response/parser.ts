@@ -64,7 +64,7 @@ export function parseMarkdown(from: string, markdownContent: string, rootResolve
     let fullTargetPath = fullSourcePath;
     let mode: DiffFileMode | undefined;
 
-    if (code === "$$DELETE_FILE$$") {
+    if (code.startsWith("$$DELETE_FILE$$")) {
       mode = "delete";
     } else if (code.startsWith("$$RENAME_FILE$$")) {
       const firstLineIndex = code.indexOf("\n");

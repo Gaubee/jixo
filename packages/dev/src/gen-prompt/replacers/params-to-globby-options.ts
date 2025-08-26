@@ -76,5 +76,7 @@ export const paramsToGlobbyOptions = (params: Record<string, unknown>, defaults:
       .with(P.boolean, (v) => v)
       .otherwise(() => defaults.unique),
   } satisfies GlobbyOptions;
-  return structuredClone(opts);
+  /// 移除 undefined 的字段
+  const safeOpts = JSON.parse(JSON.stringify(opts));
+  return safeOpts;
 };

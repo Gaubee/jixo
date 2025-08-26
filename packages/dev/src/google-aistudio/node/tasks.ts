@@ -1,4 +1,4 @@
-import {blue, cyan, gray, green, magenta, red} from "@gaubee/nodekit";
+import {blue, bold, cyan, gray, green, magenta, red} from "@gaubee/nodekit";
 import {func_remember} from "@gaubee/util";
 import {createHash} from "node:crypto";
 import fs from "node:fs";
@@ -13,16 +13,14 @@ export interface GoogleAiStudioAutomationOptions {
 const parseContent = async (fcs: FunctionCallsMap, dir: string, basename: string, contentFilepath: string, filenames: string[]) => {
   console.log(magenta("开始处理文件"), path.relative(process.cwd(), contentFilepath));
   const contents = await zContentsSchema.parse(JSON.parse(reactiveFs.readFile(contentFilepath)));
-  const latestContent = contents.at(-1);
-  if (!latestContent) {
-    return;
-  }
-
-  if (latestContent.role !== "user") {
+  const latestUserContent = contents.findLast((c) => {
+    return c.role === "user" && c.parts.find((p) => "functionResponse" in p) != null;
+  });
+  if (!latestUserContent) {
     return;
   }
   // console.log("QAQ latestContent", latestContent);
-  const functionResponsePart = latestContent.parts.find((p) => "functionResponse" in p);
+  const functionResponsePart = latestUserContent.parts.find((p) => "functionResponse" in p);
   if (!functionResponsePart) {
     return;
   }
@@ -69,6 +67,17 @@ const parseContent = async (fcs: FunctionCallsMap, dir: string, basename: string
       return true;
     } catch (e) {
       console.log(red("任务执行失败:"), e);
+      fs.writeFileSync(
+        path.join(dir, taskFilename),
+        JSON.stringify(
+          {
+            input,
+            output: {error: e instanceof Error ? e.message : String(e)},
+          },
+          null,
+          2,
+        ),
+      );
       return false;
     }
   }
@@ -81,8 +90,9 @@ const getFunctionCalls = func_remember(async (dir: string) => {
   }
   console.log(green(`Found functionCalls (${fcs.size}):`));
   for (const [index, [name, fc]] of Array.from(fcs).entries()) {
-    console.log(gray(`${index + 1}.`), blue(name), fc.module.description ?? "");
+    console.log(gray(`${index + 1}.`), bold(blue(name)), gray(fc.module.description ? `: ${fc.module.description}` : ""));
   }
+  console.log(green("─".repeat(process.stdout.columns ?? 20)));
   return fcs;
 });
 export const googleAiStudioAutomation = async ({dir = process.cwd()}: GoogleAiStudioAutomationOptions) => {

@@ -69,6 +69,18 @@ export const handleGitReplacement: Replacer = async ({globOrFilepath, mode, para
       filesToProcess = micromatch.match(uncommittedFiles, filePattern);
     }
 
+    const ignorePattern = match(params.ignore)
+      .with(P.string, (v) => [v])
+      .with(P.array(P.string), (v) => v)
+      .otherwise(() => undefined);
+    if (ignorePattern && ignorePattern.length > 0) {
+      const fileToIgnore = micromatch.match(filesToProcess, ignorePattern);
+      if (fileToIgnore.length > 0) {
+        const ignoreFiles = new Set(fileToIgnore);
+        filesToProcess = filesToProcess.filter((file) => !ignoreFiles.has(file));
+      }
+    }
+
     if (filesToProcess.length === 0) {
       return `<!-- No files found for pattern: ${filePattern} ${commitHash ? `at commit ${commitHash}` : "in working directory"} -->`;
     }

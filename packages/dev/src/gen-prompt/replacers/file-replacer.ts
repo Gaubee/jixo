@@ -116,7 +116,7 @@ export const localFileReplacement: Replacer = async (options) => {
           gitignore: isGlob ? true : false,
           cwd: baseDir,
         }),
-      );
+      ).map((entry) => (typeof entry === "string" ? entry : entry.path));
 
   if (files.length === 0) {
     const errorMsg = `No files found for pattern: ${globOrFilepath}`;
@@ -134,7 +134,7 @@ export const localFileReplacement: Replacer = async (options) => {
 
     lines.push(useFileOrInject("FILE", "", generateFileTree(files, expandDirectories), params));
   } else if (mode === "FILE_LIST") {
-    debugger
+    debugger;
     lines.push(useFileOrInject("INJECT", "", files.join("\n"), params));
   } else {
     for (const filepath of files) {

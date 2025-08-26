@@ -34,7 +34,7 @@ export const jixoProvider = async (specifier: string, options: ReplacerOptions) 
   }
   let content = (await GET_JIXO_PROMPT())[specifier];
 
-  if (specifier.includes(".json")) {
+  if (/\.(json|ts)$/.test(specifier)) {
     /// 如果是JSON文件，那么序列化后再输出
     content = JSON.stringify(content, null, z.int().optional().safeParse(options.params.spaces).data ?? 2);
   } else {

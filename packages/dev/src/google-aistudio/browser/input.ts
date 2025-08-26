@@ -41,17 +41,22 @@ const fillFunctionCall = async () => {
   if (textareaEle.disabled) {
     return;
   }
-  textareaEle.value = JSON.stringify(taskResponse.output, null, 2);
+  textareaEle.value = typeof taskResponse.output === "string" ? taskResponse.output : JSON.stringify(taskResponse.output, null, 2);
   textareaEle.dispatchEvent(new Event("input"));
 
   await delay(150);
 
-  const findFunctionCallResponseButtonEle = () => document.querySelector<HTMLButtonElement>(`button[mattooltip="Send response"]`);
+  const findFunctionCallResponseButtonEle = () => textareaEle.parentElement?.querySelector("button");
   const waitFunctionCallResponseButtonEle = async () => {
     while (true) {
       const ele = findFunctionCallResponseButtonEle();
       if (ele) {
-        return ele;
+        if (ele.disabled === false && ele.ariaDisabled !== "true") {
+          return ele;
+        } else {
+          await delay(100);
+          continue;
+        }
       }
       await scrollToBottom();
     }

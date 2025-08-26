@@ -1,6 +1,7 @@
 import {assetsResolver} from "@jixo/dev/utils/resolver";
 import {existsSync, realpathSync} from "node:fs";
-import { symlink, unlink } from "node:fs/promises";
+import {symlink, unlink} from "node:fs/promises";
+import {builtinModules} from "node:module";
 import path from "node:path";
 import {setTimeout} from "node:timers/promises";
 import {defineConfig, type UserConfig} from "tsdown";
@@ -11,10 +12,12 @@ export default defineConfig(() => {
     outDir: "./bundle",
     format: "esm",
     noExternal: /./,
+    sourcemap: true,
     dts: false,
     minify: false,
+    platform: "node",
     external: ["@parcel/watcher"],
-    ignoreWatch: [/[\\/]assets[\\/]/,/[\\/]bundle[\\/]/,/[\\/]dist[\\/]/] as any,
+    ignoreWatch: [/[\\/]assets[\\/]/, /[\\/]bundle[\\/]/, /[\\/]dist[\\/]/] as any,
     hooks: {
       "build:done": async () => {
         const source = assetsResolver.dirname;
@@ -45,5 +48,21 @@ export default defineConfig(() => {
         } while (canRetry > 0);
       },
     },
+    plugins: [
+      {
+        name: "enforce-node-protocol",
+        renderChunk: (code: string) => {
+          // 简单正则：把 "module"、"v8"、"fs" 等 Node 内建模块
+          // 统一改成 "node:xxx"
+          let replaced = code.replace(/(?<![\w.])require$["']([^"']+)["']$/g, (m, id) => (builtinModules.includes(id) && !id.startsWith("node:") ? `require("node:${id}")` : m));
+
+          // 对 ESM 的 import 也再检查一次
+          replaced = replaced.replace(/from\s+["']([^"']+)["']/g, (m, id) => (builtinModules.includes(id) && !id.startsWith("node:") ? `from "node:${id}"` : m));
+          // 对 ESM 的 dynamic import 也再检查一次
+          replaced = replaced.replace(/from\(["']([^"']+)["']\)/g, (m, id) => (builtinModules.includes(id) && !id.startsWith("node:") ? `from("node:${id}")` : m));
+          return replaced;
+        },
+      },
+    ],
   } satisfies UserConfig;
 });
