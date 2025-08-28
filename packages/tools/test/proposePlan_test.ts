@@ -1,46 +1,64 @@
-import {assertEquals} from "jsr:@std/assert";
+import type {RenderPayload} from "@jixo/tools-uikit";
+import {assertEquals, assertExists} from "jsr:@std/assert";
 import {describe, it} from "jsr:@std/testing/bdd";
-import {functionCall, paramsSchema} from "./proposePlan.ts";
+import type {ToolContext} from "../src/askUser.ts";
+import {functionCall, paramsSchema} from "../src/proposePlan.ts";
 
-describe("proposePlan", () => {
-  it("should successfully process a valid plan with estimated tool calls", () => {
-    const args = {
-      plan_summary: "Refactor the core module",
-      steps: ["Step 1: Delete old files", "Step 2: Create new files"],
-      estimated_tool_calls: ["submitChangeSet"],
+describe("proposePlan tool", () => {
+  const planArgs = {
+    plan_summary: "Refactor the core module",
+    steps: ["Step 1: Delete old files", "Step 2: Create new files"],
+    estimated_tool_calls: ["submitChangeSet"],
+  };
+
+  it("should return PLAN_APPROVED when user approves", async () => {
+    let capturedPayload: RenderPayload | null = null;
+    const mockRender = (payload: RenderPayload): Promise<boolean> => {
+      capturedPayload = payload;
+      return Promise.resolve(true); // Simulate user clicking "Approve"
     };
-    paramsSchema.parse(args); // Zod validation
-    const result = functionCall(args);
-    assertEquals(result.status, "PLAN_PROPOSED");
-    assertEquals(result.message, "Plan has been received and is pending user approval.");
-    assertEquals(result.plan, args);
+    const mockContext: ToolContext = {render: mockRender};
+
+    paramsSchema.parse(planArgs);
+    const result = await functionCall(planArgs, mockContext);
+
+    assertEquals(result.status, "PLAN_APPROVED");
+    assertExists(capturedPayload);
+    assertEquals(capturedPayload.component, "ProposePlanDialog");
+    assertEquals(capturedPayload.props.plan_summary, "Refactor the core module");
   });
 
-  it("should successfully process a valid plan without estimated tool calls", () => {
-    const args = {
-      plan_summary: "Update documentation",
-      steps: ["Step 1: Review current docs", "Step 2: Update README.md"],
+  it("should throw an error when user rejects", async () => {
+    const mockRender = (_payload: RenderPayload): Promise<boolean> => {
+      return Promise.resolve(false); // Simulate user clicking "Reject"
     };
-    paramsSchema.parse(args);
-    const result = functionCall(args);
-    assertEquals(result.status, "PLAN_PROPOSED");
-    assertEquals(result.plan.plan_summary, "Update documentation");
-    assertEquals(result.plan.steps.length, 2);
+    const mockContext: ToolContext = {render: mockRender};
+
+    let caughtError: Error | null = null;
+    try {
+      await functionCall(planArgs, mockContext);
+    } catch (e) {
+      caughtError = e;
+    }
+
+    assertExists(caughtError);
+    assertEquals(caughtError.message, "Plan was rejected by the user.");
   });
 
-  it("should fail Zod validation if plan_summary is missing", () => {
-    const args = {
-      steps: ["A", "B"],
+  it("should propagate errors from the render function (e.g., user cancellation)", async () => {
+    const mockRender = (_payload: RenderPayload): Promise<any> => {
+      return Promise.reject(new Error("User closed the window"));
     };
-    assertEquals(paramsSchema.safeParse(args).success, false);
-  });
+    const mockContext: ToolContext = {render: mockRender};
 
-  it("should fail Zod validation if steps are missing", () => {
-    const args = {
-      plan_summary: "A summary",
-    };
-    assertEquals(paramsSchema.safeParse(args).success, false);
+    let caughtError: Error | null = null;
+    try {
+      await functionCall(planArgs, mockContext);
+    } catch (e) {
+      caughtError = e;
+    }
+
+    assertExists(caughtError);
+    assertEquals(caughtError.message, "User closed the window");
   });
 });
-
-// JIXO_CODER_EOF

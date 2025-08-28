@@ -1,93 +1,129 @@
 // This is the background service worker for the Chrome extension.
+console.log("JIXO BG: Script start.");
+
 let socket: WebSocket | null = null;
 let sessionId: string | null = null;
-const WS_PORT = 8765;
 
-function connectWebSocket() {
-  // Prevent multiple connections
+// --- State Management ---
+interface ConnectionState {
+  status: "connected" | "disconnected" | "connecting";
+  serverUri: string;
+  sessionId: string | null;
+}
+
+const state: ConnectionState = {
+  status: "disconnected",
+  serverUri: "ws://127.0.0.1:8765",
+  sessionId: null,
+};
+
+function updateState(newState: Partial<ConnectionState>) {
+  console.log("JIXO BG: Updating state", newState);
+  Object.assign(state, newState);
+  broadcastState();
+}
+
+function broadcastState() {
+  console.log("JIXO BG: Broadcasting state", state);
+  chrome.runtime.sendMessage({type: "STATE_UPDATE", payload: state});
+}
+
+// --- WebSocket Logic ---
+function connectWebSocket(uri?: string) {
+  if (uri) {
+    state.serverUri = uri;
+  }
+
   if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
-    console.log("WebSocket is already open or connecting.");
     return;
   }
 
-  socket = new WebSocket(`ws://127.0.0.1:${WS_PORT}`);
+  console.log(`JIXO BG: Attempting to connect to ${state.serverUri}...`);
+  updateState({status: "connecting"});
+  socket = new WebSocket(state.serverUri);
 
-  socket.onopen = () => {
-    console.log("WebSocket connection established.");
-  };
+  socket.onopen = () => console.log("JIXO BG: WebSocket connection established.");
 
   socket.onmessage = (event) => {
     try {
       const message = JSON.parse(event.data);
-      console.log("Received message from server:", message);
+      console.log("JIXO BG: Received message from server:", message);
 
       if (message.type === "WELCOME") {
         sessionId = message.sessionId;
-        console.log(`Assigned session ID: ${sessionId}`);
-      }
+        updateState({status: "connected", sessionId: message.sessionId});
+      } else if (message.type === "RENDER_UI" && message.jobId) {
+        console.log("JIXO BG: RENDER_UI command received. Creating popup...");
+        const url = new URL(chrome.runtime.getURL("popup.html"));
+        url.searchParams.set("jobId", message.jobId);
+        url.searchParams.set("payload", JSON.stringify(message.payload));
 
-      // Forward the message to the side panel
-      chrome.runtime.sendMessage(message);
+        chrome.windows.create({
+          url: url.href,
+          type: "popup",
+          width: 400,
+          height: 350,
+        });
+      }
     } catch (error) {
-      console.error("Failed to parse message:", event.data, error);
+      console.error("JIXO BG: Failed to parse message:", event.data, error);
     }
   };
 
   socket.onclose = () => {
-    console.log("WebSocket connection closed. Attempting to reconnect in 3 seconds...");
+    console.log("JIXO BG: WebSocket connection closed. Reconnecting in 3s...");
     socket = null;
     sessionId = null;
-    setTimeout(connectWebSocket, 3000);
+    updateState({status: "disconnected", sessionId: null});
+    setTimeout(() => connectWebSocket(), 3000);
   };
 
-  socket.onerror = (error) => {
-    console.error("WebSocket error:", error);
-    // The onclose event will fire next, triggering the reconnect logic.
-  };
+  socket.onerror = (error) => console.error(`JIXO BG: WebSocket error connecting to ${state.serverUri}:`, error);
 }
 
-// Initial connection attempt
 connectWebSocket();
 
-// Listen for messages from the side panel (or other extension parts)
-// and forward them to the WebSocket server.
+// --- Message Handling from Popups/Other Scripts ---
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (socket && socket.readyState === WebSocket.OPEN && sessionId) {
-    const messageWithSession = {...message, sessionId};
-    console.log("Sending message to server:", messageWithSession);
-    socket.send(JSON.stringify(messageWithSession));
-    sendResponse({status: "MESSAGE_SENT"});
-  } else {
-    console.error("WebSocket is not connected. Cannot send message.");
-    sendResponse({status: "ERROR", reason: "WebSocket not connected"});
+  console.log("JIXO BG: Received message from a popup/script", message);
+  if (message.type === "GET_STATUS") {
+    sendResponse(state);
+  } else if (message.type === "CONNECT") {
+    connectWebSocket(message.payload.uri);
+    sendResponse({status: "CONNECTION_ATTEMPTED"});
+  } else if (message.type === "DEBUG_RENDER_UI") {
+    // Handle debug message from ControlPanel
+    const url = new URL(chrome.runtime.getURL("popup.html"));
+    url.searchParams.set("jobId", "debug-job-id");
+    url.searchParams.set("payload", JSON.stringify(message.payload));
+    chrome.windows.create({url: url.href, type: "popup", width: 400, height: 350});
+    sendResponse({status: "DEBUG_POPUP_CREATED"});
+  } else if (message.type === "USER_RESPONSE") {
+    if (socket && socket.readyState === WebSocket.OPEN && sessionId) {
+      const messageWithSession = {...message, sessionId};
+      socket.send(JSON.stringify(messageWithSession));
+      sendResponse({status: "MESSAGE_SENT"});
+    } else {
+      sendResponse({status: "ERROR", reason: "WebSocket not connected"});
+    }
   }
-  // Return true to indicate you wish to send a response asynchronously
   return true;
 });
 
-// On installation, set up the side panel to open automatically on AI Studio sites.
+// --- Extension Lifecycle/UI Events ---
 chrome.runtime.onInstalled.addListener(() => {
+  console.log("JIXO BG: Extension installed.");
+  // Context menu is kept for potential future use, but doesn't create a window anymore.
   chrome.contextMenus.create({
-    id: "openSidePanel",
-    title: "Open JIXO Panel",
+    id: "jixoContextMenu",
+    title: "JIXO AI Tools",
     contexts: ["all"],
   });
 });
 
-// When the context menu item is clicked, open the side panel.
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (info.menuItemId === "openSidePanel" && tab?.id) {
-    chrome.sidePanel.open({tabId: tab.id});
-  }
+  console.log("JIXO BG: Context menu clicked.", {info, tab});
+  // You can add other functionalities here later.
 });
 
-// When the browser action icon is clicked, toggle the side panel for the current tab.
-chrome.action.onClicked.addListener(async (tab) => {
-  if (tab.id) {
-    await chrome.sidePanel.open({tabId: tab.id});
-  }
-});
-
-console.log("JIXO AI Tools background service worker started.");
-
-// JIXO_CODER_EOF
+console.log("JIXO BG: Script end. Event listeners are active.");

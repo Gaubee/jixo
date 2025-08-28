@@ -17,11 +17,9 @@ if (import_meta_ponyfill(import.meta).main) {
     },
   });
 
-  // Start the WebSocket server in the background
-  void startWsServer(parseInt(args.wsPort, 10));
+  // Start the WebSocket server. It will run in the background.
+  startWsServer(parseInt(args.wsPort, 10));
 
   // Run the main file synchronization logic
   doSync(args);
 }
-
-// JIXO_CODER_EOF

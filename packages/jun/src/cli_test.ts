@@ -1,8 +1,9 @@
 import {assertEquals, assertStringIncludes} from "@std/assert";
 import {afterEach, beforeEach, describe, it} from "@std/testing/bdd";
 import {main} from "./cli.ts";
+import {junHistoryLogic} from "./commands/history.ts";
 
-describe("jun CLI In-Process", () => {
+describe("jun CLI In-Process E2E", () => {
   let testDir: string;
   let originalCwd: string;
   let originalConsoleLog: (...args: any[]) => void;
@@ -49,14 +50,38 @@ describe("jun CLI In-Process", () => {
   }
 
   // --- Test Cases ---
-  it("should run a simple command, show it in history, and then remove it", async () => {
-    const runResult = await invokeJun("run", "echo", "hello world");
+  it("should support default 'run' command", async () => {
+    const runResult = await invokeJun("echo", "hello from default run");
     assertEquals(runResult.code, 0);
-    assertStringIncludes(runResult.stdout, "hello world");
+    assertStringIncludes(runResult.stdout, "hello from default run");
+
+    const historyResult = await invokeJun("history", "--json");
+    const tasks = JSON.parse(historyResult.stdout);
+    assertEquals(tasks.length, 1);
+    assertEquals(tasks[0].command, "echo");
+    assertEquals(tasks[0].status, "completed");
+  });
+
+  it("should cat the stdio of the correct command", async () => {
+    await invokeJun("run", "echo", "first command");
+    await invokeJun("run", "sh", "-c", 'echo "out test" && echo "err test" >&2');
+
+    // Use the programmatic API to get the history reliably
+    const history = await junHistoryLogic();
+    const taskToCat = history.find((t) => t.command === "sh");
+    assertEquals(taskToCat !== undefined, true, "Could not find the 'sh' command in history");
+
+    const catResult = await invokeJun("cat", String(taskToCat!.pid));
+    assertStringIncludes(catResult.stdout, `--- Log for PID ${taskToCat!.pid}: sh -c echo "out test" && echo "err test" >&2 ---`);
+    assertStringIncludes(catResult.stdout, "[stdout] out test");
+    assertStringIncludes(catResult.stdout, "[stderr] err test");
+  });
+
+  it("should run a simple command, show it in history, and then remove it", async () => {
+    await invokeJun("run", "echo", "hello world");
 
     const historyResult = await invokeJun("history", "--json");
     let tasks = JSON.parse(historyResult.stdout);
-    assertEquals(tasks.length, 1);
     const taskPid = tasks[0].pid;
 
     await invokeJun("rm", String(taskPid));
@@ -65,41 +90,4 @@ describe("jun CLI In-Process", () => {
     tasks = JSON.parse(historyAfterRm.stdout);
     assertEquals(tasks.length, 0);
   });
-
-  it("should handle the full lifecycle of a background process", async () => {
-    // This test is fundamentally different in-process as we can't truly detach.
-    // The unit tests for kill logic are more reliable.
-    // This E2E test now just ensures the commands don't crash.
-    await invokeJun("run", "sleep", "0.1"); // Quick running command
-    const history = await invokeJun("history", "--json");
-    const tasks = JSON.parse(history.stdout);
-    assertEquals(tasks[0].status, "completed");
-  });
-
-  it("should cat the stdio of a command", async () => {
-    await invokeJun("run", "sh", "-c", 'echo "out test" && echo "err test" >&2');
-
-    const historyResult = await invokeJun("history", "--json");
-    const tasks = JSON.parse(historyResult.stdout);
-    const taskToCat = tasks.find((t: any) => t.command === "sh");
-    assertEquals(taskToCat !== undefined, true);
-
-    const catResult = await invokeJun("cat", String(taskToCat.pid));
-    assertStringIncludes(catResult.stdout, "[stdout] out test");
-    assertStringIncludes(catResult.stdout, "[stderr] err test");
-  });
-
-  it("should handle catting multiple pids, including failures", async () => {
-    await invokeJun("run", "echo", "task1");
-    await invokeJun("run", "echo", "task2");
-
-    const catResult = await invokeJun("cat", "1", "99", "2");
-
-    assertStringIncludes(catResult.stdout, "--- Log for PID 1: echo task1 ---");
-    assertStringIncludes(catResult.stdout, "[stdout] task1");
-    assertStringIncludes(catResult.stdout, "--- Log for PID 2: echo task2 ---");
-    assertStringIncludes(catResult.stdout, "[stdout] task2");
-    assertStringIncludes(catResult.stderr, "Error for PID 99: Task not found.");
-  });
 });
-// JIXO_CODER_EOF

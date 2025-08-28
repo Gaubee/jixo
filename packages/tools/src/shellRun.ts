@@ -1,4 +1,5 @@
 import {junRunLogic} from "jsr:@jixo/jun";
+import type {FunctionCallFn} from "npm:@jixo/dev/google-aistudio";
 import z from "npm:zod";
 
 export const name = "shellRun";
@@ -16,39 +17,52 @@ export const paramsSchema = z.object({
  * @param args - 符合paramsSchema的参数
  * @returns 一个包含jun任务信息的对象
  */
-export const functionCall = async (args: z.infer<typeof paramsSchema>) => {
-  // 注意：后台运行在 FunctionCall 模型中是一个挑战，
-  // 因为它会创建一个“孤儿”进程。
-  // 这里的实现假设执行环境能够处理这种情况。
-  // 对于非后台任务，我们直接等待结果。
-  if (!args.background) {
-    const exitCode = await junRunLogic(args.command, args.args);
+export const functionCall: FunctionCallFn<z.infer<typeof paramsSchema>> = async (args) => {
+  if (args.background) {
+    // For background tasks, we capture the JSON output to get the PID.
+    let pid = -1;
+    let osPid = -1;
+    const originalConsoleLog = console.log;
+    let jsonOutput = "";
+    console.log = (data) => {
+      jsonOutput = data;
+    }; // Hijack console.log
+
+    try {
+      await junRunLogic({
+        command: args.command,
+        commandArgs: args.args,
+        background: true,
+        json: true,
+      });
+      const parsed = JSON.parse(jsonOutput);
+      pid = parsed.pid;
+      osPid = parsed.osPid;
+    } finally {
+      console.log = originalConsoleLog; // Restore console.log
+    }
+
     return {
-      status: exitCode === 0 ? "COMPLETED" : "ERROR",
-      exit_code: exitCode,
+      status: "STARTED_IN_BACKGROUND",
+      pid: pid,
+      osPid: osPid,
       command: args.command,
       args: args.args,
     };
   }
 
-  // 对于后台任务，我们启动它但不等待它。
-  // 这将在当前进程退出后继续运行。
-  const process = new Deno.Command(Deno.execPath(), {
-    args: ["run", "-A", "jsr:@jixo/jun/cli", "run", args.command, ...args.args],
-    // 在这个模型中，我们无法轻易获取到 jun 的 pid。
-    // 这是一个需要进一步设计的点，暂时返回一个表示任务已启动的消息。
-  }).spawn();
-
-  // 我们无法安全地杀死这个子进程，所以我们 unref 它，
-  // 允许父进程（我们的工具执行器）退出。
-  process.unref();
+  // For foreground tasks, we wait for the result as before.
+  const exitCode = await junRunLogic({
+    command: args.command,
+    commandArgs: args.args,
+    background: false,
+    json: false,
+  });
 
   return {
-    status: "STARTED_IN_BACKGROUND",
+    status: exitCode === 0 ? "COMPLETED" : "ERROR",
+    exit_code: exitCode,
     command: args.command,
     args: args.args,
-    message: "Task started. Use shellList to find its PID.",
   };
 };
-
-// JIXO_CODER_EOF

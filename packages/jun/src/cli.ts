@@ -2,14 +2,15 @@
 
 import {parseArgs} from "@std/cli";
 import {format as formatDate} from "@std/datetime";
-import {junCatLogic} from "./src/commands/cat.ts";
-import {junHistoryLogic} from "./src/commands/history.ts";
-import {junInitLogic} from "./src/commands/init.ts";
-import {junKillLogic} from "./src/commands/kill.ts";
-import {junLsLogic} from "./src/commands/ls.ts";
-import {junRmLogic} from "./src/commands/rm.ts";
-import {junRunLogic} from "./src/commands/run.ts";
-import type {JunTask, JunTaskLog} from "./src/types.ts";
+import {junCatLogic} from "./commands/cat.ts";
+import {junHistoryLogic} from "./commands/history.ts";
+import {junInitLogic} from "./commands/init.ts";
+import {junKillLogic} from "./commands/kill.ts";
+import {junLsLogic} from "./commands/ls.ts";
+import {junRmLogic} from "./commands/rm.ts";
+import {junRunLogic} from "./commands/run.ts";
+import {parseRunArgs} from "./commands/run_args_parser.ts";
+import type {JunTask, JunTaskLog} from "./types.ts";
 
 function printTasks(tasks: JunTask[]) {
   if (tasks.length === 0) {
@@ -42,46 +43,42 @@ export async function main(argsArray: string[]): Promise<number> {
 
   const command = argsArray[0];
   const commandArgs = argsArray.slice(1);
-
-  // Key Fix: Handle 'run' command separately, passing remaining args without parsing them.
-  if (command === "run") {
-    if (commandArgs.length === 0) {
-      console.error('Error: No command specified for "run".');
-      return 1;
-    }
-    const [cmd, ...restArgs] = commandArgs;
-    return await junRunLogic(cmd, restArgs);
-  }
-
-  // For all other commands, parse the arguments.
-  const args = parseArgs(commandArgs, {boolean: ["json", "all", "auto"], string: ["_"]});
+  const commonArgs = parseArgs(commandArgs, {boolean: ["json", "all", "auto"], string: ["_"]});
 
   switch (command) {
     case "init": {
       const junDir = await junInitLogic();
       console.log(`Jun directory initialized at: ${junDir}`);
-      break;
+      return 0;
+    }
+    case "run": {
+      const runOpts = parseRunArgs(commandArgs);
+      if ("error" in runOpts) {
+        console.error(`Error: ${runOpts.error}`);
+        return 1;
+      }
+      return await junRunLogic(runOpts);
     }
     case "ls": {
       const runningTasks = await junLsLogic();
-      if (args.json) console.log(JSON.stringify(runningTasks, null, 2));
+      if (commonArgs.json) console.log(JSON.stringify(runningTasks, null, 2));
       else printTasks(runningTasks);
-      break;
+      return 0;
     }
     case "history": {
       const allTasks = await junHistoryLogic();
-      if (args.json) console.log(JSON.stringify(allTasks, null, 2));
+      if (commonArgs.json) console.log(JSON.stringify(allTasks, null, 2));
       else printTasks(allTasks);
-      break;
+      return 0;
     }
     case "cat": {
-      const pids = args._.map(Number).filter((n) => !isNaN(n) && n > 0);
+      const pids = commonArgs._.map(Number).filter((n) => !isNaN(n) && n > 0);
       if (pids.length === 0) {
         console.error('Error: No valid PID specified for "cat".');
         return 1;
       }
       const {success, failed} = await junCatLogic(pids);
-      if (args.json) console.log(JSON.stringify({success, failed}, null, 2));
+      if (commonArgs.json) console.log(JSON.stringify({success, failed}, null, 2));
       else {
         for (const taskLog of Object.values(success)) {
           printTaskLogs(taskLog);
@@ -90,42 +87,45 @@ export async function main(argsArray: string[]): Promise<number> {
           console.error(`Error for PID ${pid}: ${error}`);
         }
       }
-      break;
+      return 0;
     }
     case "rm": {
-      const pids = args._.map(Number).filter((n) => !isNaN(n) && n > 0);
-      if (pids.length === 0 && !args.all && !args.auto) {
+      const pids = commonArgs._.map(Number).filter((n) => !isNaN(n) && n > 0);
+      if (pids.length === 0 && !commonArgs.all && !commonArgs.auto) {
         console.error('Error: No valid PIDs specified for "rm".');
         return 1;
       }
-      const {removed, skipped} = await junRmLogic({pids, all: args.all, auto: args.auto});
+      const {removed, skipped} = await junRmLogic({pids, all: commonArgs.all, auto: commonArgs.auto});
       for (const [pid, reason] of Object.entries(skipped)) {
         console.warn(`Skipping PID ${pid}: ${reason}`);
       }
       console.log(`Removed ${removed.length} task(s).`);
-      break;
+      return 0;
     }
     case "kill": {
-      const pids = args._.map(Number).filter((n) => !isNaN(n) && n > 0);
-      if (pids.length === 0 && !args.all) {
+      const pids = commonArgs._.map(Number).filter((n) => !isNaN(n) && n > 0);
+      if (pids.length === 0 && !commonArgs.all) {
         console.error('Error: No valid PIDs specified for "kill".');
         return 1;
       }
-      const {killedCount, failedPids} = await junKillLogic({pids, all: args.all});
+      const {killedCount, failedPids} = await junKillLogic({pids, all: commonArgs.all});
       for (const [pid, error] of Object.entries(failedPids)) console.error(`Failed to kill task PID ${pid}: ${error}`);
       console.log(`Killed ${killedCount} task(s).`);
-      break;
+      return 0;
     }
-    default:
-      console.error(`Unknown command: ${command}`);
-      console.log("Available commands: init, run, ls, history, cat, rm, kill");
-      return 1;
+    default: {
+      // Default behavior: treat the command as a 'run' command.
+      const runOpts = parseRunArgs(argsArray); // Parse the original, full args array.
+      if ("error" in runOpts) {
+        console.error(`Unknown command: ${command}`);
+        console.log("Available commands: init, run, ls, history, cat, rm, kill");
+        return 1;
+      }
+      return await junRunLogic(runOpts);
+    }
   }
-  return 0;
 }
 
 if (import.meta.main) {
   Deno.exit(await main(Deno.args));
 }
-
-// JIXO_CODER_EOF

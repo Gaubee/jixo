@@ -34,8 +34,8 @@ export default defineConfig(() => {
     {
       ...baseConfig,
       entry: {
-        "groq.browser": "./src/groq/browser/index.ts",
-      },
+        "google-aistudio.jixo": "./src/google-aistudio/jixo/cli.ts",
+      } as Record<string, string>,
       // 将 hook 放在最后一个构建任务中，确保它在所有文件都生成后再执行
       hooks: {
         "build:done": async () => {

@@ -1,7 +1,7 @@
+import {junHistoryLogic, junInitLogic, junLsLogic} from "jsr:@jixo/jun";
 import {assert, assertEquals} from "jsr:@std/assert";
 import {afterEach, beforeEach, describe, it} from "jsr:@std/testing/bdd";
-import {junHistoryLogic, junInitLogic} from "jsr:@jixo/jun";
-import {functionCall, paramsSchema} from "./shellRun.ts";
+import {functionCall, paramsSchema} from "../src/shellRun.ts";
 
 describe("shellRun tool", () => {
   let testDir: string;
@@ -11,7 +11,7 @@ describe("shellRun tool", () => {
     testDir = await Deno.makeTempDir({prefix: "shell_run_test_"});
     originalCwd = Deno.cwd();
     Deno.chdir(testDir);
-    await junInitLogic(); // Initialize a local .jun for the test
+    await junInitLogic();
   });
 
   afterEach(async () => {
@@ -31,34 +31,34 @@ describe("shellRun tool", () => {
     assertEquals(result.status, "COMPLETED");
     assertEquals(result.exit_code, 0);
 
-    // Verify it was actually logged in history
     const history = await junHistoryLogic();
     assertEquals(history.length, 1);
     assertEquals(history[0]?.command, "echo");
     assertEquals(history[0]?.status, "completed");
   });
 
-  // Background testing is complex as it creates detached processes.
-  // We'll test that it returns the correct status, but won't verify the process itself in this unit test.
-  it("should return background status for a background command", async () => {
+  it("should run a background command and immediately return the correct PID", async () => {
     const args = {
       command: "sleep",
-      args: ["0.1"],
+      args: ["10"],
       background: true,
     };
     paramsSchema.parse(args);
     const result = await functionCall(args);
 
     assertEquals(result.status, "STARTED_IN_BACKGROUND");
-    assert(typeof result.message === "string");
+    assert(result.pid > 0, "PID should be a positive number");
+    assert(result.osPid > 0, "OS PID should be a positive number");
 
-    // Give a moment for the background process to potentially start and finish
-    await new Promise((resolve) => setTimeout(resolve, 200));
+    // Verify the task is actually running
+    const runningTasks = await junLsLogic();
+    assertEquals(runningTasks.length, 1);
+    assertEquals(runningTasks[0]?.pid, result.pid);
+    assertEquals(runningTasks[0]?.status, "running");
 
-    // Even after a delay, history should show the task as it's logged upon start.
-    const history = await junHistoryLogic();
-    assert(history.length >= 1, "Background task should appear in history");
+    // Cleanup
+    const bgProcess = Deno.run({cmd: ["kill", String(result.osPid)]});
+    await bgProcess.status();
+    bgProcess.close();
   });
 });
-
-// JIXO_CODER_EOF
