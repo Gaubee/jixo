@@ -1,50 +1,37 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
+// packages/chrome-ext/src/App.tsx
+import React, {useState, useEffect} from "react";
 import {ControlPanel} from "./components/ControlPanel.tsx";
-import {AskUserDialog} from "./components/AskUserDialog.tsx";
-import {LogThoughtPanel} from "./components/LogThoughtPanel.tsx";
-import {ProposePlanDialog} from "./components/ProposePlanDialog.tsx";
+import {WorkspaceSetup} from "./components/WorkspaceSetup.tsx";
+import {getWorkspaceHandle, storeWorkspaceHandle} from "./lib/workspace.ts";
 
-console.log("JIXO POPUP: Script start.");
+type AppState = "initializing" | "needs-setup" | "ready";
 
-const rootEl = document.getElementById("root");
-if (!rootEl) {
-  throw new Error("JIXO POPUP: Root element not found in popup.html");
-}
-const root = ReactDOM.createRoot(rootEl);
+export function App() {
+  const [appState, setAppState] = useState<AppState>("initializing");
 
-function App() {
-  console.log("JIXO POPUP: App component rendering.");
-  const urlParams = new URLSearchParams(window.location.search);
-  const jobId = urlParams.get("jobId");
-  const payloadStr = urlParams.get("payload");
-
-  if (jobId && payloadStr) {
-    console.log(`JIXO POPUP: Rendering UI for job ID: ${jobId}`);
-    try {
-      const payload = JSON.parse(payloadStr);
-      switch (payload.component) {
-        case "AskUserDialog":
-          return <AskUserDialog jobId={jobId} props={payload.props} />;
-        case "LogThoughtPanel":
-          return <LogThoughtPanel props={payload.props} />;
-        case "ProposePlanDialog":
-          return <ProposePlanDialog jobId={jobId} props={payload.props} />;
-        default:
-          return <p>Error: Unknown component '{payload.component}'.</p>;
+  useEffect(() => {
+    // Check if we already have a workspace handle on startup.
+    getWorkspaceHandle().then((handle) => {
+      if (handle) {
+        setAppState("ready");
+      } else {
+        setAppState("needs-setup");
       }
-    } catch (e) {
-      console.error("JIXO POPUP: Failed to parse payload:", e);
-      return <p>Error: Invalid payload data.</p>;
-    }
+    });
+  }, []);
+
+  const handleWorkspaceSelected = (handle: FileSystemDirectoryHandle) => {
+    storeWorkspaceHandle(handle);
+    setAppState("ready");
+  };
+
+  if (appState === "initializing") {
+    return <p>Loading...</p>;
   }
 
-  console.log("JIXO POPUP: No job ID found, rendering default Control Panel.");
+  if (appState === "needs-setup") {
+    return <WorkspaceSetup onWorkspaceSelected={handleWorkspaceSelected} />;
+  }
+
   return <ControlPanel />;
 }
-
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);

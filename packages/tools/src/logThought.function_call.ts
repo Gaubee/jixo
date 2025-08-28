@@ -1,5 +1,5 @@
 import z from "npm:zod";
-import type {ToolContext} from "./askUser.ts"; // Re-using ToolContext definition
+import type {ToolContext} from "./askUser.tool.ts"; // Re-using ToolContext definition
 
 export const name = "logThought";
 

@@ -1,56 +1,46 @@
-import {blue, gray, prompts, yellow} from "@gaubee/nodekit";
+import {blue, gray, prompts, readJson, yellow} from "@gaubee/nodekit";
+import {func_remember, obj_props} from "@gaubee/util";
 import {existsSync} from "node:fs";
-import {copyFile, mkdir, rm} from "node:fs/promises";
+import {mkdir, writeFile} from "node:fs/promises";
 import path from "node:path";
 import {assetsResolver} from "../../utils/resolver.js";
+const GET_JIXO_TOOLS = func_remember(() => readJson<Record<string, string>>(assetsResolver("tools.json")));
 
 export interface InitOptions {
   dir: string;
   force?: boolean;
 }
-export const commonInit = async (cpAssets: string[], {dir, force}: InitOptions) => {
-  const sourceEntries = cpAssets.map((entrypath) => ({relativepath: entrypath, fullpath: assetsResolver(`bundle`, entrypath)}));
-  const targetEntries = cpAssets.map((entrypath) => ({relativepath: entrypath, fullpath: path.resolve(dir, entrypath)}));
-  const existEntries = targetEntries.filter((targetEntry) => existsSync(targetEntry.fullpath));
 
-  if (existEntries.length) {
-    const logPaths = () => existEntries.map((entry) => `${gray("-")} ${blue(entry.relativepath)}`);
-    if (force === false) {
-      console.warn(
-        [
-          //
-          yellow(`the same file(s) name already exists.`),
-          ...logPaths(),
-        ].join("\n"),
-      );
-      return;
-    }
-    if (force == null) {
-      const overwrite = await prompts.confirm({
-        message: [
-          //
-          `the same file(s) name already exists. Are you sure you want to overwrite?`,
-          ...logPaths(),
-        ].join("\n"),
-        default: false,
-      });
-      if (!overwrite) {
-        return;
+export const copyAssets = async (targetDir: string, options: {force?: boolean}) => {
+  const tools = await GET_JIXO_TOOLS();
+  await mkdir(targetDir, {recursive: true});
+  for (const filename of obj_props(tools)) {
+    const destPath = path.join(targetDir, filename);
+    if (existsSync(destPath)) {
+      if (options.force === false) {
+        console.warn(yellow(`File already exists, skipping: ${filename}`));
+        continue;
+      }
+      if (options.force == null) {
+        const overwrite = await prompts.confirm({
+          message: `File '${blue(filename)}' already exists. Overwrite?`,
+          default: false,
+        });
+        if (!overwrite) continue;
       }
     }
-
-    await Promise.all(existEntries.map((entry) => rm(entry.fullpath, {recursive: true})));
+    await writeFile(destPath, tools[filename]);
   }
-  await mkdir(dir, {recursive: true});
-  for (const [index, sourceEntry] of sourceEntries.entries()) {
-    await copyFile(sourceEntry.fullpath, targetEntries[index].fullpath);
-  }
-  await Promise.all(
-    sourceEntries.map((sourceEntry, index) => {
-      return copyFile(sourceEntry.fullpath, targetEntries[index].fullpath);
-    }),
-  );
 };
+
+export const initTools = async ({dir, force}: InitOptions) => {
+  console.log(gray(`Initializing tools in ${dir}...`));
+  await copyAssets(dir, {force});
+  console.log(blue("✅ Tools initialized successfully."));
+};
+
 export const doInit = (opts: InitOptions) => {
-  return commonInit(["google-aistudio.browser.js"], opts);
+  // This function is now legacy, kept for potential direct use.
+  const sourceDir = assetsResolver("bundle", "google-aistudio.browser.js");
+  return copyAssets(opts.dir, {force: opts.force});
 };

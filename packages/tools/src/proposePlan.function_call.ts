@@ -1,5 +1,5 @@
 import z from "npm:zod";
-import type {ToolContext} from "./askUser.ts";
+import type {ToolContext} from "./askUser.tool.ts";
 
 export const name = "proposePlan";
 
