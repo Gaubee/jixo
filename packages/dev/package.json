@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./browser": "./dist/google-aistudio/browser/index.js",
     "./utils/resolver": "./dist/utils/resolver.js",
     "./apply-ai-response": "./dist/apply-ai-response.js",
     "./gen-prompt": "./dist/gen-prompt.js",
@@ -31,6 +32,7 @@
   ],
   "scripts": {
     "build": "pnpm run \"/^b\\:.*/\"",
+    "b:chrome-ext": "cd ../chrome-ext && vite build",
     "b:bundle-browser": "tsdown --config ./browser.tsdown.config.ts",
     "b:ts": "tsc --build",
     "b:gen-assets": "tsx ./scripts/gen-assets.ts",
@@ -45,11 +47,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@jixo/tools-uikit": "workspace:^",
     "@gaubee/node": "^0.4.0",
     "@gaubee/nodekit": "^0.12.0",
     "@gaubee/util": "^0.34.2",
     "@hono/node-server": "^1.18.1",
-    "@jixo/tools-uikit": "workspace:^",
     "@parcel/watcher": "^2.5.1",
     "@std/cli": "jsr:^1.0.20",
     "@tanstack/router-core": "^1.129.8",
@@ -68,7 +70,6 @@
     "ts-pattern": "^5.7.1",
     "tslib": "^2.8.1",
     "unist-util-visit": "^5.0.0",
-    "ws": "^8.18.3",
     "zod": "^4.0.0"
   },
   "devDependencies": {
@@ -78,7 +79,6 @@
     "@types/node": "^24.1.0",
     "@types/unist": "^3.0.3",
     "@types/wicg-file-system-access": "^2023.10.6",
-    "@types/ws": "^8.18.1",
     "micromatch": "^4.0.8",
     "playwright": "^1.54.2",
     "vite": "^7.0.6",

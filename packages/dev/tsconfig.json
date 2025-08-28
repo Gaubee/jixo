@@ -10,8 +10,7 @@
     "rootDir": "./src",
     "types": [
       "node",
-      "@types/wicg-file-system-access",
-      "deno"
+      "@types/wicg-file-system-access"
     ]
   },
   "include": [

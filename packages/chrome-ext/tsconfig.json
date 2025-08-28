@@ -1,6 +1,11 @@
 {
     "extends": "../../tsconfig.base.json",
     "compilerOptions": {
+        "module": "esnext",
+        "moduleResolution": "bundler",
+        "allowImportingTsExtensions": true,
+        "noEmit": true,
+        "jsx": "react",
         "outDir": "./dist",
         "rootDir": "./src",
         "paths": {
@@ -19,10 +24,8 @@
         },
         "types": [
             "chrome",
-            "vite/client"
-        ],
-        "lib": [
-            "DOM"
+            "vite/client",
+            "@types/wicg-file-system-access",
         ]
     },
     "include": [

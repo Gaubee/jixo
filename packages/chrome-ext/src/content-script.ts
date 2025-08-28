@@ -1,22 +1,37 @@
-// packages/chrome-ext/src/content-script.ts
-import {startSync} from "./lib/sync-logic.ts";
-import {getWorkspaceHandle} from "./lib/workspace.ts";
+import {selectWorkspace as browserSelectWorkspace, startSync as browserStartSync} from "@jixo/dev/browser";
+import {expose} from "comlink";
+import {createEndpoint} from "comlink-extension";
+import {storeWorkspaceHandle} from "./lib/workspace.ts";
 
-console.log("JIXO AI Tools content script loaded and waiting for commands.");
+console.log("JIXO CS: Content script loaded.");
 
-// Listen for a message from the popup to start the sync process.
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "START_SYNC") {
-    console.log("JIXO CS: Received START_SYNC command.");
-    (async () => {
-      const handle = await getWorkspaceHandle();
-      if (handle) {
-        await startSync(handle);
-        sendResponse({status: "SYNC_STARTED"});
-      } else {
-        sendResponse({status: "ERROR", message: "Workspace handle not found."});
-      }
-    })();
-    return true; // Indicates async response
-  }
-});
+// --- API Definition for this Content Script ---
+export const contentScriptAPI = {
+  async selectWorkspace(): Promise<string | null> {
+    const handle = await browserSelectWorkspace();
+    // We now store the handle directly from the browser lib call, but this API returns the name.
+    await storeWorkspaceHandle(handle);
+    return handle.name;
+  },
+  async startSync(): Promise<{status: string; message?: string}> {
+    return await browserStartSync();
+  },
+  ping() {
+    return true;
+  },
+};
+
+// --- Connection to Background Script ---
+function connectToBackground() {
+  // This port is for the background to talk to us.
+  const port = chrome.runtime.connect({name: "content-script"});
+  // We expose our API on this port.
+  expose(contentScriptAPI, createEndpoint(port));
+  console.log("JIXO CS: Exposed content script API on port to background.");
+}
+
+try {
+  connectToBackground();
+} catch (error) {
+  console.error("JIXO CS: Failed to connect and expose API to background script.", error);
+}

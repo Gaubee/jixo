@@ -1,37 +1,47 @@
-// packages/chrome-ext/src/App.tsx
-import React, {useState, useEffect} from "react";
-import {ControlPanel} from "./components/ControlPanel.tsx";
-import {WorkspaceSetup} from "./components/WorkspaceSetup.tsx";
-import {getWorkspaceHandle, storeWorkspaceHandle} from "./lib/workspace.ts";
+import React from "react";
+import {createRoot} from "react-dom/client";
+import {App} from "./App.tsx";
+import {AskUserDialog} from "./components/AskUserDialog.tsx";
+import {LogThoughtPanel} from "./components/LogThoughtPanel.tsx";
+import {ProposePlanDialog} from "./components/ProposePlanDialog.tsx";
 
-type AppState = "initializing" | "needs-setup" | "ready";
-
-export function App() {
-  const [appState, setAppState] = useState<AppState>("initializing");
-
-  useEffect(() => {
-    // Check if we already have a workspace handle on startup.
-    getWorkspaceHandle().then((handle) => {
-      if (handle) {
-        setAppState("ready");
-      } else {
-        setAppState("needs-setup");
-      }
-    });
-  }, []);
-
-  const handleWorkspaceSelected = (handle: FileSystemDirectoryHandle) => {
-    storeWorkspaceHandle(handle);
-    setAppState("ready");
-  };
-
-  if (appState === "initializing") {
-    return <p>Loading...</p>;
-  }
-
-  if (appState === "needs-setup") {
-    return <WorkspaceSetup onWorkspaceSelected={handleWorkspaceSelected} />;
-  }
-
-  return <ControlPanel />;
+const rootEl = document.getElementById("root");
+if (!rootEl) {
+  throw new Error("Root element not found in popup.html");
 }
+const root = createRoot(rootEl);
+
+function Main() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const jobId = urlParams.get("jobId");
+  const payloadStr = urlParams.get("payload");
+
+  // If jobId and payload are present, it's a tool UI request.
+  if (jobId && payloadStr) {
+    try {
+      const payload = JSON.parse(payloadStr);
+      switch (payload.component) {
+        case "AskUserDialog":
+          return <AskUserDialog jobId={jobId} props={payload.props} />;
+        case "LogThoughtPanel":
+          return <LogThoughtPanel props={payload.props} />;
+        case "ProposePlanDialog":
+          return <ProposePlanDialog jobId={jobId} props={payload.props} />;
+        default:
+          return <p>Error: Unknown component '{payload.component}'.</p>;
+      }
+    } catch (e) {
+      console.error("Failed to parse payload:", e);
+      return <p>Error: Invalid payload data.</p>;
+    }
+  }
+
+  // Otherwise, it's the main application.
+  return <App />;
+}
+
+root.render(
+  <React.StrictMode>
+    <Main />
+  </React.StrictMode>,
+);
