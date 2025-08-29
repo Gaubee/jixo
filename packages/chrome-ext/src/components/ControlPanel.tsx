@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from "react";
 import {getActiveContentScriptAPI} from "../lib/comlink-client";
+import {getWorkspaceHandle} from "../lib/workspace";
 
 interface ControlPanelProps {
   workspaceName: string;
@@ -7,6 +8,7 @@ interface ControlPanelProps {
 
 export function ControlPanel({workspaceName}: ControlPanelProps) {
   const [syncStatus, setSyncStatus] = useState<"idle" | "starting" | "started" | "error">("idle");
+  const [configStatus, setConfigStatus] = useState<"idle" | "applying" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
 
   const handleStartSync = async () => {
@@ -14,9 +16,8 @@ export function ControlPanel({workspaceName}: ControlPanelProps) {
     setError(null);
     try {
       const contentScriptAPI = await getActiveContentScriptAPI();
-      if (!contentScriptAPI) {
-        throw new Error("Could not connect to the content script on the active page.");
-      }
+      if (!contentScriptAPI) throw new Error("Could not connect to the content script.");
+
       const result = await contentScriptAPI.startSync();
       if (result.status === "SYNC_STARTED") {
         setSyncStatus("started");
@@ -25,6 +26,27 @@ export function ControlPanel({workspaceName}: ControlPanelProps) {
       }
     } catch (err) {
       setSyncStatus("error");
+      setError(err instanceof Error ? err.message : "An unknown error occurred.");
+    }
+  };
+
+  const handleApplyConfig = async () => {
+    setConfigStatus("applying");
+    setError(null);
+    try {
+      const contentScriptAPI = await getActiveContentScriptAPI();
+      if (!contentScriptAPI) throw new Error("Could not connect to the content script.");
+
+      const result = await contentScriptAPI.applyConfig();
+      if (result.status === "SUCCESS") {
+        setConfigStatus("success");
+        // Briefly show success, then revert to idle
+        setTimeout(() => setConfigStatus("idle"), 2000);
+      } else {
+        throw new Error(result.message || "Failed to apply config.");
+      }
+    } catch (err) {
+      setConfigStatus("error");
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
     }
   };
@@ -48,9 +70,27 @@ export function ControlPanel({workspaceName}: ControlPanelProps) {
           {syncStatus === "started" && "Sync is Active"}
           {syncStatus === "error" && "Retry Sync"}
         </button>
-        <p className="text-xs text-gray-500">Click "Start Page Sync" to connect this browser tab to your local workspace, enabling automated function calls.</p>
-        {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+        <p className="text-xs text-gray-500">Connects this browser tab to your local workspace, enabling automated function calls.</p>
       </div>
+
+      <div className="space-y-3 pt-3 border-t">
+        <button onClick={handleApplyConfig} className="w-full p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400" disabled={configStatus === "applying"}>
+          {configStatus === "idle" && "Apply Config to Page"}
+          {configStatus === "applying" && "Applying..."}
+          {configStatus === "success" && "✅ Config Applied!"}
+          {configStatus === "error" && "Retry Apply Config"}
+        </button>
+        <p className="text-xs text-gray-500">
+          Reads `{workspaceName}/{getTargetNamespace()}.config.json` and applies its settings (Tools, System Prompt, etc.) to the page.
+        </p>
+      </div>
+      {error && <p className="text-sm text-red-500 mt-2 p-2 bg-red-50 rounded border border-red-200">{error}</p>}
     </div>
   );
+}
+
+// A helper function to get the session ID, assuming it's part of the URL.
+function getTargetNamespace() {
+  // This is a simplified version for the UI. The content script has the real one.
+  return window.location.pathname.split("/").pop() || "unknown-session";
 }
