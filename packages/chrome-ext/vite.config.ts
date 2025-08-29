@@ -17,8 +17,8 @@ export default defineConfig(() => {
       emptyOutDir: true,
       rollupOptions: {
         input: {
-          // The popup is now our HTML entry point.
-          popup: resolver("popup.html"),
+          // The sidepanel is now our HTML entry point.
+          sidepanel: resolver("sidepanel.html"),
         },
         output: {
           entryFileNames: `[name].js`,

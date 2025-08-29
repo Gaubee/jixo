@@ -1,4 +1,4 @@
-import {getEasyFs, prepareDirHandle, setFunctionCallTools, setModel, setSystemPrompt, syncInput, syncOutput} from "@jixo/dev/browser";
+import {getEasyFs, getTargetNamespace, prepareDirHandle, setFunctionCallTools, setModel, setSystemPrompt, syncInput, syncOutput} from "@jixo/dev/browser";
 import {expose} from "comlink";
 import {z} from "zod";
 import {createEndpoint} from "../service-worker/lib/comlink-extension/index.ts";
@@ -73,7 +73,7 @@ const contentScriptAPI = {
       }
 
       return {status: "SUCCESS", appliedSettings};
-    } catch (error) {
+    } catch (error: any) {
       console.error("JIXO CS: Error applying config:", error);
       return {status: "ERROR", message: error.message, appliedSettings: []};
     }

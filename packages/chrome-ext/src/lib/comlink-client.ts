@@ -6,7 +6,7 @@ let backgroundAPI: Comlink.Remote<BackgroundAPI> | null = null;
 
 function getBackgroundAPI(): Comlink.Remote<BackgroundAPI> {
   if (!backgroundAPI) {
-    const port = chrome.runtime.connect({name: "popup"});
+    const port = chrome.runtime.connect({name: "background"});
     backgroundAPI = Comlink.wrap<BackgroundAPI>(createEndpoint(port));
   }
   return backgroundAPI;
@@ -15,7 +15,7 @@ function getBackgroundAPI(): Comlink.Remote<BackgroundAPI> {
 let contentScriptAPI: Comlink.Remote<ContentScriptAPI> | null = null;
 /**
  * Retrieves the Comlink-wrapped API for the content script of the currently active tab.
- * This is the primary way for the popup to interact with the page.
+ * This is the primary way for the extensions to interact with the page.
  */
 export async function getActiveContentScriptAPI(): Promise<Comlink.Remote<ContentScriptAPI> | undefined> {
   try {
@@ -25,7 +25,7 @@ export async function getActiveContentScriptAPI(): Promise<Comlink.Remote<Conten
     const [activeTab] = await chrome.tabs.query({active: true, currentWindow: true});
     const tabId = activeTab.id;
     if (tabId != null) {
-      const port = chrome.runtime.connect({name: `popup-to-content-script/${tabId}`});
+      const port = chrome.runtime.connect({name: `extensions-to-content-script/${tabId}`});
       port.onDisconnect.addListener(() => {
         contentScriptAPI = null;
       });
