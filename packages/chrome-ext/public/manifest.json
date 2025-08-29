@@ -4,7 +4,7 @@
   "short_name": "jixo",
   "version": "0.1.0",
   "description": "Enhances AI Studio with interactive tools and local filesystem integration.",
-  "permissions": ["storage", "activeTab", "contextMenus", "scripting"],
+  "permissions": ["storage", "activeTab",  "contextMenus", "scripting", "nativeMessaging"],
   "background": {
     "service_worker": "background.js",
     "type": "module"

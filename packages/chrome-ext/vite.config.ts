@@ -1,32 +1,56 @@
+import {createResolver} from "@gaubee/nodekit";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import {resolve} from "path";
-import {defineConfig} from "vite";
+import fs from "node:fs";
+import {defineConfig, type UserConfig} from "vite";
+const resolver = createResolver(import.meta.dirname);
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  publicDir: "public",
-  server: {
-    port: 17500,
-  },
-  build: {
-    outDir: "dist",
-    emptyOutDir: true,
-    rollupOptions: {
-      input: {
-        // The popup is now our HTML entry point.
-        popup: resolve(__dirname, "popup.html"),
-        background: resolve(__dirname, "src/background.ts"),
-        "content-script": resolve(__dirname, "src/content-script.ts"),
-      },
-      output: {
-        entryFileNames: `[name].js`,
-        chunkFileNames: `chunks/[name].js`,
-        assetFileNames: `assets/[name].[ext]`,
-      },
+export default defineConfig(() => {
+  return {
+    publicDir: "public",
+    server: {
+      port: 17500,
     },
-    target: "esnext",
-    minify: false,
-  },
-  plugins: [tailwindcss(), react({include: /\.(mdx|js|jsx|ts|tsx)$/})],
+    build: {
+      outDir: "dist",
+      emptyOutDir: true,
+      rollupOptions: {
+        input: {
+          // The popup is now our HTML entry point.
+          popup: resolver("popup.html"),
+        },
+        output: {
+          entryFileNames: `[name].js`,
+          chunkFileNames: `chunks/[name].js`,
+          assetFileNames: `assets/[name].[ext]`,
+        },
+      },
+      target: "esnext",
+      minify: false,
+    },
+    plugins: [
+      tailwindcss(),
+      react({include: /\.(mdx|js|jsx|ts|tsx)$/}),
+      (() => {
+        const bundleDirname = resolver("bundle");
+        return {
+          name: "copy-bundle",
+          apply: "build",
+          configureServer(server) {
+            // 1. 让 Vite 把 bundle 当静态资源目录
+            server.config.server.fs.allow.push(bundleDirname);
+
+            // 2. 让 Vite 的 watcher 监听 bundle 目录
+            server.watcher.add(bundleDirname);
+          },
+          closeBundle() {
+            if (fs.existsSync(bundleDirname)) {
+              fs.cpSync(bundleDirname, resolver("dist"), {recursive: true});
+            }
+          },
+        };
+      })(),
+    ],
+  } satisfies UserConfig;
 });

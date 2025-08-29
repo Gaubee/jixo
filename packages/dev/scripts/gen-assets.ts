@@ -18,7 +18,7 @@ const doGenAssets = async () => {
     const prompt_json_content: Record<string, any> = {};
     for (const filepath of filepaths) {
       const filename_info = path.parse(filepath);
-      const file_content = reactiveFs.readFile(filepath);
+      const file_content = reactiveFs.readFile(projectResolver(filepath));
       if (filename_info.base.endsWith(".jixo.md")) {
         prompt_json_content[filename_info.base.replace(".jixo.md", "")] = file_content;
       } else if (/^.(json|ts|js|mts|mjs)$/.test(filename_info.ext)) {
@@ -32,15 +32,15 @@ const doGenAssets = async () => {
   }
   /// tools
   {
-    const toolsResolver = createResolver(createResolverByRootFile(import.meta.url, "tools/deno.json").dirname + "/tools");
+    const toolsResolver = createResolver(createResolverByRootFile(import.meta.url, "tools/deno.json").dirname + "/tools/src");
 
-    const toolsJsonFilepath = path.join(toolsResolver.dirname, "tools.json");
+    const toolsJsonFilepath = assetsResolver("tools.json");
     mkdirSync(dirname(toolsJsonFilepath), {recursive: true});
 
     const filepaths = reactiveFs.readDirByGlob(toolsResolver.dirname, "*.function_call.ts");
     const tools_json_content: Record<string, string> = {};
     for (const filepath of filepaths) {
-      const file_content = reactiveFs.readFile(filepath);
+      const file_content = reactiveFs.readFile(toolsResolver(filepath));
       const filename_info = path.parse(filepath);
       tools_json_content[filename_info.base] = file_content;
     }

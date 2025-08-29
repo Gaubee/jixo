@@ -8,6 +8,7 @@
     "ts": "tsc",
     "build": "pnpm run \"/^b\\:.*/\"",
     "b:chrome-ext": "vite build",
+    "b:bundle": "tsdown --config ./tsdown.config.ts",
     "dev": "pnpm run \"/^d\\:.*/\"",
     "d:chrome-ext": "vite dev"
   },
@@ -20,7 +21,6 @@
   "dependencies": {
     "@gaubee/util": "^0.34.2",
     "comlink": "^4.4.2",
-    "comlink-extension": "^1.0.8",
     "idb-keyval": "^6.2.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",

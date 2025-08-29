@@ -28,7 +28,7 @@ export default defineConfig(() => {
     {
       ...baseConfig,
       entry: {
-        "google-aistudio.browser": "./src/google-aistudio/browser/index.ts",
+        "google-aistudio.browser": "./src/google-aistudio/browser/iife.ts",
       } as Record<string, string>,
     } satisfies SimpleUserConfig,
     {
