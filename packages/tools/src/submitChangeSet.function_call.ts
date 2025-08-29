@@ -1,8 +1,9 @@
+import type {FunctionCallFn} from "npm:@jixo/dev/google-aistudio";
 import z from "npm:zod";
 
 export const name = "submitChangeSet";
 
-export const description = "所有编码任务的最终交付工具。它将一个完整的变更集作为原子单元提交进行验证和应用。在你完成所有思考和规划后，必须调用此工具来产出代码。";
+export const description = "向用户展示一个文件变更集以供最终审批，并在批准后应用这些变更。";
 
 const operationSchema = z.object({
   type: z.enum(["writeFile", "deleteFile", "renameFile"]),
@@ -12,39 +13,45 @@ const operationSchema = z.object({
 });
 
 export const paramsSchema = z.object({
-  change_log: z.string().describe("严格符合Git Commit Message规范的变更日志，以用户（第一人称）口吻编写。"),
+  change_log: z.string().describe("严格符合Git Commit Message规范的变更日志。"),
   operations: z.array(operationSchema).describe("一个包含所有文件系统操作的原子列表。"),
-  final_statement: z.string().describe("当这个变更集被成功验证并应用后，你希望对用户说的总结性话语。"),
+  final_statement: z.string().describe("当这个变更集被成功应用后，你希望对用户说的总结性话语。"),
 });
 
 /**
- * 这是一个模拟的functionCall实现。
- * 在实际应用中，这里会包含执行文件操作、运行代码验证（lint, test）的逻辑。
- * @param args - 符合paramsSchema的参数
- * @returns 一个包含执行结果的对象
+ * Renders a change set to the user for final approval, then returns the operations if approved.
+ * In a real scenario, the host environment (jixo-node) would execute the operations.
+ * For now, this function simulates that by returning the operations upon approval.
+ * @param args - The changeset details.
+ * @param context - The context containing the `render` function.
+ * @returns The original operations if approved, so the host can execute them.
  */
-export const functionCall = (args: z.infer<typeof paramsSchema>) => {
-  console.log("Executing submitChangeSet with args:", args);
+export const functionCall: FunctionCallFn<z.infer<typeof paramsSchema>> = async (args, context) => {
+  console.log("Proposing changeset to user via UI for final approval.");
 
-  // 验证operations的完整性
-  for (const op of args.operations) {
-    if (op.type === "writeFile" && op.content === undefined) {
-      throw new Error(`Operation for path "${op.path}" is 'writeFile' but content is missing.`);
+  try {
+    const isApproved = await context.render({
+      component: "SubmitChangeSetPanel",
+      props: {
+        change_log: args.change_log,
+        operations: args.operations,
+      },
+    });
+
+    if (isApproved === true) {
+      console.log("Changeset was approved by the user.");
+      // The tool's job is done. It returns the validated operations.
+      // The host environment is now responsible for executing them.
+      return {
+        status: "CHANGESET_APPROVED",
+        operations: args.operations,
+        final_statement: args.final_statement,
+      };
+    } else {
+      throw new Error("Changeset was rejected by the user.");
     }
-    if (op.type === "renameFile" && op.new_path === undefined) {
-      throw new Error(`Operation for path "${op.path}" is 'renameFile' but new_path is missing.`);
-    }
+  } catch (error) {
+    console.error("Failed to get changeset approval:", error);
+    throw error;
   }
-
-  // 模拟成功场景
-  const result = {
-    status: "SUCCESS",
-    files_affected: args.operations.length,
-    message: "ChangeSet applied and validated successfully.",
-  };
-
-  console.log("Execution result:", result);
-  return result;
 };
-
-// JIXO_CODER_EOF

@@ -12,11 +12,15 @@ interface LogThoughtPanelProps {
 export function LogThoughtPanel({props}: LogThoughtPanelProps) {
   const {thought, step, total_steps, is_conclusive} = props;
   return (
-    <div className="p-4 space-y-2 bg-blue-50 border border-blue-200 rounded-lg">
-      <h3 className="font-semibold text-blue-800">
-        🧠 Thought ({step}/{total_steps}){is_conclusive && <span className="ml-2 font-normal text-green-600">(Conclusive)</span>}
+    <div className="p-4 space-y-2 bg-blue-50 border border-blue-200 rounded-lg text-sm">
+      <h3 className="font-semibold text-blue-800 flex justify-between items-center">
+        <span>🧠 AI Thought Process</span>
+        <span className="text-xs font-mono px-2 py-1 bg-blue-100 rounded">
+          {step}/{total_steps}
+        </span>
       </h3>
-      <p className="text-gray-700">{thought}</p>
+      <p className="text-gray-800 whitespace-pre-wrap">{thought}</p>
+      {is_conclusive && <p className="text-xs text-green-700 font-bold pt-2 border-t border-blue-200 mt-2">✓ Conclusive thought. Ready for the next step.</p>}
     </div>
   );
 }

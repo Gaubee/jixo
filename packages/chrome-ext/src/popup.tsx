@@ -4,6 +4,7 @@ import {App} from "./App.tsx";
 import {AskUserDialog} from "./components/AskUserDialog.tsx";
 import {LogThoughtPanel} from "./components/LogThoughtPanel.tsx";
 import {ProposePlanDialog} from "./components/ProposePlanDialog.tsx";
+import {SubmitChangeSetPanel} from "./components/SubmitChangeSetPanel.tsx";
 
 const rootEl = document.getElementById("root");
 if (!rootEl) {
@@ -16,7 +17,6 @@ function Main() {
   const jobId = urlParams.get("jobId");
   const payloadStr = urlParams.get("payload");
 
-  // If jobId and payload are present, it's a tool UI request.
   if (jobId && payloadStr) {
     try {
       const payload = JSON.parse(payloadStr);
@@ -27,6 +27,8 @@ function Main() {
           return <LogThoughtPanel props={payload.props} />;
         case "ProposePlanDialog":
           return <ProposePlanDialog jobId={jobId} props={payload.props} />;
+        case "SubmitChangeSetPanel":
+          return <SubmitChangeSetPanel jobId={jobId} props={payload.props} />;
         default:
           return <p>Error: Unknown component '{payload.component}'.</p>;
       }
@@ -36,7 +38,6 @@ function Main() {
     }
   }
 
-  // Otherwise, it's the main application.
   return <App />;
 }
 

@@ -25,5 +25,3 @@ export const functionCall = async (args: z.infer<typeof paramsSchema>) => {
     failed_pids: failed,
   };
 };
-
-// JIXO_CODER_EOF

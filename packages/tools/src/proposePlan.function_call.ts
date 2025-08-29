@@ -1,5 +1,5 @@
+import type {FunctionCallFn} from "npm:@jixo/dev/google-aistudio";
 import z from "npm:zod";
-import type {ToolContext} from "./askUser.tool.ts";
 
 export const name = "proposePlan";
 
@@ -17,7 +17,7 @@ export const paramsSchema = z.object({
  * @param context - The context containing the `render` function.
  * @returns A promise resolving with an approval status.
  */
-export const functionCall = async (args: z.infer<typeof paramsSchema>, context: ToolContext) => {
+export const functionCall: FunctionCallFn<z.infer<typeof paramsSchema>> = async (args, context) => {
   console.log("Proposing plan to user via UI:", args.plan_summary);
 
   try {
@@ -26,14 +26,16 @@ export const functionCall = async (args: z.infer<typeof paramsSchema>, context: 
       props: args,
     });
 
-    // The UI should return a boolean or a specific approval string.
-    if (response === true || response === "approved") {
+    if (response === true) {
+      console.log("Plan was approved by the user.");
       return {status: "PLAN_APPROVED"};
     } else {
+      // This handles both explicit rejection (response === false) and other falsy values.
       throw new Error("Plan was rejected by the user.");
     }
   } catch (error) {
     console.error("Failed to get plan approval:", error);
+    // Re-throw the error to ensure the AI knows the tool failed.
     throw error;
   }
 };
