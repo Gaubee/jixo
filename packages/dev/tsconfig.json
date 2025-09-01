@@ -18,7 +18,7 @@
     "src/**/*.json"
   ],
   "exclude": [
-    "src/groq/",
+    "src/groq.bak",
     "../jun",
     "../tools",
     "../tools/uikit"

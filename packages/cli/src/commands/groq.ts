@@ -1,5 +1,5 @@
 import {prompts} from "@gaubee/nodekit";
-import {doInit, startServe} from "@jixo/dev/groq";
+import {doInit, startServe} from "../../../dev/dist/groq.bak/index.js";
 import type {CommandModule} from "yargs";
 
 // 定义 yargs builder 所需的参数接口
