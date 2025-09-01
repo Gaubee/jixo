@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import {defineConfig, type UserConfig} from "tsdown";
 
 // 导出一个配置数组，tsdown 会依次执行它们
@@ -26,8 +27,9 @@ export default defineConfig(() => {
     {
       ...baseConfig,
       entry: {
-        "content-script": "./web/main.tsx",
+        "content-script": "./web/content-script.ts",
       } as Record<string, string>,
+      plugins: [tailwindcss()],
     } satisfies SimpleUserConfig,
     {
       ...baseConfig,

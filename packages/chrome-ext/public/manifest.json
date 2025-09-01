@@ -9,9 +9,10 @@
     "service_worker": "background.js",
     "type": "module"
   },
+  "host_permissions": ["https://aistudio.google.com/*"],
   "web_accessible_resources": [
     {
-      "resources": ["**"],
+      "resources": ["*", "assets/*", "chunks/*", "icons/*"],
       "matches": ["<all_urls>"]
     }
   ],
@@ -19,7 +20,8 @@
     {
       "matches": ["https://aistudio.google.com/*"],
       "js": ["content-script.js"],
-      "css": ["content-styles.css"]
+      "css": ["content-styles.css"],
+      "world": "ISOLATED"
     }
   ],
   "action": {

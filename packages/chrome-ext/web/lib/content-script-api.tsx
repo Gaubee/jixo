@@ -7,7 +7,7 @@ import {AskUserDialog} from "../components/AskUserDialog.tsx";
 import {LogThoughtPanel} from "../components/LogThoughtPanel.tsx";
 import {ProposePlanDialog} from "../components/ProposePlanDialog.tsx";
 import {SubmitChangeSetPanel} from "../components/SubmitChangeSetPanel.tsx";
-import {JIXODraggableDialogElement} from "../draggable-dialog.ts";
+import {JIXODraggableDialogIsolatedHelper} from "../draggable-dialog.isolated.ts";
 import {storeWorkspaceHandle} from "./workspace.ts";
 
 const ConfigSchema = z
@@ -18,31 +18,52 @@ const ConfigSchema = z
   })
   .partial();
 
-let dialogInstance: JIXODraggableDialogElement | null = null;
+let reactRootEle: HTMLDivElement | null = null;
 let reactRoot: Root | null = null;
 const jobResponseListeners = new Map<string, (payload: any) => void>();
 
-function ensureDialog(): JIXODraggableDialogElement {
-  if (!dialogInstance) {
-    dialogInstance = JIXODraggableDialogElement.createElement();
-    dialogInstance.appendTo(document.body);
-    const container = document.createElement("div");
-    dialogInstance.setContent(container);
-    reactRoot = createRoot(container);
+async function ensureDialog() {
+  const dialogEle = await JIXODraggableDialogIsolatedHelper.prepare();
+  if (!reactRoot) {
+    const html = String.raw;
+    {
+      const headerTemplate = document.createElement("template");
+      headerTemplate.innerHTML = html`
+        <div class="flex flex-row gap-1 min-w-60 justify-between items-center p-2" data-draggable="true" slot="header">
+          <h1 class="text-lg font-bold pointer-events-none">JIXO Control Panel</h1>
+          <button class="text-red aspect-square flex items-center justify-center w-6 cursor-pointer">✖️</button>
+        </div>
+      `;
+      headerTemplate.content.querySelector("button")!.addEventListener("click", () => {
+        dialogEle.dataset.open = "false";
+      });
+      dialogEle.appendChild(headerTemplate.content);
+    }
+    {
+      const contentTemplate = document.createElement("template");
+      contentTemplate.innerHTML = html`<div slot="content"></div>`;
+      reactRootEle = contentTemplate.content.querySelector("div")!;
+      dialogEle.appendChild(contentTemplate.content);
+      reactRoot = createRoot(reactRootEle);
+    }
   }
-  return dialogInstance;
+  return dialogEle;
 }
 
+// Listen for responses from the React components via a global custom event.
 window.addEventListener("jixo-user-response", ((event: CustomEvent) => {
   const {jobId, payload} = event.detail;
   const listener = jobResponseListeners.get(jobId);
   if (listener) {
     listener(payload);
     jobResponseListeners.delete(jobId);
-    ensureDialog().closeDialog();
+    ensureDialog().then((dialogEle) => {
+      dialogEle.dataset.open = "true";
+    });
   }
 }) as EventListener);
 
+// --- API Definition ---
 export const contentScriptAPI = {
   async selectWorkspace(): Promise<string | null> {
     const dirHandle = await prepareDirHandle();
@@ -52,7 +73,7 @@ export const contentScriptAPI = {
   async startSync(): Promise<{status: "SYNC_STARTED" | "ERROR"; message?: string}> {
     const handle = await prepareDirHandle();
     if (!handle) return {status: "ERROR", message: "Workspace not selected."};
-    // Fixed: syncOutput/syncInput no longer take a handle argument.
+    console.log(`JIXO BROWSER: Starting sync with workspace '${handle.name}'...`);
     void syncOutput();
     void syncInput();
     return {status: "SYNC_STARTED"};
@@ -90,57 +111,61 @@ export const contentScriptAPI = {
       return {status: "ERROR", message: error.message, appliedSettings: []};
     }
   },
-  renderComponent(componentName: string, jobId: string | null, props: any): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const dialog = ensureDialog();
-      if (!reactRoot) return reject(new Error("React root not initialized."));
 
-      const finalJobId = jobId || `display-only-${Date.now()}`;
-      const allProps = {jobId: finalJobId, props, key: finalJobId};
-      let componentToRender;
+  async renderComponent(componentName: string, jobId: string | null, props: any): Promise<any> {
+    const dialog = await ensureDialog();
+    if (!reactRoot) throw new Error("React root not initialized.");
 
-      if (jobId) {
-        // Only set up listeners for interactive components
-        jobResponseListeners.set(jobId, (payload) => {
-          if (payload.error) reject(new Error(payload.error));
-          else resolve(payload.data);
-        });
-      }
+    const allProps = {jobId, props, key: jobId || componentName};
+    let componentToRender;
 
-      const apiForComponents = {
-        selectWorkspace: this.selectWorkspace,
-        startSync: this.startSync,
-        applyConfig: this.applyConfig,
+    if (jobId) {
+      const listener = (payload: {data?: any; error?: string}) => {
+        if (payload.error) throw new Error(payload.error);
+        else return payload.data;
       };
+      jobResponseListeners.set(jobId, listener);
+    }
 
-      switch (componentName) {
-        case "App":
-          componentToRender = <App api={apiForComponents} />;
-          break;
-        case "AskUserDialog":
-          componentToRender = <AskUserDialog {...allProps} />;
-          break;
-        case "LogThoughtPanel":
-          componentToRender = <LogThoughtPanel {...allProps} />;
-          break;
-        case "ProposePlanDialog":
-          componentToRender = <ProposePlanDialog {...allProps} />;
-          break;
-        case "SubmitChangeSetPanel":
-          componentToRender = <SubmitChangeSetPanel {...allProps} />;
-          break;
-        default:
-          componentToRender = <div>Error: Unknown component '{componentName}'</div>;
-      }
+    const apiForComponents = {
+      selectWorkspace: this.selectWorkspace,
+      startSync: this.startSync,
+      applyConfig: this.applyConfig,
+    };
 
-      reactRoot.render(<React.StrictMode>{componentToRender}</React.StrictMode>);
-      dialog.openDialog();
+    switch (componentName) {
+      case "App":
+        componentToRender = <App api={apiForComponents} />;
+        break;
+      case "AskUserDialog":
+        componentToRender = <AskUserDialog {...(allProps as any)} />;
+        break;
+      case "LogThoughtPanel":
+        componentToRender = <LogThoughtPanel {...allProps} />;
+        break;
+      case "ProposePlanDialog":
+        componentToRender = <ProposePlanDialog {...(allProps as any)} />;
+        break;
+      case "SubmitChangeSetPanel":
+        componentToRender = <SubmitChangeSetPanel {...(allProps as any)} />;
+        break;
+      default:
+        componentToRender = <p>Error: Unknown component '{componentName}'</p>;
+    }
 
-      if (!jobId) resolve(true); // Non-interactive components resolve immediately
-    });
+    reactRoot.render(<React.StrictMode>{componentToRender}</React.StrictMode>);
+    if (dialog.dataset.open != "true") {
+      dialog.dataset.open = "true";
+    } else {
+      dialog.dataset.open = "false";
+    }
+
+    if (!jobId) return true;
   },
+
   ping() {
     return true;
   },
 };
+
 export type ContentScriptAPI = typeof contentScriptAPI;

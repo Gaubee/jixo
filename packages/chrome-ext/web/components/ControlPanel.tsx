@@ -1,5 +1,4 @@
 import React, {useState} from "react";
-import {getTargetNamespace} from "@jixo/dev/browser";
 
 // In the new model, ControlPanel receives functions directly from its parent (content-script)
 interface ControlPanelProps {
@@ -48,7 +47,6 @@ export function ControlPanel({workspaceName, onStartSync, onApplyConfig}: Contro
 
   return (
     <div className="p-4 space-y-4 text-sm">
-      <h1 className="text-lg font-bold">JIXO Control Panel</h1>
       <div className="p-2 border rounded bg-gray-50">
         <strong>Workspace:</strong> <code className="ml-2 bg-gray-200 px-1 rounded">{workspaceName}</code>
       </div>

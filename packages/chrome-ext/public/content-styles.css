@@ -7,6 +7,8 @@ ms-chat-turn {
 }
 .chat-turn-container {
   padding-bottom: 16px !important;
+  border-radius: 16px;
+  corner-shape: superellipse(2);
 }
 .chat-turn-container > .actions-container > .actions {
   top: -28px !important;
@@ -42,6 +44,7 @@ ms-chat-turn-options {
 
   bottom: -10px !important;
   scale: 0.72;
+  transform-origin: left bottom;
 }
 .chat-turn-container:hover > .turn-footer {
   background-color: light-dark(#fff6, #0009) !important;

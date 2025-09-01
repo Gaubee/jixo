@@ -1,54 +1,63 @@
-// draggable-dialog.ts
+import type {TrustedTypePolicyFactory} from "trusted-types";
+import tailwindCssContent from "./styles.css?inline";
 
-import {$, easy$} from "@jixo/dev/browser";
+const JIXORootElementHelper = {
+  getAdoptedStyleSheets() {
+    return [] as CSSStyleSheet[];
+  },
+  pushSdoptedStyleSheets(...values: CSSStyleSheet[]) {
+    return;
+  },
+};
+const JIXORootFactory = (config: {
+  /// 提供adoptedStyleSheets
+  cssRoot: DocumentOrShadowRoot;
+  // 提供元素容器
+  eleSource: HTMLElement;
+  // 提供容器迁移的目标
+  eleTarget: HTMLElement | DocumentFragment;
+  moveTo?: (fromEle: HTMLElement, childEle: ChildNode, toEle: HTMLElement | DocumentFragment) => void;
+  // 提供属性容器
+  attrEle: HTMLElement;
+}) => {
+  const openCssSheet = new CSSStyleSheet();
+  const tailwindCssSheet = new CSSStyleSheet();
+  tailwindCssSheet.replaceSync(tailwindCssContent);
+  config.cssRoot.adoptedStyleSheets = [tailwindCssSheet, openCssSheet];
+  JIXORootElementHelper.getAdoptedStyleSheets = () => config.cssRoot.adoptedStyleSheets;
+  JIXORootElementHelper.pushSdoptedStyleSheets = (...values) => config.cssRoot.adoptedStyleSheets.push(...values);
 
-declare global {
-  interface HTMLDialogElement {
-    jixo?: JIXODraggableDialogElement;
-  }
-}
+  const moveChildrenToShadow = () => {
+    const moveTo =
+      config.moveTo ??
+      (((_f, c, t) => {
+        t.appendChild(c);
+      }) satisfies (typeof config)["moveTo"]);
+    // 用 Array.from 防止 live 集合导致的索引错位
+    Array.from(config.eleSource.childNodes).forEach((node) => {
+      moveTo(config.eleSource, node, config.eleTarget);
+    });
+  };
+  const syncFromDataset = () => {
+    const cssText = config.attrEle.dataset.css;
+    openCssSheet.replaceSync(cssText || "");
+  };
+  // 只监听“子节点”变化即可
+  new MutationObserver(() => {
+    // 再次把可能新增的节点搬进去
+    moveChildrenToShadow();
+  }).observe(config.eleSource, {childList: true});
+  /// 监听属性变化
+  new MutationObserver(() => {
+    syncFromDataset();
+  }).observe(config.attrEle, {attributes: true, attributeFilter: ["data-css"]});
+};
 
-/**
- * JIXODraggableDialog - 一个可拖拽、自动吸附边缘的浮动对话框。
- *
- * 此组件使用纯 DOM 操作创建，不依赖 Web Components。
- * 它创建一个浮动的 div 元素，可以通过带有 `data-draggable="true"` 属性的子元素进行拖拽。
- * 拖拽结束后，对话框会自动吸附到最近的窗口边缘。
- * 窗口大小调整时，对话框也会重新吸附，以避免溢出视窗。
- * 背景默认使用液态玻璃特效。
- *
- * 用法:
- * 1. 导入类:
- *    `import { JIXODraggableDialog } from './draggable-dialog';`
- * 2. 创建实例:
- *    `const dialogInstance = JIXODraggableDialog.createElement();`
- * 3. 设置内容:
- *    `dialogInstance.setHeader(headerElement);`
- *    `dialogInstance.setContent(contentElement);`
- * 4. 将对话框的 DOM 元素添加到页面:
- *    `document.body.appendChild(dialogInstance.element);`
- * 5. 打开/关闭对话框:
- *    `dialogInstance.openDialog();`
- *    `dialogInstance.closeDialog();`
- *
- * CSS 选择器 (替代 CSS Parts):
- * - `.jixo-draggable-dialog`: 主对话框容器。
- * - `.jixo-draggable-dialog [data-part="dialog-header"]`: 头部内容的容器。
- * - `.jixo-draggable-dialog [data-part="dialog-content"]`: 主要内容的容器。
- */
-export class JIXODraggableDialogElement {
+export class JIXODraggableDialogElement extends HTMLElement {
   // 静态属性，保持与 Web Component 版本的接口一致性
   static readonly is = "jixo-draggable-dialog" as const;
   static readonly tagName = JIXODraggableDialogElement.is.toUpperCase() as Uppercase<typeof JIXODraggableDialogElement.is>;
-  static readonly selector = `dialog[is="${JIXODraggableDialogElement.is}"]`; // 现在使用类选择器
-  static prepare(): void {}
-
-  static async easy$() {
-    return (await easy$<HTMLDialogElement>(this.selector))?.jixo;
-  }
-  static $() {
-    return $<HTMLDialogElement>(this.selector)?.jixo;
-  }
+  static readonly selector = `jixo-draggable-dialog`; // 现在使用类选择器
 
   private _dialogElement: HTMLDialogElement; // 主对话框的 Dialog 元素
   private _isDragging: boolean = false;
@@ -60,17 +69,36 @@ export class JIXODraggableDialogElement {
   private readonly SNAP_PADDING: number = 10; // 距离窗口边缘的像素
 
   constructor() {
+    super();
+    const root = this.attachShadow({mode: "open"});
     this._dialogElement = document.createElement("dialog");
-    this._dialogElement.jixo = this; // 关联实例，方便外部访问
-    this._dialogElement.setAttribute("is", JIXODraggableDialogElement.is); // 用于样式和选择
+    this._dialogElement.setAttribute("is", JIXODraggableDialogElement.is);
     this._dialogElement.popover = "manual";
+    JIXORootFactory({
+      cssRoot: root,
+      eleSource: this,
+      eleTarget: this._dialogElement,
+      moveTo: (_f, c, _t) => {
+        const slot = c instanceof Element ? c.getAttribute("slot") : null;
+        if (slot === "header") {
+          this._dialogElement.querySelector(`slot[name="header"]`)!.appendChild(c);
+        }
+        if (slot === "footer") {
+          this._dialogElement.querySelector(`slot[name="footer"]`)!.appendChild(c);
+        }
+        if (slot === "content" || slot == null) {
+          this._dialogElement.querySelector(`slot[name="content"]`)!.appendChild(c);
+        }
+      },
+      attrEle: this,
+    });
+    root.appendChild(this._dialogElement);
     const innerCssSheet = new CSSStyleSheet();
-    document.adoptedStyleSheets.push(innerCssSheet);
-    document.adoptedStyleSheets.push(this.#openCssSheet);
+    root.adoptedStyleSheets.push(innerCssSheet);
     const css = String.raw;
     const html = String.raw;
     innerCssSheet.replaceSync(css`
-      dialog[is="${JIXODraggableDialogElement.is}"] {
+      dialog[is="jixo-draggable-dialog"] {
         top: ${this.SNAP_PADDING}px; /* 初始位置 */
         left: ${this.SNAP_PADDING}px; /* 初始位置 */
         min-width: 150px;
@@ -118,14 +146,20 @@ export class JIXODraggableDialogElement {
           display: flex;
           flex-direction: column;
         }
+        [data-draggable="true"] {
+          cursor: grab;
+        }
         &[data-dragging="true"] {
           transition-property: none;
+          [data-draggable="true"] {
+            cursor: grabbing;
+          }
         }
-        [data-part="dialog-header"] {
+        [part="dialog-header"] {
           flex-shrink: 0;
           user-select: none; /* 防止拖拽时文本被选中 */
         }
-        [data-part="dialog-content"] {
+        [part="dialog-content"] {
           flex-grow: 1;
           overflow-y: auto; /* 内容溢出时允许滚动 */
         }
@@ -136,30 +170,28 @@ export class JIXODraggableDialogElement {
     `);
     // 内部结构 (不再使用 Shadow DOM 和 slot，直接创建 div), 使用 data-part 属性模拟 CSS Parts
     const template = document.createElement("template");
-    template.innerHTML = html`
-      <div data-part="dialog-header"></div>
-      <div data-part="dialog-content"></div>
-      <div data-part="dialog-footer"></div>
-    `;
+    // @ts-ignore
+    const escapeHTMLPolicy = (trustedTypes as TrustedTypePolicyFactory).createPolicy("forceInner", {
+      createHTML: (to_escape) => to_escape,
+    });
+    // @ts-ignore
+    template.innerHTML = escapeHTMLPolicy.createHTML(html`
+      <div part="dialog-header"><slot name="header"></slot></div>
+      <div part="dialog-content"><slot name="content"></slot></div>
+      <div part="dialog-footer"><slot name="footer"></slot></div>
+    `);
     this._dialogElement.appendChild(template.content);
 
     this._setupEventListeners();
     this._snapToEdge(); // 初始吸附
   }
-  #openCssSheet = new CSSStyleSheet();
-  setCss(cssText: string) {
-    this.#openCssSheet.replaceSync(`dialog[is="${JIXODraggableDialogElement.is}"]{${cssText}}`);
-  }
-  get dataset() {
-    return this._dialogElement.dataset;
-  }
-
   /**
    * 静态方法，用于创建 JIXODraggableDialog 的实例。
    * 保持与 Web Component 版本的 `createElement` 接口一致。
    */
   static createElement(): JIXODraggableDialogElement {
-    return new JIXODraggableDialogElement();
+    // return new JIXODraggableDialogElement();
+    return document.createElement(JIXODraggableDialogElement.is) as JIXODraggableDialogElement;
   }
 
   /**
@@ -203,6 +235,17 @@ export class JIXODraggableDialogElement {
     // 监听对话框自身大小的变化
     this._resizeObserver = new ResizeObserver(() => this._snapToEdge());
     this._resizeObserver.observe(this._dialogElement);
+
+    // 监听属性变化
+
+    /// 监听属性变化
+    new MutationObserver(() => {
+      if (this.dataset.open === "true") {
+        this.openDialog();
+      } else {
+        this.closeDialog();
+      }
+    }).observe(this, {attributes: true, attributeFilter: ["data-open"]});
   }
 
   /**
@@ -223,18 +266,34 @@ export class JIXODraggableDialogElement {
    * 这将使其可见并进行吸附。
    */
   public openDialog() {
+    if (this.open) return;
     this._dialogElement.showPopover();
     this._dialogElement.open = true;
-    this._snapToEdge(); // 打开时进行吸附
+
+    const raf = () => new Promise((cb) => requestAnimationFrame(cb));
+    (async () => {
+      await raf();
+      let key = this._snapToEdge(); // 打开时进行吸附
+      while (!this._isDragging) {
+        await raf();
+        const newKey = this._snapToEdge();
+        if (newKey === key) {
+          break;
+        }
+        key = newKey;
+      }
+    })();
   }
   /**
    * 关闭对话框。
    * 这将使其隐藏。
    */
   public closeDialog() {
+    if (!this.open) return;
     this._dialogElement.close();
     this._dialogElement.hidePopover();
   }
+
   get open() {
     return this._dialogElement.open;
   }
@@ -251,7 +310,6 @@ export class JIXODraggableDialogElement {
     // 只有当对话框可见且目标元素有 data-draggable="true" 时才允许拖拽
     if (this.open && target.dataset.draggable === "true") {
       this._isDragging = true;
-      this._dialogElement.style.cursor = "grabbing";
       this._dialogElement.dataset.dragging = "true";
       // 存储鼠标相对于对话框左上角的偏移量
       const rect = this._dialogElement.getBoundingClientRect();
@@ -280,7 +338,6 @@ export class JIXODraggableDialogElement {
   private _handleMouseUp = () => {
     if (this._isDragging) {
       this._isDragging = false;
-      this._dialogElement.style.cursor = "default";
       this._dialogElement.dataset.dragging = undefined;
       this._snapToEdge(); // 拖拽结束后吸附到边缘
     }
@@ -327,9 +384,23 @@ export class JIXODraggableDialogElement {
     this._dialogElement.style.top = `${newTop}px`;
     this._dialogElement.style.right = "auto";
     this._dialogElement.style.bottom = "auto";
+    return JSON.stringify(rect.toJSON());
   }
 
   appendTo(parent: HTMLElement) {
     parent.appendChild(this._dialogElement);
   }
+}
+const main = () => {
+  customElements.define(JIXODraggableDialogElement.is, JIXODraggableDialogElement);
+  try {
+    document.body.append(JIXODraggableDialogElement.createElement());
+  } catch (e) {
+    console.error("QAQ", e);
+  }
+};
+if (document.readyState === "loading") {
+  addEventListener("DOMContentLoaded", main);
+} else {
+  main();
 }

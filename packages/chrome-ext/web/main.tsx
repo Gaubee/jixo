@@ -1,7 +1,7 @@
 import {while$} from "@jixo/dev/browser";
 import * as Comlink from "comlink";
 import {createEndpoint} from "../service-worker/lib/comlink-extension/index.ts";
-import {JIXODraggableDialogElement} from "./draggable-dialog.ts";
+import {JIXODraggableDialogIsolatedHelper} from "./draggable-dialog.isolated.ts";
 import {contentScriptAPI} from "./lib/content-script-api.tsx"; // Fixed import
 
 console.log("JIXO CS: Main script loaded.");
@@ -13,26 +13,31 @@ function exposeApiToBackground() {
 }
 
 async function addToggleButton() {
-  const toolbarRightEle = await while$("ms-toolbar .toolbar-right");
-  const btn = document.createElement("button");
-  btn.style.cssText = "display: flex; background: transparent; border: none; cursor: pointer; padding: 4px;";
-  btn.title = "Toggle JIXO Panel";
-  btn.innerHTML = `<img style="width:20px" src="${chrome.runtime.getURL("icons/icon128.png")}" />`;
+  const toolbarRightEle = await while$("ms-toolbar .toolbar-right", 0);
+  const template = document.createElement("template");
+
+  const html = String.raw;
+  template.innerHTML = html`
+    <button
+      class="jixo-toggle-button"
+      title="Toggle JIXO Panel"
+      style="
+        display: flex; background: transparent; border: none; cursor: pointer; padding: 4px;"
+    >
+      <img style="width:20px" src="${chrome.runtime.getURL("icons/icon128.png")}" />
+    </button>
+  `;
+  const btn = template.content.querySelector("button")!;
   btn.addEventListener("click", () => {
     contentScriptAPI.renderComponent("App", null, {});
   });
-  toolbarRightEle.insertBefore(btn, toolbarRightEle.firstElementChild);
+  toolbarRightEle.insertBefore(template.content, toolbarRightEle.firstElementChild);
 }
 
-function initialize() {
-  JIXODraggableDialogElement.prepare();
+async function initialize() {
   exposeApiToBackground();
-
-  if (document.readyState === "loading") {
-    window.addEventListener("DOMContentLoaded", addToggleButton);
-  } else {
-    addToggleButton();
-  }
+  await JIXODraggableDialogIsolatedHelper.prepare();
+  addToggleButton();
 }
 
 initialize();

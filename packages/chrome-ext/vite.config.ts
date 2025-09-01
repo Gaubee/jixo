@@ -19,6 +19,10 @@ export default defineConfig(() => {
         input: {
           // The sidepanel is now our HTML entry point.
           sidepanel: resolver("sidepanel.html"),
+          // "content-script": resolver("web/main.tsx"),
+          web: resolver("web/main.tsx"),
+          "web-inject": resolver("web/inject.ts"),
+          // background: resolver("service-worker/background.ts"),
         },
         output: {
           entryFileNames: `[name].js`,

@@ -1,7 +1,8 @@
-import React, {useState, useEffect, useCallback} from "react";
+import React, {useCallback, useEffect, useState} from "react";
 import {createRoot} from "react-dom/client";
 import type {JixoTab} from "../web/lib/comlink-api-types.ts";
 import {getSidePanelAPI} from "../web/lib/comlink-client.ts";
+import "./styles.css";
 
 function SidePanelApp() {
   const [tabs, setTabs] = useState<JixoTab[]>([]);

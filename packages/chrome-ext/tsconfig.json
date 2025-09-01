@@ -6,6 +6,7 @@
         "allowImportingTsExtensions": true,
         "noEmit": true,
         "jsx": "react",
+        "jsxFactory": "React.createElement",
         "outDir": "./dist",
         "rootDirs": [
             "./background",
@@ -30,6 +31,7 @@
             "chrome",
             "vite/client",
             "@types/wicg-file-system-access",
+            "@types/trusted-types",
         ]
     },
     "include": [
