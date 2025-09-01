@@ -52,10 +52,10 @@ export const getTargetNamespace = () => location.pathname.split("/").at(-1)!;
 export const delay = (ms: number) => new Promise((cb) => setTimeout(cb, ms));
 export const raf = () => new Promise((cb) => requestAnimationFrame(cb));
 export const whileRaf = async (condition: () => boolean, timeout = 3_000) => {
-  const timeoutSignal = AbortSignal.timeout(timeout);
+  const timeoutSignal = timeout > 0 ? AbortSignal.timeout(timeout) : null;
   while (condition()) {
     await raf();
-    timeoutSignal.throwIfAborted();
+    timeoutSignal?.throwIfAborted();
   }
 };
 
@@ -84,14 +84,14 @@ export const aFollowedByB = (el: HTMLElement, aSelector: string, bSelector: stri
 };
 export const $ = <E extends Element = Element>(selectors: string) => document.querySelector<E>(selectors);
 export const while$ = async <E extends Element = Element>(selectors: string, timeout = 3_000) => {
-  const timeoutSignal = AbortSignal.timeout(timeout);
+  const timeoutSignal = timeout > 0 ? AbortSignal.timeout(timeout) : null;
   while (true) {
     const ele = $<E>(selectors);
     if (ele != null) {
       return ele;
     }
     await raf();
-    timeoutSignal.throwIfAborted();
+    timeoutSignal?.throwIfAborted();
   }
 };
 export const easy$ = <E extends Element = Element>(selectors: string, timeout = 3_000) => {

@@ -25,13 +25,13 @@ export default defineConfig(() => {
     {
       ...baseConfig,
       entry: {
-        "content-script": "./web/main.ts",
+        "content-script": "./web/content-script.ts",
       } as Record<string, string>,
     } satisfies SimpleUserConfig,
     {
       ...baseConfig,
       entry: {
-        "background": "./service-worker/main.ts",
+        background: "./service-worker/background.ts",
       } as Record<string, string>,
     } satisfies SimpleUserConfig,
   ] as UserConfig;

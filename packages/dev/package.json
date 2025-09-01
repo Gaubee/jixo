@@ -32,7 +32,6 @@
   ],
   "scripts": {
     "build": "pnpm run \"/^b\\:.*/\"",
-    "b:chrome-ext": "cd ../chrome-ext && vite build",
     "b:bundle-browser": "tsdown --config ./browser.tsdown.config.ts",
     "b:ts": "tsc --build",
     "b:gen-assets": "tsx ./scripts/gen-assets.ts",

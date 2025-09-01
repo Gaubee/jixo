@@ -1,5 +1,5 @@
 ms-chat-session > ms-autoscroll-container {
-  padding-bottom: 14px!important;
+  padding-bottom: 14px !important;
 }
 
 ms-chat-turn {
@@ -38,9 +38,14 @@ ms-chat-turn-options {
   transition-duration: 250ms;
   border-radius: 16px;
   padding: 2px 8px;
+  opacity: 0;
+
+  bottom: -10px !important;
+  scale: 0.72;
 }
 .chat-turn-container:hover > .turn-footer {
   background-color: light-dark(#fff6, #0009) !important;
+  opacity: 1;
 }
 .chat-turn-container > .turn-footer > .model-run-time-pill {
   background-color: transparent !important;

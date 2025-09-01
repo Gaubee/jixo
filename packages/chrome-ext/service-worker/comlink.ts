@@ -3,11 +3,24 @@ import {createBackgroundEndpoint} from "./lib/comlink-extension/index.ts";
 
 const contentScriptPorts = new Map<number, chrome.runtime.Port>();
 
-const backgroundAPI = {
-  // In this model, the background API is minimal. Its main job is routing.
-};
+export class BackgroundAPI {
+  constructor(private port: chrome.runtime.Port) {}
+  async getTabId() {
+    return this.port.sender?.tab?.id;
+  }
 
-export type BackgroundAPI = typeof backgroundAPI;
+  async openSidePanel(tabId?: number) {
+    if (tabId != null) {
+      console.log("Opening side panel for tab", tabId);
+      await chrome.sidePanel.open({tabId: tabId});
+    } else {
+      const windowId = (await chrome.windows.getCurrent()).id;
+      if (windowId != null) {
+        chrome.sidePanel.open({windowId: windowId});
+      }
+    }
+  }
+}
 
 /**
  * Initializes the Comlink connection listener to route messages.
@@ -62,7 +75,7 @@ export function initializeComlink(): void {
 
     // Case 3: A background is connecting to the background itself.
     if (port.name === "background") {
-      Comlink.expose(backgroundAPI, createBackgroundEndpoint(port));
+      Comlink.expose(new BackgroundAPI(port), createBackgroundEndpoint(port));
     }
   });
 
