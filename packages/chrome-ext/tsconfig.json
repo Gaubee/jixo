@@ -8,8 +8,8 @@
         "jsx": "react",
         "outDir": "./dist",
         "rootDirs": [
-            "./src",
             "./background",
+            "./sidepanel",
             "./web"
         ],
         "paths": {
@@ -33,7 +33,7 @@
         ]
     },
     "include": [
-        "src",
+        "sidepanel",
         "web",
         "service-worker"
     ]

@@ -1,11 +1,13 @@
 import {initializeComlink} from "./comlink.ts";
 import {initializeSidePanel} from "./sidepanel.ts";
-export type {BackgroundAPI} from "./comlink.ts";
+import {initializeWebSocket} from "./websocket.ts";
 
 console.log("JIXO BG: Service Worker starting up...");
 
-// Initialize all sub-systems.
-initializeSidePanel();
-initializeComlink();
+const {backgroundAPI, contentScriptPorts} = initializeComlink();
+initializeSidePanel(contentScriptPorts);
+initializeWebSocket(backgroundAPI);
 
 console.log("JIXO BG: All services initialized.");
+
+export type {BackgroundAPI} from "./comlink.ts";

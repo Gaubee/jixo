@@ -12,6 +12,7 @@ export default defineConfig(() => {
     dts: false,
     treeshake: true,
     minify: "dce-only",
+    platform: "browser",
     noExternal: /./,
     // 关键：在每个独立的构建任务中，也要包含这个选项
     // 以防止单个入口内部的动态 import() 产生 chunk
@@ -25,7 +26,7 @@ export default defineConfig(() => {
     {
       ...baseConfig,
       entry: {
-        "content-script": "./web/content-script.ts",
+        "content-script": "./web/main.tsx",
       } as Record<string, string>,
     } satisfies SimpleUserConfig,
     {

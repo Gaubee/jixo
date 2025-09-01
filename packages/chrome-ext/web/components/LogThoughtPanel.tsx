@@ -20,7 +20,7 @@ export function LogThoughtPanel({props}: LogThoughtPanelProps) {
         </span>
       </h3>
       <p className="text-gray-800 whitespace-pre-wrap">{thought}</p>
-      {is_conclusive && <p className="text-xs text-green-700 font-bold pt-2 border-t border-blue-200 mt-2">✓ Conclusive thought. Ready for the next step.</p>}
+      {is_conclusive && <p className="text-xs text-green-700 font-bold pt-2 border-t border-blue-200 mt-2">✓ Conclusive thought.</p>}
     </div>
   );
 }

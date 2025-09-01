@@ -1,12 +1,14 @@
-import React, {useState, useEffect} from "react";
-import {getActiveContentScriptAPI} from "../lib/comlink-client";
-import {getWorkspaceHandle} from "../lib/workspace";
+import React, {useState} from "react";
+import {getTargetNamespace} from "@jixo/dev/browser";
 
+// In the new model, ControlPanel receives functions directly from its parent (content-script)
 interface ControlPanelProps {
   workspaceName: string;
+  onStartSync: () => Promise<{status: string; message?: string}>;
+  onApplyConfig: () => Promise<{status: string; message?: string; appliedSettings: string[]}>;
 }
 
-export function ControlPanel({workspaceName}: ControlPanelProps) {
+export function ControlPanel({workspaceName, onStartSync, onApplyConfig}: ControlPanelProps) {
   const [syncStatus, setSyncStatus] = useState<"idle" | "starting" | "started" | "error">("idle");
   const [configStatus, setConfigStatus] = useState<"idle" | "applying" | "success" | "error">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -15,10 +17,7 @@ export function ControlPanel({workspaceName}: ControlPanelProps) {
     setSyncStatus("starting");
     setError(null);
     try {
-      const contentScriptAPI = await getActiveContentScriptAPI();
-      if (!contentScriptAPI) throw new Error("Could not connect to the content script.");
-
-      const result = await contentScriptAPI.startSync();
+      const result = await onStartSync();
       if (result.status === "SYNC_STARTED") {
         setSyncStatus("started");
       } else {
@@ -34,13 +33,9 @@ export function ControlPanel({workspaceName}: ControlPanelProps) {
     setConfigStatus("applying");
     setError(null);
     try {
-      const contentScriptAPI = await getActiveContentScriptAPI();
-      if (!contentScriptAPI) throw new Error("Could not connect to the content script.");
-
-      const result = await contentScriptAPI.applyConfig();
+      const result = await onApplyConfig();
       if (result.status === "SUCCESS") {
         setConfigStatus("success");
-        // Briefly show success, then revert to idle
         setTimeout(() => setConfigStatus("idle"), 2000);
       } else {
         throw new Error(result.message || "Failed to apply config.");
@@ -54,25 +49,17 @@ export function ControlPanel({workspaceName}: ControlPanelProps) {
   return (
     <div className="p-4 space-y-4 text-sm">
       <h1 className="text-lg font-bold">JIXO Control Panel</h1>
-
       <div className="p-2 border rounded bg-gray-50">
         <strong>Workspace:</strong> <code className="ml-2 bg-gray-200 px-1 rounded">{workspaceName}</code>
       </div>
-
       <div className="space-y-3">
-        <button
-          onClick={handleStartSync}
-          className="w-full p-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400"
-          disabled={syncStatus === "starting" || syncStatus === "started"}
-        >
+        <button onClick={handleStartSync} className="w-full p-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400" disabled={syncStatus !== "idle"}>
           {syncStatus === "idle" && "Start Page Sync"}
           {syncStatus === "starting" && "Starting..."}
           {syncStatus === "started" && "Sync is Active"}
           {syncStatus === "error" && "Retry Sync"}
         </button>
-        <p className="text-xs text-gray-500">Connects this browser tab to your local workspace, enabling automated function calls.</p>
       </div>
-
       <div className="space-y-3 pt-3 border-t">
         <button onClick={handleApplyConfig} className="w-full p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400" disabled={configStatus === "applying"}>
           {configStatus === "idle" && "Apply Config to Page"}
@@ -80,17 +67,8 @@ export function ControlPanel({workspaceName}: ControlPanelProps) {
           {configStatus === "success" && "✅ Config Applied!"}
           {configStatus === "error" && "Retry Apply Config"}
         </button>
-        <p className="text-xs text-gray-500">
-          Reads `{workspaceName}/{getTargetNamespace()}.config.json` and applies its settings (Tools, System Prompt, etc.) to the page.
-        </p>
       </div>
       {error && <p className="text-sm text-red-500 mt-2 p-2 bg-red-50 rounded border border-red-200">{error}</p>}
     </div>
   );
-}
-
-// A helper function to get the session ID, assuming it's part of the URL.
-function getTargetNamespace() {
-  // This is a simplified version for the UI. The content script has the real one.
-  return window.location.pathname.split("/").pop() || "unknown-session";
 }

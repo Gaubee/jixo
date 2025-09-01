@@ -1,7 +1,5 @@
 import React from "react";
 
-// A very basic diff viewer component.
-// In a real application, a library like `diff2html` would be used.
 const DiffViewer = ({content}: {content: string}) => {
   const lines = content.split("\n").map((line, i) => {
     let color = "text-gray-500";
@@ -11,13 +9,13 @@ const DiffViewer = ({content}: {content: string}) => {
       <div key={i} className={color}>
         {line || " "}
       </div>
-    ); // Render empty lines correctly
+    );
   });
-  return <pre className="bg-gray-50 p-2 rounded-md text-xs whitespace-pre-wrap font-mono">{lines}</pre>;
+  return <pre className="bg-gray-50 p-2 rounded-md text-xs whitespace-pre-wrap font-mono max-h-48 overflow-auto">{lines}</pre>;
 };
 
 interface SubmitChangeSetPanelProps {
-  jobId: string;
+  jobId: string; // jobId is always a string for interactive components
   props: {
     change_log: string;
     operations: Array<{
@@ -33,19 +31,18 @@ export function SubmitChangeSetPanel({jobId, props}: SubmitChangeSetPanelProps) 
   const {change_log, operations} = props;
 
   const handleResponse = (approved: boolean) => {
-    chrome.runtime.sendMessage({
-      type: "USER_RESPONSE",
-      jobId,
-      payload: {data: approved},
-    });
-    window.close();
+    window.dispatchEvent(
+      new CustomEvent("jixo-user-response", {
+        detail: {jobId, payload: {data: approved}},
+      }),
+    );
   };
 
   const renderOperation = (op: (typeof operations)[0], index: number) => {
     switch (op.type) {
       case "writeFile":
         return (
-          <div key={index} className="border-b pb-2 mb-2">
+          <div key={index} className="border-t pt-2 mt-2">
             <p className="font-semibold text-blue-700">
               📝 Modify: <code>{op.path}</code>
             </p>
@@ -74,20 +71,16 @@ export function SubmitChangeSetPanel({jobId, props}: SubmitChangeSetPanelProps) 
   };
 
   return (
-    <div className="p-4 space-y-4 text-sm max-h-screen overflow-y-auto">
-      <h3 className="text-base font-semibold text-gray-800">Apply Changes?</h3>
-
+    <div className="space-y-4 text-sm">
       <div className="p-3 bg-gray-50 border rounded-md space-y-3">
         <p className="font-semibold text-gray-700">Commit Message:</p>
         <pre className="bg-white p-2 border rounded whitespace-pre-wrap">{change_log}</pre>
       </div>
-
-      <div className="p-3 bg-gray-50 border rounded-md space-y-3">
+      <div className="p-3 bg-gray-50 border rounded-md space-y-2">
         <p className="font-semibold text-gray-700">File Operations:</p>
         {operations.map(renderOperation)}
       </div>
-
-      <div className="flex justify-end gap-2 sticky bottom-0 bg-white py-2">
+      <div className="flex justify-end gap-2">
         <button onClick={() => handleResponse(false)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
           Cancel
         </button>

@@ -1,11 +1,13 @@
 import React, {useState} from "react";
-import {getActiveContentScriptAPI} from "../lib/comlink-client.ts";
 
+// In the new model, this component will call a function passed via props
+// which is connected to the content-script's API.
 interface WorkspaceSetupProps {
   onWorkspaceSelected: (workspaceName: string) => void;
+  selectWorkspace: () => Promise<string | null>;
 }
 
-export function WorkspaceSetup({onWorkspaceSelected}: WorkspaceSetupProps) {
+export function WorkspaceSetup({onWorkspaceSelected, selectWorkspace}: WorkspaceSetupProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSelecting, setIsSelecting] = useState(false);
 
@@ -13,11 +15,7 @@ export function WorkspaceSetup({onWorkspaceSelected}: WorkspaceSetupProps) {
     setIsSelecting(true);
     setError(null);
     try {
-      const contentScriptAPI = await getActiveContentScriptAPI();
-      if (!contentScriptAPI) {
-        throw new Error("Cannot connect to the active page. Please ensure you are on AI Studio and refresh the page.");
-      }
-      const workspaceName = await contentScriptAPI.selectWorkspace();
+      const workspaceName = await selectWorkspace();
       if (workspaceName) {
         onWorkspaceSelected(workspaceName);
       }

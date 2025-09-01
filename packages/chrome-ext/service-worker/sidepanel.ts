@@ -1,90 +1,58 @@
-const JIXO_ORIGIN = "https://aistudio.google.com";
+import * as Comlink from "comlink";
+import type {JixoTab} from "../web/lib/comlink-api-types.ts";
+import {createBackgroundEndpoint} from "./lib/comlink-extension/index.ts";
 
-const ALLOWED_URL_PATTERNS = [`${JIXO_ORIGIN}/*`];
+let contentScriptPorts: Map<number, chrome.runtime.Port>;
 
-// 检查给定 URL 是否与允许的模式匹配
-function isUrlAllowed(url: string) {
-  return ALLOWED_URL_PATTERNS.some((pattern) => {
-    const regex = new RegExp(pattern.replace(/\*/g, ".*"));
-    return regex.test(url);
-  });
-}
-/**
- * Initializes all listeners related to the side panel's behavior.
- */
-export function initializeSidePanel(): void {
-  // chrome.runtime.onInstalled.addListener(() => {
-  //   chrome.contextMenus.create({
-  //     id: "openSidePanel",
-  //     title: "Open side panel",
-  //     contexts: ["all"],
-  //   });
-  // });
+export const sidePanelAPI = {
+  async getJixoTabs(): Promise<JixoTab[]> {
+    // Query all tabs that match the URL
+    const allTabs = await chrome.tabs.query({url: "https://aistudio.google.com/*"});
+    const [activeTab] = await chrome.tabs.query({active: true, currentWindow: true});
 
-  // chrome.contextMenus.onClicked.addListener((info, tab) => {
-  //   if (info.menuItemId === "openSidePanel") {
-  //     // This will open the panel in all the pages on the current window.
-  //     chrome.sidePanel.open({windowId: tab!.windowId});
-  //   }
-  // });
-  // chrome.runtime.onInstalled.addListener(() => {
-  //   // Disable the side panel globally by default.
-  //   chrome.sidePanel.setOptions({enabled: false});
-  //   console.log("JIXO BG: Side panel globally disabled by default.");
-  // });
+    // Filter tabs to only those that have an active content script connection
+    const jixoTabs = allTabs
+      .filter((tab) => tab.id && contentScriptPorts.has(tab.id))
+      .map((tab) => ({
+        id: tab.id!,
+        title: tab.title || "AI Studio",
+        url: tab.url || "",
+        favIconUrl: tab.favIconUrl,
+        isActive: activeTab?.id === tab.id,
+      }));
 
-  chrome.sidePanel
-    //
-    .setPanelBehavior({openPanelOnActionClick: true})
-    .catch((error) => console.error(error));
+    return jixoTabs;
+  },
 
-  // 根据 URL 启用或禁用 Side Panel
-  async function updateSidePanel(tabId: number, url: string) {
-    if (isUrlAllowed(url)) {
-      // Enables the side panel on aistudio.google.com
-      console.log("enable sidepanel", url);
-      await chrome.sidePanel.setOptions({
-        tabId: tabId,
-        path: "sidepanel.html",
-        enabled: true,
-      });
+  async switchToTab(tabId: number): Promise<void> {
+    await chrome.tabs.update(tabId, {active: true});
+    const tab = await chrome.tabs.get(tabId);
+    if (tab.windowId) {
+      await chrome.windows.update(tab.windowId, {focused: true});
+    }
+  },
+};
+
+export function initializeSidePanel(portsMap: Map<number, chrome.runtime.Port>): void {
+  contentScriptPorts = portsMap;
+
+  chrome.sidePanel.setPanelBehavior({openPanelOnActionClick: true}).catch((error) => console.error(error));
+
+  chrome.tabs.onUpdated.addListener(async (tabId, info, tab) => {
+    if (tab.url && tab.url.startsWith("https://aistudio.google.com/")) {
+      await chrome.sidePanel.setOptions({tabId, path: "sidepanel.html", enabled: true});
     } else {
-      // Disables the side panel on all other sites
-      console.log("disable sidepanel", url);
-      await chrome.sidePanel.setOptions({
-        tabId: tabId,
-        enabled: false,
-      });
-    }
-  }
-
-  // 监听标签页更新事件
-  chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (changeInfo.url && tab.active) {
-      // 确保只处理活动标签页的 URL 变化
-      await updateSidePanel(tabId, changeInfo.url);
+      await chrome.sidePanel.setOptions({tabId, enabled: false});
     }
   });
 
-  // // 监听标签页激活事件（当用户切换标签页时）
-  // chrome.tabs.onActivated.addListener(async (activeInfo) => {
-  //   const tab = await chrome.tabs.get(activeInfo.tabId);
-  //   if (tab.url) {
-  //     await updateSidePanel(activeInfo.tabId, tab.url);
-  //   }
-  // });
-  // 首次安装时，为所有现有标签页设置 Side Panel 状态
-  chrome.runtime.onInstalled.addListener(async () => {
-    const tabs = await chrome.tabs.query({});
-    for (const tab of tabs) {
-      if (tab.url) {
-        const tabId = tab.id;
-        if (tabId != null) {
-          await updateSidePanel(tabId, tab.url);
-        }
-      }
+  // Expose the API for the sidepanel UI
+  chrome.runtime.onConnect.addListener((port) => {
+    if (port.name === "sidepanel") {
+      console.log("JIXO BG: Side panel UI connected.");
+      Comlink.expose(sidePanelAPI, createBackgroundEndpoint(port));
     }
   });
 
-  console.log("JIXO BG: Side panel listeners initialized.");
+  console.log("JIXO BG: Side panel logic initialized.");
 }

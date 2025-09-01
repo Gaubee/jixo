@@ -1,7 +1,7 @@
 import React from "react";
 
 interface ProposePlanDialogProps {
-  jobId: string;
+  jobId: string; // jobId is always a string for interactive components
   props: {
     plan_summary: string;
     steps: string[];
@@ -13,17 +13,15 @@ export function ProposePlanDialog({jobId, props}: ProposePlanDialogProps) {
   const {plan_summary, steps, estimated_tool_calls} = props;
 
   const handleResponse = (approved: boolean) => {
-    chrome.runtime.sendMessage({
-      type: "USER_RESPONSE",
-      jobId,
-      payload: {data: approved},
-    });
-    window.close();
+    window.dispatchEvent(
+      new CustomEvent("jixo-user-response", {
+        detail: {jobId, payload: {data: approved}},
+      }),
+    );
   };
 
   return (
     <div className="p-4 space-y-4 text-sm">
-      <h3 className="text-base font-semibold text-gray-800">Plan Approval Request</h3>
       <div className="p-3 bg-gray-50 border rounded-md space-y-3">
         <div>
           <p className="font-semibold text-gray-700">Summary:</p>
