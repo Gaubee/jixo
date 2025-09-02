@@ -47,7 +47,7 @@ async function ensureDialog() {
       reactRoot = createRoot(reactRootEle);
     }
   }
-  return dialogEle;
+  return reactRoot;
 }
 
 // Listen for responses from the React components via a global custom event.
@@ -57,8 +57,8 @@ window.addEventListener("jixo-user-response", ((event: CustomEvent) => {
   if (listener) {
     listener(payload);
     jobResponseListeners.delete(jobId);
-    ensureDialog().then((dialogEle) => {
-      dialogEle.dataset.open = "true";
+    ensureDialog().then(() => {
+      JIXODraggableDialogIsolatedHelper.openDialog();
     });
   }
 }) as EventListener);
@@ -113,8 +113,7 @@ export const contentScriptAPI = {
   },
 
   async renderComponent(componentName: string, jobId: string | null, props: any): Promise<any> {
-    const dialog = await ensureDialog();
-    if (!reactRoot) throw new Error("React root not initialized.");
+    const reactRoot = await ensureDialog();
 
     const allProps = {jobId, props, key: jobId || componentName};
     let componentToRender;
@@ -154,11 +153,6 @@ export const contentScriptAPI = {
     }
 
     reactRoot.render(<React.StrictMode>{componentToRender}</React.StrictMode>);
-    if (dialog.dataset.open != "true") {
-      dialog.dataset.open = "true";
-    } else {
-      dialog.dataset.open = "false";
-    }
 
     if (!jobId) return true;
   },

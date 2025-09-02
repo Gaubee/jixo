@@ -1,5 +1,5 @@
 import z from "zod";
-import {$, easy$, while$, whileRaf} from "./utils.js";
+import {$, easy$, raf, while$, whileRaf} from "./utils.js";
 
 /**
  * 设置tools
@@ -93,5 +93,24 @@ export const setModel = async (modelId: string) => {
   if (model?.btn) {
     model.btn.click();
     await whileRaf(() => model.ele.classList.contains("selected"));
+  }
+};
+
+/**
+ * 清理历史记录
+ */
+export const clearHistory = async () => {
+  while (true) {
+    const btn = $<HTMLButtonElement>("ms-chat-turn-options button");
+    if (btn == null) {
+      break;
+    }
+    btn.click();
+    await raf();
+    {
+      const deleteBtnEle = await while$<HTMLButtonElement>(".mat-mdc-menu-panel > div > button:nth-child(1)");
+      deleteBtnEle.click();
+    }
+    await raf();
   }
 };
