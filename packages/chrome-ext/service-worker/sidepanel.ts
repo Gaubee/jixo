@@ -1,5 +1,5 @@
 import * as Comlink from "comlink";
-import type {JixoTab} from "../web/lib/comlink-api-types.ts";
+import type {JixoTab} from "../web/isolated/lib/comlink-api-types.ts";
 import {createBackgroundEndpoint} from "./lib/comlink-extension/index.ts";
 
 let contentScriptPorts: Map<number, chrome.runtime.Port>;

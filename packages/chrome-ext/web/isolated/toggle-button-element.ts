@@ -1,18 +1,8 @@
 import {while$} from "@jixo/dev/browser";
-import * as Comlink from "comlink";
-import {createEndpoint} from "../service-worker/lib/comlink-extension/index.ts";
-import {JIXODraggableDialogIsolatedHelper} from "./draggable-dialog.isolated.ts";
-import {contentScriptAPI} from "./lib/content-script-api.tsx"; // Fixed import
+import {JIXODraggableDialogIsolatedHelper} from "./draggable-dialog-isolated.ts";
+import {isolatedContentScriptAPI} from "./lib/content-script-api.tsx"; // Fixed import
 
-console.log("JIXO CS: Main script loaded.");
-
-function exposeApiToBackground() {
-  const port = chrome.runtime.connect({name: "content-script"});
-  Comlink.expose(contentScriptAPI, createEndpoint(port));
-  console.log("JIXO CS: Exposed content script API to background.");
-}
-
-async function addToggleButton(jixoRoot: HTMLElement) {
+export async function addToggleButton() {
   const toolbarRightEle = await while$("ms-toolbar .toolbar-right", 0);
   const template = document.createElement("template");
 
@@ -44,7 +34,7 @@ async function addToggleButton(jixoRoot: HTMLElement) {
 
   const btn = template.content.querySelector("button")!;
   btn.addEventListener("click", async () => {
-    await contentScriptAPI.renderComponent("App", null, {});
+    await isolatedContentScriptAPI.renderComponent("App", null, {});
     if (JIXODraggableDialogIsolatedHelper.isOpend) {
       JIXODraggableDialogIsolatedHelper.closeDialog();
       btn.dataset.open = "false";
@@ -55,11 +45,3 @@ async function addToggleButton(jixoRoot: HTMLElement) {
   });
   toolbarRightEle.insertBefore(template.content, toolbarRightEle.firstElementChild);
 }
-
-async function initialize() {
-  exposeApiToBackground();
-  const jixoRoot = await JIXODraggableDialogIsolatedHelper.prepare();
-  addToggleButton(jixoRoot);
-}
-
-initialize();

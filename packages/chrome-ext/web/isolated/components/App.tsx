@@ -1,13 +1,13 @@
-import React, {useState, useEffect} from "react";
+import * as Comlink from "comlink";
+import React, {useEffect, useState} from "react";
+import type {MainContentScriptAPI} from "../../main/lib/content-script-api.ts";
+import {getWorkspaceHandle} from "../../main/lib/workspace.ts";
 import {ControlPanel} from "./ControlPanel.tsx";
 import {WorkspaceSetup} from "./WorkspaceSetup.tsx";
-import {getWorkspaceHandle} from "../lib/workspace.ts";
-import type {ContentScriptAPI} from "../lib/content-script-api.tsx";
-
 type AppState = "initializing" | "needs-setup" | "ready";
 
 interface AppProps {
-  api: Pick<ContentScriptAPI, "selectWorkspace" | "startSync" | "applyConfig">;
+  api: Comlink.Remote<MainContentScriptAPI>;
 }
 
 export function App({api}: AppProps) {

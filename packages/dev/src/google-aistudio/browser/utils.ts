@@ -1,17 +1,13 @@
-import {async_proxyer} from "@gaubee/util";
+import {async_proxyer, func_remember} from "@gaubee/util";
 export * from "./easy_fs.js";
 
-let rootDirHandle: FileSystemDirectoryHandle | undefined;
-export const prepareDirHandle = async (): Promise<FileSystemDirectoryHandle> => {
-  if (rootDirHandle) {
-    return rootDirHandle;
-  }
+export const prepareDirHandle = func_remember(async (): Promise<FileSystemDirectoryHandle> => {
   // 1. 请求用户选择一个 *根* 文件夹
   const ti = setTimeout(() => {
     console.log("%c等待用户动作: 请选择一个文件夹，用来作为内容导入导出的协作目录.", styles.info);
   }, 100);
   try {
-    rootDirHandle = await window.showDirectoryPicker({mode: "readwrite"});
+    const rootDirHandle = await window.showDirectoryPicker({mode: "readwrite"});
     console.log(`%c✅ 根文件夹已选择: %c${rootDirHandle.name}`, styles.success, styles.code);
     return rootDirHandle;
   } catch (e) {
@@ -30,7 +26,7 @@ export const prepareDirHandle = async (): Promise<FileSystemDirectoryHandle> => 
     }
     throw e;
   }
-};
+});
 export const styles = {
   header: "color: #4CAF50; font-size: 18px; font-weight: bold; border-bottom: 2px solid #4CAF50; padding-bottom: 5px;",
   info: "color: #2196F3; font-style: italic;",

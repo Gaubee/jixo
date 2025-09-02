@@ -10,19 +10,7 @@ initializeWebSocket(backgroundAPI);
 
 console.log("JIXO BG: All services initialized.");
 
-export type {BackgroundAPI} from "./comlink.ts";
+import {setupContentScriptInjecter} from "./inject-content-script.ts";
+setupContentScriptInjecter();
 
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (tab.url && tab.url.startsWith("https://aistudio.google.com/")) {
-    try {
-      await chrome.scripting.executeScript({
-        target: {tabId: tabId},
-        files: ["web-inject.js"],
-        world: "MAIN",
-      });
-    } catch (e) {
-      console.error("QAQ", e);
-    }
-  } else {
-  }
-});
+export type {BackgroundAPI} from "./comlink.ts";

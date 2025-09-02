@@ -26,7 +26,7 @@
     "@ai-sdk/xai": "alpha",
     "@gaubee/node": "^0.4.0",
     "@gaubee/nodekit": "^0.12.0",
-    "@gaubee/util": "^0.34.2",
+    "@gaubee/util": "^0.35.0",
     "@jixo/mcp-fs": "workspace:^",
     "@jixo/mcp-pnpm": "workspace:^",
     "ai": "^4.3.19",

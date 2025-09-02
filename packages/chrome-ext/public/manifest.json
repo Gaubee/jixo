@@ -12,16 +12,14 @@
   "host_permissions": ["https://aistudio.google.com/*"],
   "web_accessible_resources": [
     {
-      "resources": ["*", "assets/*", "chunks/*", "icons/*"],
+      "resources": ["/*"],
       "matches": ["<all_urls>"]
     }
   ],
   "content_scripts": [
     {
       "matches": ["https://aistudio.google.com/*"],
-      "js": ["content-script.js"],
-      "css": ["content-styles.css"],
-      "world": "ISOLATED"
+      "css": ["content-styles.css"]
     }
   ],
   "action": {

@@ -29,14 +29,14 @@ export async function gitWorkingDiffs(repoPath: string, options: GetGitFilesOpti
     let diffArgs: string[];
     if (stagedOnly) {
       // 如果只看暂存区，必须使用 'git diff --staged'
-      diffArgs = ["diff", "--staged", "--", ...trackedFilesPaths];
+      diffArgs = ["diff", "--staged", "-M", "-C", "--", ...trackedFilesPaths];
     } else {
       const hasHead = await hasGitHead(repoPath);
       // 如果看所有变更，则统一比较工作区和 HEAD
       const diffCmd = hasHead ? "diff" : "diff --staged";
       const diffBase = hasHead ? "HEAD" : "";
       // 避免当 diffBase 为空时，向参数列表添加一个空字符串
-      diffArgs = diffBase ? [diffCmd, diffBase, "--", ...trackedFilesPaths] : [diffCmd, "--", ...trackedFilesPaths];
+      diffArgs = diffBase ? [diffCmd, diffBase, "-M", "-C", "--", ...trackedFilesPaths] : [diffCmd, "--", ...trackedFilesPaths];
     }
 
     const promise = easySpawn("git", diffArgs, {cwd: repoPath}).then((result) => {

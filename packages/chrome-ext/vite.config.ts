@@ -20,8 +20,8 @@ export default defineConfig(() => {
           // The sidepanel is now our HTML entry point.
           sidepanel: resolver("sidepanel.html"),
           // "content-script": resolver("web/main.tsx"),
-          web: resolver("web/main.tsx"),
-          "web-inject": resolver("web/inject.ts"),
+          "content-script/isolated": resolver("web/isolated/index.ts"),
+          "content-script/main": resolver("web/main/index.ts"),
           // background: resolver("service-worker/background.ts"),
         },
         output: {

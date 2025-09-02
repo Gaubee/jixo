@@ -1,5 +1,5 @@
 import * as Comlink from "comlink";
-import type {ContentScriptAPI} from "../web/lib/content-script-api.tsx"; // Fixed path
+import type {IsolatedContentScriptAPI} from "../web/isolated/lib/content-script-api.tsx"; // Fixed path
 import {createBackgroundEndpoint, createEndpoint} from "./lib/comlink-extension/index.ts"; // Fixed import
 import {sidePanelAPI} from "./sidepanel.ts";
 
@@ -11,7 +11,7 @@ export class BackgroundAPI {
     if (activeTab?.id) {
       const port = contentScriptPorts.get(activeTab.id);
       if (port) {
-        const api = Comlink.wrap<ContentScriptAPI>(createEndpoint(port));
+        const api = Comlink.wrap<IsolatedContentScriptAPI>(createEndpoint(port));
         return await api.renderComponent(componentName, jobId, props);
       } else {
         throw new Error("JIXO content script not connected on the active tab.");

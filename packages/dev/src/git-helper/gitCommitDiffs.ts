@@ -39,6 +39,8 @@ export async function gitCommitDiffs(repoPath: string, commitRef: string, filePa
   const showArgs = [
     "show",
     commitRef,
+    "-M", // 开启 rename detection
+    "-C", // 开启 copy detection
     "--", // 分隔符，确保文件名不会被误解为参数
     ...changedFilePaths,
   ];
@@ -50,7 +52,7 @@ export async function gitCommitDiffs(repoPath: string, commitRef: string, filePa
   const diffChunks = diffResult.stdout.trim().split("\ndiff --git ");
 
   // 跳过第一个元素，因为它通常是 commit 信息
-  const changedFilesMap = new Map(changedFiles)
+  const changedFilesMap = new Map(changedFiles);
   for (const chunk of diffChunks.slice(1)) {
     const fullDiff = "diff --git " + chunk;
     const firstLine = fullDiff.substring(0, fullDiff.indexOf("\n"));

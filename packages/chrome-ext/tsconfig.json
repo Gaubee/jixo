@@ -8,11 +8,7 @@
         "jsx": "react",
         "jsxFactory": "React.createElement",
         "outDir": "./dist",
-        "rootDirs": [
-            "./background",
-            "./sidepanel",
-            "./web"
-        ],
+        "rootDir": "./",
         "paths": {
             "@jixo/dev/*": [
                 "../dev/src/*"

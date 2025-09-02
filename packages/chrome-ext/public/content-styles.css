@@ -12,10 +12,18 @@ ms-chat-turn {
 }
 .chat-turn-container > .actions-container > .actions {
   top: -28px !important;
-  backdrop-filter: blur(10px);
   background-color: light-dark(#fff3, #0006) !important;
   box-shadow: color-mix(in srgb, currentcolor, transparent) 0px 12px 16px 0;
   border-radius: 20px !important;
+
+  backdrop-filter: blur(1px) contrast(1.5);
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0, 0.95, 0.5, 0.9);
+  transition-property: opacity, backdrop-filter !important;
+  will-change: opacity, backdrop-filter !important;
+  &:hover {
+    backdrop-filter: blur(10px) contrast(1.2);
+  }
 }
 ms-chat-turn-options {
   margin-bottom: 0px !important;
@@ -34,7 +42,6 @@ ms-chat-turn-options {
   background-color: #2196f333;
 }
 .chat-turn-container > .turn-footer {
-  backdrop-filter: blur(10px);
   background-color: light-dark(#fff3, #0006) !important;
   box-shadow: color-mix(in srgb, currentcolor, transparent) 0px 1px 2px;
   transition-duration: 250ms;
@@ -45,6 +52,16 @@ ms-chat-turn-options {
   bottom: -10px !important;
   scale: 0.72;
   transform-origin: left bottom;
+
+  backdrop-filter: blur(1px);
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0, 0.95, 0.5, 0.9);
+  transition-property: opacity, backdrop-filter, scale !important;
+  will-change: opacity, backdrop-filter, scale !important;
+  &:hover {
+    backdrop-filter: blur(10px);
+    scale: 1;
+  }
 }
 .chat-turn-container:hover > .turn-footer {
   background-color: light-dark(#fff6, #0009) !important;

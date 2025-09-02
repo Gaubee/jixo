@@ -62,7 +62,7 @@ export const handleGitReplacement: Replacer = async ({globOrFilepath, mode, para
   try {
     let filesToProcess: string[] = [];
     if (commitHash) {
-      filesToProcess = (await git.show([commitHash, "--pretty=", "--name-only", "--", filePattern])).split("\n").filter(Boolean);
+      filesToProcess = (await git.show([commitHash, "-M", "-C", "--pretty=", "--name-only", "--", filePattern])).split("\n").filter(Boolean);
     } else {
       const statusResult = await git.status();
       const uncommittedFiles = statusResult.files.filter((f) => f.index !== " " || f.working_dir !== " ").map((f) => f.path);
