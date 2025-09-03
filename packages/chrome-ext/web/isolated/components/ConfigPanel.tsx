@@ -1,32 +1,61 @@
+import type {AgentMetadata} from "@jixo/dev/browser";
 import React from "react";
+import {Button} from "@/components/ui/button.tsx";
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card.tsx";
+import {Label} from "@/components/ui/label.tsx";
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
 import {CoderAgentConfigPanel} from "./CoderAgentConfigPanel.tsx";
-import type { AgentMetadata } from "@jixo/dev/browser";
-
 
 interface ConfigPanelProps {
   metadata: AgentMetadata;
   onMetadataChange: (metadata: AgentMetadata) => void;
+  onGenerateConfig: () => Promise<void>;
 }
 
-export function ConfigPanel({metadata, onMetadataChange}: ConfigPanelProps) {
-  const agentType = "coder"; // Hardcoded for now
+export function ConfigPanel({metadata, onMetadataChange, onGenerateConfig}: ConfigPanelProps) {
+  const agentType = metadata.agent || "coder";
+
+  const handleAgentChange = (value: string) => {
+    if (value === "coder") {
+      onMetadataChange({
+        agent: "coder",
+        dirs: metadata.dirs || [],
+        docs: metadata.docs || [],
+        mcp: metadata.mcp || [],
+      });
+    }
+  };
 
   return (
-    <div className="space-y-3">
-      <div>
-        <label htmlFor="agent-select" className="block text-sm font-medium text-gray-700">
-          Select Agent
-        </label>
-        <select
-          id="agent-select"
-          value={agentType}
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-        >
-          <option value="coder">Coder Agent</option>
-          {/* Other agents can be added here */}
-        </select>
-      </div>
-      {agentType === "coder" && <CoderAgentConfigPanel metadata={metadata} onMetadataChange={onMetadataChange} />}
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Agent Configuration</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="agent-select">Select Agent</Label>
+          <Select value={agentType} onValueChange={handleAgentChange}>
+            <SelectTrigger id="agent-select" className="w-full">
+              <SelectValue placeholder="Select an agent" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="coder">Coder Agent</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {agentType === "coder" && (
+          <div className="pt-4 border-t">
+            <CoderAgentConfigPanel metadata={metadata} onMetadataChange={onMetadataChange} />
+          </div>
+        )}
+
+        <div className="pt-4 border-t">
+          <Button onClick={onGenerateConfig} className="w-full">
+            Generate Config Template
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

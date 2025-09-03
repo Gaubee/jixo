@@ -1,13 +1,18 @@
 import {useDebounce} from "@uidotdev/usehooks";
-import React, {memo, useEffect, useState} from "react";
+import React, {useEffect, useState} from "react";
 import type {MainContentScriptAPI} from "../../main/lib/content-script-api";
-import {ConfigPanel} from "./ConfigPanel.tsx";
-import * as Comlink from 'comlink'
-import type { AgentMetadata } from "@jixo/dev/browser";
+import {ConfigPanel, type AgentMetadata} from "./ConfigPanel.tsx";
+import * as Comlink from "comlink";
+import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
+import {Toaster, toast} from "@/components/ui/sonner.tsx";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
+import {Button} from "@/components/ui/button.tsx";
+import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
+import {Terminal} from "lucide-react";
 
 interface ControlPanelProps {
   workspaceName: string;
-  mainApi:  Comlink.Remote<MainContentScriptAPI>;
+  mainApi: Comlink.Remote<MainContentScriptAPI>;
   onGenerateConfig: (metadata: AgentMetadata) => Promise<any>;
   onApplyTemplate: () => Promise<{status: string; message?: string}>;
   onApplyConfig: () => Promise<{status: string; message?: string}>;
@@ -23,9 +28,24 @@ const initialMetadata: AgentMetadata = {
 
 export function ControlPanel({workspaceName, mainApi, onGenerateConfig, onApplyTemplate, onApplyConfig, onStartSync}: ControlPanelProps) {
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState("");
   const [metadata, setMetadata] = useState<AgentMetadata>(initialMetadata);
   const [configDiffers, setConfigDiffers] = useState(false);
+  const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
+
+  const handleAction = async (actionName: string, actionFn: () => Promise<any>) => {
+    setIsLoading((prev) => ({...prev, [actionName]: true}));
+    setError(null);
+    try {
+      await actionFn();
+      toast.success(`${actionName} completed successfully.`);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading((prev) => ({...prev, [actionName]: false}));
+    }
+  };
 
   // Load initial metadata from config.json
   useEffect(() => {
@@ -46,7 +66,6 @@ export function ControlPanel({workspaceName, mainApi, onGenerateConfig, onApplyT
     const interval = setInterval(async () => {
       try {
         const [config, template] = await Promise.all([mainApi.readConfigFile(false), mainApi.readConfigFile(true)]);
-        // Also check if template exists
         setConfigDiffers(!!template && JSON.stringify(config) !== JSON.stringify(template));
       } catch {
         setConfigDiffers(false);
@@ -55,94 +74,68 @@ export function ControlPanel({workspaceName, mainApi, onGenerateConfig, onApplyT
     return () => clearInterval(interval);
   }, [mainApi]);
 
-  const debouncedWriteMetadata = async (newMetadata: AgentMetadata) => {
+  const debouncedWriteMetadata = useDebounce(async (newMetadata: AgentMetadata) => {
     try {
       const currentConfig = (await mainApi.readConfigFile(false)) || {};
       await mainApi.writeConfigFile({...currentConfig, metadata: newMetadata}, false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save metadata.");
     }
-  };
+  }, 500);
 
   const handleMetadataChange = (newMetadata: AgentMetadata) => {
     setMetadata(newMetadata);
     debouncedWriteMetadata(newMetadata);
   };
 
-  const handleGenerateConfig = async () => {
-    setStatus("Generating template...");
-    setError(null);
-    try {
-      await onGenerateConfig(metadata);
-      setStatus("Template generated successfully!");
-    } catch (err) {
-      setStatus("Error generating template.");
-      setError(err instanceof Error ? err.message : "An unknown error occurred.");
-    }
-  };
-
-  const handleApplyTemplate = async () => {
-    setStatus("Applying template to config...");
-    setError(null);
-    try {
-      await onApplyTemplate();
-      setStatus("Template applied to config!");
-    } catch (err) {
-      setStatus("Error applying template.");
-      setError(err instanceof Error ? err.message : "An unknown error occurred.");
-    }
-  };
-
-  const handleApplyConfig = async () => {
-    setStatus("Applying config to page...");
-    setError(null);
-    try {
-      await onApplyConfig();
-      setStatus("Config applied to page successfully!");
-    } catch (err) {
-      setStatus("Error applying config to page.");
-      setError(err instanceof Error ? err.message : "An unknown error occurred.");
-    }
-  };
-
-  const handleStartSync = async () => {
-    setStatus("Starting sync...");
-    setError(null);
-    try {
-      await onStartSync();
-      setStatus("Sync started.");
-    } catch (err) {
-      setStatus("Error starting sync.");
-      setError(err instanceof Error ? err.message : "An unknown error occurred.");
-    }
-  };
-
   return (
-    <div className="p-4 space-y-4 text-sm">
-      <div className="p-2 border rounded bg-gray-50">
-        <strong>Workspace:</strong> <code className="ml-2 bg-gray-200 px-1 rounded">{workspaceName}</code>
-      </div>
-      <ConfigPanel metadata={metadata} onMetadataChange={handleMetadataChange} />
-      <div className="space-y-3 pt-3 border-t">
-        <button onClick={handleStartSync} className="w-full p-2 bg-cyan-600 text-white rounded hover:bg-cyan-700">
-          Start Page Sync
-        </button>
-        <button onClick={handleGenerateConfig} className="w-full p-2 bg-green-600 text-white rounded hover:bg-green-700">
-          Generate Config Template
-        </button>
-        <button
-          onClick={handleApplyTemplate}
-          className="w-full p-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
-          disabled={!configDiffers}
-        >
-          Apply Template to Config
-        </button>
-        <button onClick={handleApplyConfig} className="w-full p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
-          Apply Config to Page
-        </button>
-      </div>
-      {status && <p className="text-xs text-gray-500 mt-1">{status}</p>}
-      {error && <p className="text-sm text-red-500 mt-2 p-2 bg-red-50 rounded border border-red-200">{error}</p>}
+    <div className="p-2 space-y-2 text-sm">
+      <Toaster />
+      <Tabs defaultValue="configuration">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="configuration">Configuration</TabsTrigger>
+          <TabsTrigger value="synchronization">Synchronization</TabsTrigger>
+        </TabsList>
+        <TabsContent value="configuration">
+          <ConfigPanel metadata={metadata} onMetadataChange={handleMetadataChange} onGenerateConfig={() => handleAction("Generate Config", () => onGenerateConfig(metadata))} />
+        </TabsContent>
+        <TabsContent value="synchronization">
+          <Card>
+            <CardHeader>
+              <CardTitle>Workspace & Sync</CardTitle>
+              <CardDescription>Manage your local workspace and page synchronization.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-2 border rounded bg-muted text-muted-foreground">
+                <strong>Workspace:</strong> <code className="ml-2 bg-background px-1 rounded">{workspaceName}</code>
+              </div>
+              <div className="space-y-3 pt-4 border-t">
+                <Button onClick={() => handleAction("Start Sync", onStartSync)} className="w-full" disabled={isLoading["Start Sync"]}>
+                  {isLoading["Start Sync"] ? "Starting..." : "Start Page Sync"}
+                </Button>
+                <Button
+                  onClick={() => handleAction("Apply Template", onApplyTemplate)}
+                  className="w-full"
+                  variant="secondary"
+                  disabled={!configDiffers || isLoading["Apply Template"]}
+                >
+                  {isLoading["Apply Template"] ? "Applying..." : "Apply Template to Config"}
+                </Button>
+                <Button onClick={() => handleAction("Apply Config", onApplyConfig)} className="w-full" disabled={isLoading["Apply Config"]}>
+                  {isLoading["Apply Config"] ? "Applying..." : "Apply Config to Page"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+      {error && (
+        <Alert variant="destructive" className="mt-2">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
     </div>
   );
 }
