@@ -1,7 +1,6 @@
 {
   "workspace": [
     "jun",
-    "tools",
-    "tools-uikit"
+    "tools"
   ]
 }

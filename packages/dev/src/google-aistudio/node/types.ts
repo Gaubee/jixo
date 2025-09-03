@@ -1,5 +1,5 @@
 import type {RenderFunction} from "@jixo/tools-uikit";
-import {type output, z} from "./z-min.js";
+import {z} from "./z-min.js";
 export const zContentsSchema = z.array(
   z.object({
     role: z.string(),
@@ -86,7 +86,7 @@ export const zAiStudioContentSchema = z.looseObject({
   }),
 });
 
-export type AiStudioContentSchema = output<typeof zAiStudioContentSchema>;
+export type AiStudioContentSchema = z.output<typeof zAiStudioContentSchema>;
 
 export const zFunctionCallConfig = z.object({
   name: z.string(),
@@ -113,11 +113,10 @@ export const zFunctionCallStandardModule = z.looseObject({
   functionCall: zFunctionCallFn,
 });
 
-export type FunctionCallStandardModule = output<typeof zFunctionCallStandardModule> & {
+export type FunctionCallStandardModule = z.output<typeof zFunctionCallStandardModule> & {
   functionCall: FunctionCallFn;
 };
 
 export const zFunctionCallMiniModule = z.extend(z.partial(zFunctionCallConfig), {
   functionCall: zFunctionCallFn,
 });
-

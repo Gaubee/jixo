@@ -56,5 +56,10 @@ export default defineConfig(() => {
         };
       })(),
     ],
+    resolve: {
+      alias: {
+        "@": resolver("./src"),
+      },
+    },
   } satisfies UserConfig;
 });

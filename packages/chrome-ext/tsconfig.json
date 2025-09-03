@@ -9,18 +9,10 @@
         "jsxFactory": "React.createElement",
         "outDir": "./dist",
         "rootDir": "./",
+        "baseUrl": ".",
         "paths": {
-            "@jixo/dev/*": [
-                "../dev/src/*"
-            ],
-            "@jixo/jun/*": [
-                "../jun/src/*"
-            ],
-            "@jixo/tools/*": [
-                "../tools/src/*"
-            ],
-            "@jixo/tools-uikit/*": [
-                "../tools-uikit/src/*"
+            "@/*": [
+                "./src/*"
             ]
         },
         "types": [
@@ -31,6 +23,7 @@
         ]
     },
     "include": [
+        "src",
         "sidepanel",
         "web",
         "service-worker"
