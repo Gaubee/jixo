@@ -36,7 +36,7 @@ export interface AiResponse {
  * @returns An object containing the git commit message and a list of file diffs.
  */
 export function parseMarkdown(from: string, markdownContent: string, rootResolver: PathResolver): AiResponse {
-  const gitCommitMessageRegex = /【变更日志】[*\s\n]+(`{3,})[\w]*\s*\n([\s\S]*?)\n\1/;
+  const gitCommitMessageRegex = /【变更日志】[*\s\n]+(`{3,})[\w]*\s*\n([\s\S]*?)\1/;
   const gitCommitMessageMatchRes = markdownContent.match(gitCommitMessageRegex);
   let gitCommitMessage: GitCommitMessage | null = null;
   if (gitCommitMessageMatchRes) {
@@ -52,7 +52,7 @@ export function parseMarkdown(from: string, markdownContent: string, rootResolve
 
   // Regex to match file path headers and their corresponding code blocks
   // It handles ``` and ```` fences.
-  const fileBlockRegex = /#{4}[\s*]+`(.+?)`[\s\S]*?\n(`{3,6})[\w]*\s*\n([\s\S]*?)\n\2/g;
+  const fileBlockRegex = /#{4}[\s*]+`(.+?)`[\s\S]*?\n(`{3,6})[\w]*\s*\n([\s\S]*?)\2/g;
   const diffFiles: DiffFiles = [];
 
   logger.info("Parsing Markdown content to find file blocks...");

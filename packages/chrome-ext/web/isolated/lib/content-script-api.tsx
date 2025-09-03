@@ -19,9 +19,9 @@ async function ensureJixoMainRuntime() {
     {
       const headerTemplate = document.createElement("template");
       headerTemplate.innerHTML = html`
-        <div class="flex flex-row gap-1 min-w-60 justify-between items-center p-2" data-draggable="true" slot="header">
-          <h1 class="text-lg font-bold pointer-events-none">JIXO Control Panel</h1>
-          <button class="text-red aspect-square flex items-center justify-center w-6 cursor-pointer">✖️</button>
+        <div class="flex min-w-60 flex-row items-center justify-between gap-1 p-2" data-draggable="true" slot="header">
+          <h1 class="pointer-events-none text-lg font-bold">JIXO Control Panel</h1>
+          <button class="text-red flex aspect-square w-6 cursor-pointer items-center justify-center">✖️</button>
         </div>
       `;
       headerTemplate.content.querySelector("button")!.addEventListener("click", () => {
@@ -55,7 +55,7 @@ window.addEventListener("jixo-user-response", ((event: CustomEvent) => {
 export const isolatedContentScriptAPI = {
   async generateConfigFromMetadata(metadata: any): Promise<any> {
     const {mainContentScriptAPI} = await ensureJixoMainRuntime();
-    const workDirHandle = await mainContentScriptAPI.selectWorkspace();
+    const workDirHandle = await mainContentScriptAPI.getWorkspaceHandleName();
     if (!workDirHandle) throw new Error("Workspace not selected.");
 
     const result = await sessionRequest("generateConfigFromMetadata", {
@@ -69,27 +69,7 @@ export const isolatedContentScriptAPI = {
 
   async handleStartSync(): Promise<{status: "SYNC_STARTED" | "ERROR"; message?: string}> {
     const {mainContentScriptAPI} = await ensureJixoMainRuntime();
-    return await mainContentScriptAPI.startSync();
-  },
-
-  async handleApplyConfig(): Promise<{status: "SUCCESS" | "ERROR"; message?: string}> {
-    const {mainContentScriptAPI} = await ensureJixoMainRuntime();
-    const config = await mainContentScriptAPI.readConfigFile(false);
-    if (!config) {
-      return {status: "ERROR", message: "Config file (config.json) not found."};
-    }
-    await mainContentScriptAPI.applyPageConfig(config);
-    return {status: "SUCCESS"};
-  },
-
-  async handleApplyTemplate(): Promise<{status: "SUCCESS" | "ERROR"; message?: string}> {
-    const {mainContentScriptAPI} = await ensureJixoMainRuntime();
-    const templateConfig = await mainContentScriptAPI.readConfigFile(true);
-    if (!templateConfig) {
-      return {status: "ERROR", message: "Config template not found."};
-    }
-    await mainContentScriptAPI.writeConfigFile(templateConfig, false);
-    return {status: "SUCCESS"};
+    return mainContentScriptAPI.startSync();
   },
 
   async renderComponent(componentName: string, jobId: string | null, props: any): Promise<any> {

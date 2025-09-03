@@ -1,7 +1,8 @@
 import * as Comlink from "comlink";
-import type {IsolatedContentScriptAPI} from "../web/isolated/lib/content-script-api.tsx"; // Fixed path
-import {createBackgroundEndpoint, createEndpoint} from "./lib/comlink-extension/index.ts"; // Fixed import
+import type {IsolatedContentScriptAPI} from "../web/isolated/lib/content-script-api.tsx";
+import {createBackgroundEndpoint, createEndpoint} from "./lib/comlink-extension/index.ts";
 import {sidePanelAPI} from "./sidepanel.ts";
+import {globalWebSocket} from "./websocket.ts";
 
 export const contentScriptPorts = new Map<number, chrome.runtime.Port>();
 
@@ -19,6 +20,10 @@ export class BackgroundAPI {
     } else {
       throw new Error("No active tab found.");
     }
+  }
+
+  getServiceStatus() {
+    return globalWebSocket.getStatus();
   }
 }
 

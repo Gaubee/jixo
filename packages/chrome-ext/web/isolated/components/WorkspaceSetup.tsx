@@ -1,40 +1,28 @@
-import React, {useState} from "react";
+import {Button} from "@/components/ui/button.tsx";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
+import {FolderSearch} from "lucide-react";
+import React from "react";
 
-// In the new model, this component will call a function passed via props
-// which is connected to the content-script's API.
 interface WorkspaceSetupProps {
-  onWorkspaceSelected: (workspaceName: string) => void;
-  selectWorkspace: () => Promise<string | null>;
+  onSelectWorkspace: () => Promise<void>;
+  isLoading: boolean;
 }
 
-export function WorkspaceSetup({onWorkspaceSelected, selectWorkspace}: WorkspaceSetupProps) {
-  const [error, setError] = useState<string | null>(null);
-  const [isSelecting, setIsSelecting] = useState(false);
-
-  const handleSelectWorkspace = async () => {
-    setIsSelecting(true);
-    setError(null);
-    try {
-      const workspaceName = await selectWorkspace();
-      if (workspaceName) {
-        onWorkspaceSelected(workspaceName);
-      }
-    } catch (err) {
-      console.error("Error in handleSelectWorkspace:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred.");
-    } finally {
-      setIsSelecting(false);
-    }
-  };
-
+export function WorkspaceSetup({onSelectWorkspace, isLoading}: WorkspaceSetupProps) {
   return (
-    <div className="p-4 space-y-4 text-center">
-      <h1 className="text-lg font-bold">Welcome to JIXO</h1>
-      <p className="text-sm text-gray-600">To get started, please select a local folder to use as your workspace.</p>
-      <button onClick={handleSelectWorkspace} className="w-full p-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400" disabled={isSelecting}>
-        {isSelecting ? "Waiting for selection..." : "Select Workspace Folder"}
-      </button>
-      {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
+    <div className="p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Welcome to JIXO</CardTitle>
+          <CardDescription>Please select a project folder to get started.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button onClick={onSelectWorkspace} className="w-full" disabled={isLoading}>
+            <FolderSearch className="mr-2 h-4 w-4" />
+            {isLoading ? "Waiting for selection..." : "Select Workspace Folder"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }

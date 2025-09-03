@@ -1,4 +1,4 @@
-import {createStore, get, set} from "idb-keyval";
+import {createStore, del, get, set} from "idb-keyval";
 
 const customStore = createStore("jixo-db", "jixo-store");
 
@@ -16,6 +16,10 @@ export async function getWorkspaceHandle(): Promise<FileSystemDirectoryHandle | 
     return handle;
   }
   return undefined;
+}
+
+export async function unsetWorkspaceHandle(): Promise<void> {
+  await del("workspaceHandle", customStore);
 }
 
 async function verifyPermission(handle: FileSystemDirectoryHandle): Promise<boolean> {
