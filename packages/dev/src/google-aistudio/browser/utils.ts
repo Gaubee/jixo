@@ -1,4 +1,4 @@
-import {async_proxyer, func_remember} from "@gaubee/util";
+import { async_proxyer, func_remember } from "@gaubee/util";
 export * from "./easy_fs.js";
 
 export const prepareDirHandle = func_remember(async (): Promise<FileSystemDirectoryHandle> => {
@@ -7,7 +7,7 @@ export const prepareDirHandle = func_remember(async (): Promise<FileSystemDirect
     console.log("%c等待用户动作: 请选择一个文件夹，用来作为内容导入导出的协作目录.", styles.info);
   }, 100);
   try {
-    const rootDirHandle = await window.showDirectoryPicker({mode: "readwrite"});
+    const rootDirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
     console.log(`%c✅ 根文件夹已选择: %c${rootDirHandle.name}`, styles.success, styles.code);
     return rootDirHandle;
   } catch (e) {
@@ -19,6 +19,7 @@ export const prepareDirHandle = func_remember(async (): Promise<FileSystemDirect
         return prepareDirHandle();
       }
       if (e.name === "AbortError") {
+        prepareDirHandle.reset()
         throw new DOMException("用户取消了文件夹选择", "AbortError");
         // console.log("%c用户取消了文件夹选择", styles.error);
         // return;
@@ -74,7 +75,7 @@ export const aFollowedByB = (el: HTMLElement, aSelector: string, bSelector: stri
   };
 
   const mo = new MutationObserver(run);
-  mo.observe(el, {childList: true});
+  mo.observe(el, { childList: true });
   run(); // 立即跑一遍
   return () => mo.disconnect();
 };

@@ -120,3 +120,4 @@ export type FunctionCallStandardModule = output<typeof zFunctionCallStandardModu
 export const zFunctionCallMiniModule = z.extend(z.partial(zFunctionCallConfig), {
   functionCall: zFunctionCallFn,
 });
+

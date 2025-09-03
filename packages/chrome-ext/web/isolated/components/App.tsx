@@ -2,15 +2,17 @@ import * as Comlink from "comlink";
 import React, {useEffect, useState} from "react";
 import type {MainContentScriptAPI} from "../../main/lib/content-script-api.ts";
 import {getWorkspaceHandle} from "../../main/lib/workspace.ts";
+import type {IsolatedContentScriptAPI} from "../lib/content-script-api.tsx";
 import {ControlPanel} from "./ControlPanel.tsx";
 import {WorkspaceSetup} from "./WorkspaceSetup.tsx";
 type AppState = "initializing" | "needs-setup" | "ready";
 
 interface AppProps {
-  api: Comlink.Remote<MainContentScriptAPI>;
+  mainApi: Comlink.Remote<MainContentScriptAPI>;
+  isolatedApi: IsolatedContentScriptAPI; // Corrected: No Remote wrapper
 }
 
-export function App({api}: AppProps) {
+export function App({mainApi, isolatedApi}: AppProps) {
   const [appState, setAppState] = useState<AppState>("initializing");
   const [workspaceName, setWorkspaceName] = useState<string>("");
 
@@ -35,8 +37,17 @@ export function App({api}: AppProps) {
   }
 
   if (appState === "needs-setup") {
-    return <WorkspaceSetup onWorkspaceSelected={handleWorkspaceSelected} selectWorkspace={api.selectWorkspace} />;
+    return <WorkspaceSetup onWorkspaceSelected={handleWorkspaceSelected} selectWorkspace={mainApi.selectWorkspace} />;
   }
 
-  return <ControlPanel workspaceName={workspaceName} onStartSync={api.startSync} onApplyConfig={api.applyConfig} />;
+  return (
+    <ControlPanel
+      workspaceName={workspaceName}
+      mainApi={mainApi}
+      onGenerateConfig={isolatedApi.generateConfigFromMetadata}
+      onApplyTemplate={isolatedApi.handleApplyTemplate}
+      onApplyConfig={isolatedApi.handleApplyConfig}
+      onStartSync={isolatedApi.handleStartSync}
+    />
+  );
 }

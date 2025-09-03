@@ -1,5 +1,5 @@
 import {match, P} from "ts-pattern";
-import {z} from "zod";
+import { z } from "../node/z-min.js";
 
 // --------------------------------------------------------------------------
 // 1. TYPE DEFINITIONS

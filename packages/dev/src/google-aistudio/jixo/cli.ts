@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import {parseArgs} from "@std/cli/parse-args";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
-import {doStart, doSync} from "./index.js";
+import {doStart} from "./start.js";
+import {doSync} from "./sync.js";
 import {startWsServer} from "./ws-server.js";
 
 if (import_meta_ponyfill(import_meta_ponyfill(import.meta)).main) {
@@ -19,16 +20,19 @@ if (import_meta_ponyfill(import_meta_ponyfill(import.meta)).main) {
   });
 
   const command = args._[0];
+  const remainingArgs = process.argv.slice(3);
 
-  if (command === "start") {
-    const workDir = args._[1]?.toString() || process.cwd();
-    // Start command handles its own services
-    doStart({workDir, force: args.force});
-  } else {
-    // Legacy support for direct sync command
-    // Start the WebSocket server in the background
-    void startWsServer(parseInt(args.wsPort, 10));
-    // Run the main file synchronization logic
-    doSync(args);
+  switch (command) {
+    case "start": {
+      const workDir = args._[1]?.toString() || process.cwd();
+      doStart({workDir, force: args.force});
+      break;
+    }
+    default: {
+      // Legacy support for direct sync command
+      void startWsServer(parseInt(args.wsPort, 10));
+      doSync(args);
+      break;
+    }
   }
 }

@@ -1,46 +1,118 @@
-import React, {useState} from "react";
+import {useDebounce} from "@uidotdev/usehooks";
+import React, {memo, useEffect, useState} from "react";
+import type {MainContentScriptAPI} from "../../main/lib/content-script-api";
+import {ConfigPanel} from "./ConfigPanel.tsx";
+import * as Comlink from 'comlink'
+import type { AgentMetadata } from "@jixo/dev/browser";
 
-// In the new model, ControlPanel receives functions directly from its parent (content-script)
 interface ControlPanelProps {
   workspaceName: string;
+  mainApi:  Comlink.Remote<MainContentScriptAPI>;
+  onGenerateConfig: (metadata: AgentMetadata) => Promise<any>;
+  onApplyTemplate: () => Promise<{status: string; message?: string}>;
+  onApplyConfig: () => Promise<{status: string; message?: string}>;
   onStartSync: () => Promise<{status: string; message?: string}>;
-  onApplyConfig: () => Promise<{status: string; message?: string; appliedSettings: string[]}>;
 }
 
-export function ControlPanel({workspaceName, onStartSync, onApplyConfig}: ControlPanelProps) {
-  const [syncStatus, setSyncStatus] = useState<"idle" | "starting" | "started" | "error">("idle");
-  const [configStatus, setConfigStatus] = useState<"idle" | "applying" | "success" | "error">("idle");
-  const [error, setError] = useState<string | null>(null);
+const initialMetadata: AgentMetadata = {
+  agent: "coder",
+  dirs: [],
+  docs: [],
+  mcp: [],
+};
 
-  const handleStartSync = async () => {
-    setSyncStatus("starting");
+export function ControlPanel({workspaceName, mainApi, onGenerateConfig, onApplyTemplate, onApplyConfig, onStartSync}: ControlPanelProps) {
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState("");
+  const [metadata, setMetadata] = useState<AgentMetadata>(initialMetadata);
+  const [configDiffers, setConfigDiffers] = useState(false);
+
+  // Load initial metadata from config.json
+  useEffect(() => {
+    mainApi
+      .readConfigFile(false)
+      .then((config) => {
+        if (config?.metadata) {
+          setMetadata(config.metadata);
+        }
+      })
+      .catch(() => {
+        // Ignore if file doesn't exist
+      });
+  }, [mainApi]);
+
+  // Periodically check for differences between config and template
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const [config, template] = await Promise.all([mainApi.readConfigFile(false), mainApi.readConfigFile(true)]);
+        // Also check if template exists
+        setConfigDiffers(!!template && JSON.stringify(config) !== JSON.stringify(template));
+      } catch {
+        setConfigDiffers(false);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [mainApi]);
+
+  const debouncedWriteMetadata = async (newMetadata: AgentMetadata) => {
+    try {
+      const currentConfig = (await mainApi.readConfigFile(false)) || {};
+      await mainApi.writeConfigFile({...currentConfig, metadata: newMetadata}, false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save metadata.");
+    }
+  };
+
+  const handleMetadataChange = (newMetadata: AgentMetadata) => {
+    setMetadata(newMetadata);
+    debouncedWriteMetadata(newMetadata);
+  };
+
+  const handleGenerateConfig = async () => {
+    setStatus("Generating template...");
     setError(null);
     try {
-      const result = await onStartSync();
-      if (result.status === "SYNC_STARTED") {
-        setSyncStatus("started");
-      } else {
-        throw new Error(result.message || "Failed to start sync process.");
-      }
+      await onGenerateConfig(metadata);
+      setStatus("Template generated successfully!");
     } catch (err) {
-      setSyncStatus("error");
+      setStatus("Error generating template.");
+      setError(err instanceof Error ? err.message : "An unknown error occurred.");
+    }
+  };
+
+  const handleApplyTemplate = async () => {
+    setStatus("Applying template to config...");
+    setError(null);
+    try {
+      await onApplyTemplate();
+      setStatus("Template applied to config!");
+    } catch (err) {
+      setStatus("Error applying template.");
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
     }
   };
 
   const handleApplyConfig = async () => {
-    setConfigStatus("applying");
+    setStatus("Applying config to page...");
     setError(null);
     try {
-      const result = await onApplyConfig();
-      if (result.status === "SUCCESS") {
-        setConfigStatus("success");
-        setTimeout(() => setConfigStatus("idle"), 2000);
-      } else {
-        throw new Error(result.message || "Failed to apply config.");
-      }
+      await onApplyConfig();
+      setStatus("Config applied to page successfully!");
     } catch (err) {
-      setConfigStatus("error");
+      setStatus("Error applying config to page.");
+      setError(err instanceof Error ? err.message : "An unknown error occurred.");
+    }
+  };
+
+  const handleStartSync = async () => {
+    setStatus("Starting sync...");
+    setError(null);
+    try {
+      await onStartSync();
+      setStatus("Sync started.");
+    } catch (err) {
+      setStatus("Error starting sync.");
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
     }
   };
@@ -50,22 +122,26 @@ export function ControlPanel({workspaceName, onStartSync, onApplyConfig}: Contro
       <div className="p-2 border rounded bg-gray-50">
         <strong>Workspace:</strong> <code className="ml-2 bg-gray-200 px-1 rounded">{workspaceName}</code>
       </div>
-      <div className="space-y-3">
-        <button onClick={handleStartSync} className="w-full p-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-400" disabled={syncStatus !== "idle"}>
-          {syncStatus === "idle" && "Start Page Sync"}
-          {syncStatus === "starting" && "Starting..."}
-          {syncStatus === "started" && "Sync is Active"}
-          {syncStatus === "error" && "Retry Sync"}
-        </button>
-      </div>
+      <ConfigPanel metadata={metadata} onMetadataChange={handleMetadataChange} />
       <div className="space-y-3 pt-3 border-t">
-        <button onClick={handleApplyConfig} className="w-full p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400" disabled={configStatus === "applying"}>
-          {configStatus === "idle" && "Apply Config to Page"}
-          {configStatus === "applying" && "Applying..."}
-          {configStatus === "success" && "✅ Config Applied!"}
-          {configStatus === "error" && "Retry Apply Config"}
+        <button onClick={handleStartSync} className="w-full p-2 bg-cyan-600 text-white rounded hover:bg-cyan-700">
+          Start Page Sync
+        </button>
+        <button onClick={handleGenerateConfig} className="w-full p-2 bg-green-600 text-white rounded hover:bg-green-700">
+          Generate Config Template
+        </button>
+        <button
+          onClick={handleApplyTemplate}
+          className="w-full p-2 bg-orange-500 text-white rounded hover:bg-orange-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          disabled={!configDiffers}
+        >
+          Apply Template to Config
+        </button>
+        <button onClick={handleApplyConfig} className="w-full p-2 bg-indigo-600 text-white rounded hover:bg-indigo-700">
+          Apply Config to Page
         </button>
       </div>
+      {status && <p className="text-xs text-gray-500 mt-1">{status}</p>}
       {error && <p className="text-sm text-red-500 mt-2 p-2 bg-red-50 rounded border border-red-200">{error}</p>}
     </div>
   );

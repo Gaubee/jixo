@@ -45,6 +45,12 @@ export class JIXODraggableDialogElement extends HTMLElement {
     const css = String.raw;
     const html = String.raw;
     innerCssSheet.replaceSync(css`
+      @media (prefers-color-scheme: dark) {
+        dialog[is="jixo-draggable-dialog"] {
+          backdrop-filter: blur(10px) contrast(0.8);
+          background: rgba(0, 0, 0, 0.2); /* 半透明黑色背景 */
+        }
+      }
       dialog[is="jixo-draggable-dialog"] {
         top: ${this.SNAP_PADDING}px; /* 初始位置 */
         left: ${this.SNAP_PADDING}px; /* 初始位置 */

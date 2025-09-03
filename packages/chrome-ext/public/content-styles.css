@@ -5,68 +5,67 @@ ms-chat-session > ms-autoscroll-container {
 ms-chat-turn {
   padding-bottom: 8px !important;
 }
-.chat-turn-container {
-  padding-bottom: 16px !important;
-  border-radius: 16px;
-  corner-shape: superellipse(2);
-}
-.chat-turn-container > .actions-container > .actions {
-  top: -28px !important;
-  background-color: light-dark(#fff3, #0006) !important;
-  box-shadow: color-mix(in srgb, currentcolor, transparent) 0px 12px 16px 0;
-  border-radius: 20px !important;
-
-  backdrop-filter: blur(1px) contrast(1.5);
-  transition-duration: 200ms;
-  transition-timing-function: cubic-bezier(0, 0.95, 0.5, 0.9);
-  transition-property: opacity, backdrop-filter !important;
-  will-change: opacity, backdrop-filter !important;
-  &:hover {
-    backdrop-filter: blur(10px) contrast(1.2);
-  }
-}
 ms-chat-turn-options {
   margin-bottom: 0px !important;
 }
 
-.turn-separator {
-  box-shadow: 0 0 6px 0px currentColor;
-  border-color: color-mix(in srgb, currentColor, transparent) !important;
-  scale: 0.7;
-}
-
-.chat-turn-container.user {
-  background-color: #e91e6333;
-}
-.chat-turn-container.model {
-  background-color: #2196f333;
-}
-.chat-turn-container > .turn-footer {
-  background-color: light-dark(#fff3, #0006) !important;
-  box-shadow: color-mix(in srgb, currentcolor, transparent) 0px 1px 2px;
-  transition-duration: 250ms;
-  border-radius: 16px;
-  padding: 2px 8px;
-  opacity: 0;
-
-  bottom: -10px !important;
-  scale: 0.72;
-  transform-origin: left bottom;
-
-  backdrop-filter: blur(1px);
-  transition-duration: 200ms;
-  transition-timing-function: cubic-bezier(0, 0.95, 0.5, 0.9);
-  transition-property: opacity, backdrop-filter, scale !important;
-  will-change: opacity, backdrop-filter, scale !important;
-  &:hover {
-    backdrop-filter: blur(10px);
-    scale: 1;
+.chat-turn-container {
+  padding-bottom: 16px !important;
+  border-radius: 20px !important;
+  corner-shape: superellipse(2);
+  &.user {
+    background-color: #e91e6333;
   }
-}
-.chat-turn-container:hover > .turn-footer {
-  background-color: light-dark(#fff6, #0009) !important;
-  opacity: 1;
-}
-.chat-turn-container > .turn-footer > .model-run-time-pill {
-  background-color: transparent !important;
+  &.model {
+    background-color: #2196f333;
+  }
+  & > .actions-container > .actions {
+    top: -28px !important;
+    background-color: light-dark(#fff3, #0006) !important;
+    box-shadow: color-mix(in srgb, currentcolor, transparent) 0px 12px 16px 0;
+    border-radius: 20px !important;
+
+    backdrop-filter: blur(1px) contrast(1.5);
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0, 0.95, 0.5, 0.9);
+    transition-property: opacity, backdrop-filter !important;
+    will-change: opacity, backdrop-filter !important;
+    &:hover {
+      backdrop-filter: blur(10px) contrast(1.2);
+    }
+  }
+
+  .turn-separator {
+    translate: 0 -9px;
+  }
+
+  & > .turn-footer {
+    background-color: light-dark(#fff3, #0006) !important;
+    box-shadow: color-mix(in srgb, currentcolor, transparent) 0px 1px 2px;
+    transition-duration: 250ms;
+    border-radius: 16px;
+    padding: 2px 8px;
+    opacity: 0;
+
+    bottom: -10px !important;
+    scale: 0.72;
+    transform-origin: left bottom;
+
+    backdrop-filter: blur(1px);
+    transition-duration: 200ms;
+    transition-timing-function: cubic-bezier(0, 0.95, 0.5, 0.9);
+    transition-property: opacity, backdrop-filter, scale !important;
+    will-change: opacity, backdrop-filter, scale !important;
+    &:hover {
+      backdrop-filter: blur(10px);
+      scale: 1;
+    }
+  }
+  &:hover > .turn-footer {
+    background-color: light-dark(#fff6, #0009) !important;
+    opacity: 1;
+  }
+  & > .turn-footer > .model-run-time-pill {
+    background-color: transparent !important;
+  }
 }

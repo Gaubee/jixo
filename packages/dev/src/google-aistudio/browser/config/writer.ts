@@ -1,10 +1,11 @@
-import z from "zod";
-import {$, easy$, raf, while$, whileRaf} from "./utils.js";
+import type {z} from "../../node/z-min.js";
+import {$, easy$, raf, while$, whileRaf} from "../utils.js";
 
 /**
- * 设置tools
+ * 设置Function Call工具。
+ * @param tools - 一个符合JSON Schema格式的工具数组。
  */
-export const setFunctionCallTools = async (tools: z.core.JSONSchema.BaseSchema[]) => {
+export const setPageFunctionCallTools = async (tools: z.core.JSONSchema.BaseSchema[]) => {
   const switchBtn = async (label: string, enable: boolean) => {
     const btn = $<HTMLButtonElement>(`button[role="switch"][aria-label="${label}"]`);
     if (btn) {
@@ -45,9 +46,10 @@ export const setFunctionCallTools = async (tools: z.core.JSONSchema.BaseSchema[]
 };
 
 /**
- * 设置系统提示词
+ * 设置系统提示词。
+ * @param system - 要设置的系统提示词字符串。
  */
-export const setSystemPrompt = async (system: string) => {
+export const setPageSystemPrompt = async (system: string) => {
   const btn = await while$<HTMLButtonElement>('button[aria-label="System instructions"]');
   const inputClosed = btn.ariaDisabled !== "false";
   if (inputClosed) {
@@ -63,9 +65,10 @@ export const setSystemPrompt = async (system: string) => {
 };
 
 /**
- * 设置使用的模型
+ * 设置使用的模型。
+ * @param modelId - 模型的ID或部分名称。
  */
-export const setModel = async (modelId: string) => {
+export const setPageModel = async (modelId: string) => {
   const btn = await while$<HTMLButtonElement>("ms-prompt-run-settings ms-model-selector-v3>button");
 
   if ($("ms-model-carousel") === null) {
@@ -97,9 +100,9 @@ export const setModel = async (modelId: string) => {
 };
 
 /**
- * 清理历史记录
+ * 清理历史记录。
  */
-export const clearHistory = async () => {
+export const clearPageHistory = async () => {
   while (true) {
     const btn = $<HTMLButtonElement>("ms-chat-turn-options button");
     if (btn == null) {

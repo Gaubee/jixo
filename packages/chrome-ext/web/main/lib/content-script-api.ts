@@ -1,67 +1,61 @@
-import {getEasyFs, getTargetNamespace, prepareDirHandle, setFunctionCallTools, setModel, setSystemPrompt, syncInput, syncOutput} from "@jixo/dev/browser";
-import {z} from "zod";
-import {storeWorkspaceHandle} from "./workspace.ts";
-
-const ConfigSchema = z
-  .object({
-    systemPrompt: z.string().optional(),
-    tools: z.array(z.any()).optional(),
-    model: z.string().optional(),
-  })
-  .partial();
+import { applyPageConfig as applyPageConfigToBrowser, getEasyFs, getTargetNamespace, prepareDirHandle, syncInput, syncOutput } from "@jixo/dev/browser";
+import { storeWorkspaceHandle } from "./workspace.ts";
+import { func_remember } from "@gaubee/util";
+import type { PageConfig } from "@jixo/dev/browser";
 
 // --- API Definition ---
-export const mainContentScriptAPI = {
+export const mainContentScriptAPI = new class {
   async selectWorkspace(): Promise<string | null> {
     const dirHandle = await prepareDirHandle();
     await storeWorkspaceHandle(dirHandle);
     return dirHandle.name;
-  },
-  async startSync(): Promise<{status: "SYNC_STARTED" | "ERROR"; message?: string}> {
-    const handle = await prepareDirHandle();
-    if (!handle) return {status: "ERROR", message: "Workspace not selected."};
-    console.log(`JIXO BROWSER: Starting sync with workspace '${handle.name}'...`);
-    void syncOutput();
-    void syncInput();
-    return {status: "SYNC_STARTED"};
-  },
-  async applyConfig(): Promise<{status: "SUCCESS" | "ERROR"; message?: string; appliedSettings: string[]}> {
+  }
+
+  #startSync = func_remember(async (): Promise<{ status: "SYNC_STARTED" | "ERROR"; message?: string }> => {
+    try {
+      const handle = await prepareDirHandle();
+      console.log(`JIXO BROWSER: Starting sync with workspace '${handle.name}'...`);
+      void syncOutput();
+      void syncInput();
+      return { status: "SYNC_STARTED" };
+    } catch (e) {
+      this.#startSync.reset()
+      return { status: "ERROR", message: e instanceof Error ? e.message : String(e) };
+    }
+  })
+  startSync() {
+    return this.#startSync()
+  }
+
+  async applyPageConfig(config: any): Promise<void> {
+    return applyPageConfigToBrowser(config);
+  }
+
+  async readConfigFile(isTemplate: boolean): Promise<PageConfig | null> {
     try {
       const fs = await getEasyFs();
-      const configPath = `${getTargetNamespace()}.config.json`;
-      if (!(await fs.exists(configPath))) {
-        const templatePath = `${getTargetNamespace()}.config-template.json`;
-        if (await fs.exists(templatePath)) {
-          const templateContent = await fs.readFileText(templatePath);
-          await fs.writeFile(configPath, templateContent);
-        } else {
-          return {status: "ERROR", message: `Config file not found: ${configPath}`, appliedSettings: []};
-        }
+      const targetName = getTargetNamespace();
+      const filename = isTemplate ? `${targetName}.config-template.json` : `${targetName}.config.json`;
+      const content = await fs.readFileText(filename);
+      return JSON.parse(content);
+    } catch (error) {
+      if (error instanceof Error && error.name === "NotFoundError") {
+        return null;
       }
-      const configContent = await fs.readFileText(configPath);
-      const config = ConfigSchema.parse(JSON.parse(configContent));
-      const appliedSettings: string[] = [];
-      if (config.systemPrompt) {
-        await setSystemPrompt(config.systemPrompt);
-        appliedSettings.push("systemPrompt");
-      }
-      if (config.tools) {
-        await setFunctionCallTools(config.tools);
-        appliedSettings.push("tools");
-      }
-      if (config.model) {
-        await setModel(config.model);
-        appliedSettings.push("model");
-      }
-      return {status: "SUCCESS", appliedSettings};
-    } catch (error: any) {
-      return {status: "ERROR", message: error.message, appliedSettings: []};
+      throw error;
     }
-  },
+  }
 
-  ping() {
+  async writeConfigFile(config: object, isTemplate: boolean): Promise<void> {
+    const fs = await getEasyFs();
+    const targetName = getTargetNamespace();
+    const filename = isTemplate ? `${targetName}.config-template.json` : `${targetName}.config.json`;
+    await fs.writeFile(filename, JSON.stringify(config, null, 2));
+  }
+
+  async ping() {
     return true;
-  },
+  }
 };
 
 export type MainContentScriptAPI = typeof mainContentScriptAPI;

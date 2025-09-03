@@ -20,6 +20,7 @@
   "license": "MIT",
   "dependencies": {
     "@gaubee/util": "^0.35.0",
+    "@uidotdev/usehooks": "^2.4.1",
     "comlink": "^4.4.2",
     "idb-keyval": "^6.2.2",
     "react": "^19.1.1",

@@ -1,16 +1,19 @@
 import {blue, bold} from "@gaubee/nodekit";
 import type {UIRenderCommand, UIResponse} from "@jixo/tools-uikit";
 import http from "node:http";
+import {URL} from "node:url";
 import {WebSocket, WebSocketServer} from "ws";
+import {genPageConfig} from "../node/config.js";
 
-const wsMap = new Map<string, WebSocket>();
-let sessionIdCounter = 0;
+const globalWsMap = new Map<string, WebSocket>();
+const sessionWsMap = new Map<string, WebSocket>();
+let globalSessionIdCounter = 0;
 
-// --- Render Service ---
+// --- Render Service (Global Channel) ---
 type JobResolver = (response: any) => void;
 const jobListeners = new Map<string, JobResolver>();
 
-function handleUserResponse(message: UIResponse) {
+function handleGlobalUserResponse(message: UIResponse) {
   const callback = jobListeners.get(message.jobId);
   if (callback) {
     callback(message.payload);
@@ -21,9 +24,9 @@ function handleUserResponse(message: UIResponse) {
 }
 
 export const webSocketRenderHandler = (sessionId: string, command: UIRenderCommand): Promise<any> => {
-  const ws = wsMap.get(sessionId);
+  const ws = [...globalWsMap.values()].at(-1);
   if (!ws || ws.readyState !== WebSocket.OPEN) {
-    return Promise.reject(new Error(`No active WebSocket session found for ID: ${sessionId}`));
+    return Promise.reject(new Error(`No active global WebSocket session found.`));
   }
 
   return new Promise((resolve, reject) => {
@@ -49,39 +52,97 @@ export const webSocketRenderHandler = (sessionId: string, command: UIRenderComma
   });
 };
 
+// --- Session-level Request Handler ---
+async function handleSessionRequest(sessionId: string, message: any) {
+  const ws = sessionWsMap.get(sessionId);
+  if (!ws) return;
+
+  const {type, requestId, payload} = message;
+
+  try {
+    let result: any;
+    switch (type) {
+      case "generateConfigFromMetadata":
+        result = await genPageConfig({
+          sessionId,
+          workDir: payload.workDir,
+          metadata: payload.metadata,
+          outputFilename: `${sessionId}.config-template.json`,
+        });
+        break;
+      default:
+        throw new Error(`Unknown request type: ${type}`);
+    }
+    ws.send(JSON.stringify({type: "RESPONSE", requestId, status: "SUCCESS", payload: result}));
+  } catch (error) {
+    ws.send(JSON.stringify({type: "RESPONSE", requestId, status: "ERROR", error: error instanceof Error ? error.message : String(error)}));
+  }
+}
+
 // --- WebSocket Server ---
 export function startWsServer(port = 8765) {
   const server = http.createServer();
-  const wss = new WebSocketServer({server});
+  const wss = new WebSocketServer({noServer: true});
 
-  wss.on("connection", (ws) => {
-    const sessionId = `session-${sessionIdCounter++}`;
-    wsMap.set(sessionId, ws);
-    console.log(blue(`WebSocket client connected: ${bold(sessionId)}`));
+  wss.on("connection", (ws, request) => {
+    const url = new URL(request.url || "/", `ws://${request.headers.host}`);
+    const sessionIdMatch = url.pathname.match(/^\/session\/([^/]+)/);
 
-    ws.on("message", (data) => {
-      try {
-        const message = JSON.parse(data.toString());
-        if (message.type === "USER_RESPONSE" && message.jobId) {
-          handleUserResponse(message as UIResponse);
-        } else {
-          console.log(`Received unhandled message from ${sessionId}:`, message);
+    if (sessionIdMatch) {
+      // Session-specific connection
+      const sessionId = sessionIdMatch[1];
+      sessionWsMap.set(sessionId, ws);
+      console.log(blue(`WebSocket session client connected: ${bold(sessionId)}`));
+
+      ws.on("message", (data) => {
+        try {
+          const message = JSON.parse(data.toString());
+          if (message.type === "REQUEST" && message.requestId) {
+            handleSessionRequest(sessionId, message);
+          }
+        } catch (e) {
+          console.error(`Error processing message from session ${sessionId}:`, e);
         }
-      } catch (e) {
-        console.error(`Error processing message from ${sessionId}:`, e);
-      }
-    });
+      });
 
-    ws.on("close", () => {
-      wsMap.delete(sessionId);
-      console.log(blue(`WebSocket client disconnected: ${bold(sessionId)}`));
-    });
+      ws.on("close", () => {
+        sessionWsMap.delete(sessionId);
+        console.log(blue(`WebSocket session client disconnected: ${bold(sessionId)}`));
+      });
 
-    ws.on("error", (error) => {
-      console.error(`WebSocket error for ${sessionId}:`, error);
-    });
+      ws.on("error", (error) => console.error(`WebSocket error for session ${sessionId}:`, error));
+      ws.send(JSON.stringify({type: "SESSION_WELCOME", sessionId}));
+    } else {
+      // Global connection (from background script)
+      const globalId = `global-${globalSessionIdCounter++}`;
+      globalWsMap.set(globalId, ws);
+      console.log(blue(`WebSocket global client connected: ${bold(globalId)}`));
 
-    ws.send(JSON.stringify({type: "WELCOME", sessionId}));
+      ws.on("message", (data) => {
+        try {
+          const message = JSON.parse(data.toString());
+          if (message.type === "USER_RESPONSE" && message.jobId) {
+            handleGlobalUserResponse(message as UIResponse);
+          }
+        } catch (e) {
+          console.error(`Error processing message from global client ${globalId}:`, e);
+        }
+      });
+
+      ws.on("close", () => {
+        globalWsMap.delete(globalId);
+        console.log(blue(`WebSocket global client disconnected: ${bold(globalId)}`));
+      });
+
+      ws.on("error", (error) => console.error(`WebSocket error for global client ${globalId}:`, error));
+      ws.send(JSON.stringify({type: "GLOBAL_WELCOME", globalId}));
+    }
+  });
+
+  server.on("upgrade", (request, socket, head) => {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit("connection", ws, request);
+    });
   });
 
   server.listen(port, "127.0.0.1", () => {
