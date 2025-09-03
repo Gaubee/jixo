@@ -116,9 +116,6 @@ export class JIXODraggableDialogElement extends HTMLElement {
           flex-grow: 1;
           overflow-y: auto; /* 内容溢出时允许滚动 */
         }
-        * {
-          corner-shape: superellipse(2);
-        }
       }
     `);
     // 内部结构 (不再使用 Shadow DOM 和 slot，直接创建 div), 使用 data-part 属性模拟 CSS Parts

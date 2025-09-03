@@ -9,7 +9,7 @@ export const JIXORootElementHelper = {
 };
 export const JIXORootFactory = (config: {
   /// 提供adoptedStyleSheets
-  cssRoot: DocumentOrShadowRoot;
+  cssRoot: ShadowRoot;
   // 提供元素容器
   eleSource: HTMLElement;
   // 提供容器迁移的目标
@@ -21,6 +21,19 @@ export const JIXORootFactory = (config: {
   const openCssSheet = new CSSStyleSheet();
   const tailwindCssSheet = new CSSStyleSheet();
   tailwindCssSheet.replaceSync(tailwindCssContent);
+  if (true) {
+    // 处理 @property
+    const propertyRegStyleEle = document.createElement("style");
+    propertyRegStyleEle.dataset.jixoOutside = "true";
+    let propertyRegCssText = "";
+    for (const rule of tailwindCssSheet.cssRules) {
+      if (rule instanceof CSSPropertyRule) {
+        propertyRegCssText += rule.cssText + "\n";
+      }
+    }
+    propertyRegStyleEle.textContent = propertyRegCssText;
+    document.head.appendChild(propertyRegStyleEle);
+  }
   config.cssRoot.adoptedStyleSheets = [tailwindCssSheet, openCssSheet];
   JIXORootElementHelper.getAdoptedStyleSheets = () => config.cssRoot.adoptedStyleSheets;
   JIXORootElementHelper.pushSdoptedStyleSheets = (...values) => config.cssRoot.adoptedStyleSheets.push(...values);

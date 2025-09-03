@@ -1,14 +1,14 @@
-import {useDebounce} from "@uidotdev/usehooks";
+import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
+import {Button} from "@/components/ui/button.tsx";
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
+import {Toaster, toast} from "@/components/ui/sonner.tsx";
+import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
+import type {AgentMetadata} from "@jixo/dev/browser";
+import * as Comlink from "comlink";
+import {Terminal} from "lucide-react";
 import React, {useEffect, useState} from "react";
 import type {MainContentScriptAPI} from "../../main/lib/content-script-api";
-import {ConfigPanel, type AgentMetadata} from "./ConfigPanel.tsx";
-import * as Comlink from "comlink";
-import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
-import {Toaster, toast} from "@/components/ui/sonner.tsx";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
-import {Button} from "@/components/ui/button.tsx";
-import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
-import {Terminal} from "lucide-react";
+import {ConfigPanel} from "./ConfigPanel.tsx";
 
 interface ControlPanelProps {
   workspaceName: string;
@@ -74,14 +74,14 @@ export function ControlPanel({workspaceName, mainApi, onGenerateConfig, onApplyT
     return () => clearInterval(interval);
   }, [mainApi]);
 
-  const debouncedWriteMetadata = useDebounce(async (newMetadata: AgentMetadata) => {
+  const debouncedWriteMetadata = async (newMetadata: AgentMetadata) => {
     try {
       const currentConfig = (await mainApi.readConfigFile(false)) || {};
       await mainApi.writeConfigFile({...currentConfig, metadata: newMetadata}, false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save metadata.");
     }
-  }, 500);
+  };
 
   const handleMetadataChange = (newMetadata: AgentMetadata) => {
     setMetadata(newMetadata);
