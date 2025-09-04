@@ -37,11 +37,15 @@ export async function addToggleButton() {
     await isolatedContentScriptAPI.renderComponent("App", null, {});
     if (JIXODraggableDialogIsolatedHelper.isOpend) {
       JIXODraggableDialogIsolatedHelper.closeDialog();
-      btn.dataset.open = "false";
     } else {
       JIXODraggableDialogIsolatedHelper.openDialog();
-      btn.dataset.open = "true";
     }
   });
-  toolbarRightEle.insertBefore(template.content, toolbarRightEle.firstElementChild);
+  JIXODraggableDialogIsolatedHelper.onOpenChanged((opened) => {
+    btn.dataset.open = `${opened}`;
+  });
+  toolbarRightEle.insertBefore(btn, toolbarRightEle.firstElementChild);
+  JIXODraggableDialogIsolatedHelper.onDestroy(() => {
+    btn.remove();
+  });
 }

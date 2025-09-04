@@ -1,5 +1,5 @@
-import * as Comlink from "comlink";
-import {createEndpoint} from "../../service-worker/lib/comlink-extension/index.ts";
+import {createEndpoint} from "@/lib/comlink-extension/index.ts";
+import {Comlink} from "@jixo/dev/comlink";
 import {JIXODraggableDialogIsolatedHelper} from "./draggable-dialog-isolated.ts";
 import {isolatedContentScriptAPI} from "./lib/content-script-api.tsx"; // Fixed import
 import {addToggleButton} from "./toggle-button-element.ts";
@@ -15,8 +15,11 @@ function exposeApiToBackground() {
 async function initialize() {
   try {
     exposeApiToBackground();
-    await JIXODraggableDialogIsolatedHelper.prepare();
-    addToggleButton();
+    while (true) {
+      await JIXODraggableDialogIsolatedHelper.prepare();
+      await addToggleButton();
+      await JIXODraggableDialogIsolatedHelper.afterDestory;
+    }
   } catch (e) {
     console.error("JIXO CS: ISOLATED initialize failed", e);
   }

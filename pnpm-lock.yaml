@@ -485,6 +485,9 @@ importers:
       clipboardy:
         specifier: ^4.0.0
         version: 4.0.0
+      comlink:
+        specifier: ^4.4.2
+        version: 4.4.2
       debug:
         specifier: ^4.4.1
         version: 4.4.1

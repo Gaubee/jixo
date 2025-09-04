@@ -139,9 +139,11 @@ export class JIXODraggableDialogElement extends HTMLElement {
    * 静态方法，用于创建 JIXODraggableDialog 的实例。
    * 保持与 Web Component 版本的 `createElement` 接口一致。
    */
-  static createElement(): JIXODraggableDialogElement {
+  static createElement(sessionId:string): JIXODraggableDialogElement {
     // return new JIXODraggableDialogElement();
-    return document.createElement(JIXODraggableDialogElement.is) as JIXODraggableDialogElement;
+    const ele= document.createElement(JIXODraggableDialogElement.is) as JIXODraggableDialogElement;
+    ele.dataset.sessionId = sessionId
+    return ele
   }
 
   /**

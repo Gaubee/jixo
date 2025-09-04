@@ -1,4 +1,4 @@
-import * as Comlink from "comlink";
+import { Comlink } from "@jixo/dev/comlink";
 import React from "react";
 import type {MainContentScriptAPI} from "../../main/lib/content-script-api.ts";
 import type {IsolatedContentScriptAPI} from "../lib/content-script-api.tsx";

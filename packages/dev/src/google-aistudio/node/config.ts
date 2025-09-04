@@ -1,22 +1,8 @@
-import {green, writeJson} from "@gaubee/nodekit";
 import path from "node:path";
-import {z} from "./z-min.js";
-
-export const PageConfigMetadataSchema = z.partial(
-  z.object({
-    dirs: z.array(z.string()),
-    docs: z.array(z.string()),
-    mcp: z.array(z.object({command: z.string(), prefix: z.string()})),
-  }),
-);
-
-export type PageConfigMetadata = z.infer<typeof PageConfigMetadataSchema>;
+import {type AgentMetadata} from "../browser/index.js";
 
 export interface GenPageConfigOptions {
-  sessionId: string;
-  workDir: string;
-  metadata?: PageConfigMetadata;
-  outputFilename?: string;
+  metadata?: AgentMetadata;
 }
 
 /**
@@ -37,7 +23,7 @@ export interface GenPageConfigOptions {
  * ```
  * </todo>
  */
-export const genPageConfig = async ({sessionId, workDir, metadata, outputFilename}: GenPageConfigOptions) => {
+export const genPageConfig = async ({metadata}: GenPageConfigOptions) => {
   const systemPromptLines = ["You are a helpful assistant."];
   const tools: any[] = [];
 
@@ -70,9 +56,5 @@ export const genPageConfig = async ({sessionId, workDir, metadata, outputFilenam
     metadata, // Persist the metadata
   };
 
-  const filename = outputFilename || `${sessionId}.config.json`;
-  const configPath = path.join(workDir, filename);
-  writeJson(configPath, finalConfig);
-  console.log(green(`✅ Config generated at: ${path.relative(process.cwd(), configPath)}`));
   return finalConfig;
 };

@@ -1,12 +1,22 @@
 import {blue, bold} from "@gaubee/nodekit";
+import {map_get_or_put} from "@gaubee/util";
+import {Comlink} from "@jixo/dev/comlink";
 import type {UIRenderCommand, UIResponse} from "@jixo/tools-uikit";
 import http from "node:http";
 import {URL} from "node:url";
 import {WebSocket, WebSocketServer} from "ws";
+import {webSocketEndpoint} from "../../lib/comlink-adapters/web-socket-adapters.js";
+import type {AgentMetadata} from "../browser/index.js";
 import {genPageConfig} from "../node/config.js";
 
 const globalWsMap = new Map<string, WebSocket>();
-const sessionWsMap = new Map<string, WebSocket>();
+const sessionWsMap = new Map<
+  string,
+  {
+    instances: Map<WebSocket, Comlink.Endpoint>;
+    api: SessionAPI;
+  }
+>();
 let globalSessionIdCounter = 0;
 
 // --- Render Service (Global Channel) ---
@@ -53,31 +63,61 @@ export const webSocketRenderHandler = (sessionId: string, command: UIRenderComma
 };
 
 // --- Session-level Request Handler ---
-async function handleSessionRequest(sessionId: string, message: any) {
-  const ws = sessionWsMap.get(sessionId);
-  if (!ws) return;
+export class SessionAPI {
+  constructor(
+    readonly nid: number,
+    readonly sessionId: string,
+  ) {}
+  #dir: string | PromiseWithResolvers<string> = Promise.withResolvers<string>();
+  #changeWitter: PromiseWithResolvers<string> | null = null;
 
-  const {type, requestId, payload} = message;
-
-  try {
-    let result: any;
-    switch (type) {
-      case "generateConfigFromMetadata":
-        result = await genPageConfig({
-          sessionId,
-          workDir: payload.workDir,
-          metadata: payload.metadata,
-          outputFilename: `${sessionId}.config-template.json`,
-        });
-        break;
-      default:
-        throw new Error(`Unknown request type: ${type}`);
+  async setWorkDir(workDir: string) {
+    if (typeof this.#dir === "object") {
+      this.#dir.resolve(workDir);
     }
-    ws.send(JSON.stringify({type: "RESPONSE", requestId, status: "SUCCESS", payload: result}));
-  } catch (error) {
-    ws.send(JSON.stringify({type: "RESPONSE", requestId, status: "ERROR", error: error instanceof Error ? error.message : String(error)}));
+    if (workDir !== this.#dir) {
+      this.#dir = workDir;
+      this.#changeWitter?.resolve(workDir);
+      this.#changeWitter = null;
+    }
+  }
+  async whenWorkDirChanged() {
+    if (this.#changeWitter == null) {
+      this.#changeWitter = Promise.withResolvers();
+    }
+    return this.#changeWitter.promise;
+  }
+  async getWorkDir() {
+    if (typeof this.#dir === "object") {
+      return this.#dir.promise;
+    }
+    return this.#dir;
+  }
+  async hasWorkDir() {
+    return typeof this.#dir === "string";
+  }
+  async unsetWorkDir() {
+    if (typeof this.#dir === "string") {
+      this.#dir = Promise.withResolvers();
+    }
+  }
+  async generateConfigFromMetadata(metadata: AgentMetadata) {
+    const config = await genPageConfig({
+      metadata: metadata,
+    });
+    return Comlink.clone(config);
+  }
+  async ping() {
+    return "pong";
   }
 }
+const getNid = () => {
+  const nids = new Set(Array.from({length: sessionWsMap.size + 1}, (_, i) => i + 1));
+  for (const session of sessionWsMap.values()) {
+    nids.delete(session.api.nid);
+  }
+  return nids.values().next().value!;
+};
 
 // --- WebSocket Server ---
 export function startWsServer(port = 8765) {
@@ -85,33 +125,31 @@ export function startWsServer(port = 8765) {
   const wss = new WebSocketServer({noServer: true});
 
   wss.on("connection", (ws, request) => {
-    const url = new URL(request.url || "/", `ws://${request.headers.host}`);
+    const url = new URL(request.url || "/", `ws://${request.headers.host ?? "localhost:8080"}`);
     const sessionIdMatch = url.pathname.match(/^\/session\/([^/]+)/);
 
     if (sessionIdMatch) {
       // Session-specific connection
       const sessionId = sessionIdMatch[1];
-      sessionWsMap.set(sessionId, ws);
+      const ep = webSocketEndpoint({webSocket: ws, messageChannel: sessionId});
+      const nid = getNid();
+      const api = new SessionAPI(nid, sessionId);
+      Comlink.expose(api, ep);
+      const session = map_get_or_put(sessionWsMap, sessionId, () => {
+        return {instances: new Map(), api};
+      });
+      session.instances.set(ws, ep);
       console.log(blue(`WebSocket session client connected: ${bold(sessionId)}`));
 
-      ws.on("message", (data) => {
-        try {
-          const message = JSON.parse(data.toString());
-          if (message.type === "REQUEST" && message.requestId) {
-            handleSessionRequest(sessionId, message);
-          }
-        } catch (e) {
-          console.error(`Error processing message from session ${sessionId}:`, e);
-        }
-      });
-
       ws.on("close", () => {
-        sessionWsMap.delete(sessionId);
+        session.instances.delete(ws);
+        if (session.instances.size === 0) {
+          sessionWsMap.delete(sessionId);
+        }
         console.log(blue(`WebSocket session client disconnected: ${bold(sessionId)}`));
       });
 
       ws.on("error", (error) => console.error(`WebSocket error for session ${sessionId}:`, error));
-      ws.send(JSON.stringify({type: "SESSION_WELCOME", sessionId}));
     } else {
       // Global connection (from background script)
       const globalId = `global-${globalSessionIdCounter++}`;
@@ -139,6 +177,12 @@ export function startWsServer(port = 8765) {
     }
   });
 
+  server.on("request", (req, res) => {
+    if (req.url?.startsWith("/init-session")) {
+      return initSession(req, res);
+    }
+  });
+
   server.on("upgrade", (request, socket, head) => {
     wss.handleUpgrade(request, socket, head, (ws) => {
       wss.emit("connection", ws, request);
@@ -157,3 +201,38 @@ export function startWsServer(port = 8765) {
     }
   });
 }
+
+const initSession = (req: http.IncomingMessage, res: http.ServerResponse) => {
+  const url = new URL(`http://${process.env.HOST ?? "localhost"}${req.url}`);
+  const workDir = url.searchParams.get("workDir");
+  if (!workDir) {
+    return res.writeHead(400).end("workDir is required");
+  }
+  const nid = url.searchParams.get("nid");
+
+  const sessionId = url.searchParams.get("sessionId") ?? getSessionByNid(nid)?.api.sessionId;
+  if (!sessionId) {
+    return res.writeHead(400).end("sessionId is required");
+  }
+
+  const session = sessionWsMap.get(sessionId);
+  if (!session) {
+    return res.writeHead(400).end("session not found");
+  }
+  session.api.setWorkDir(workDir);
+  return res.writeHead(200).end();
+};
+
+const getSessionByNid = (nid?: number | string | null) => {
+  if (nid == null) {
+    return;
+  }
+  if (typeof nid === "string") {
+    nid = parseInt(nid);
+  }
+  for (const session of sessionWsMap.values()) {
+    if (session.api.nid === nid) {
+      return session;
+    }
+  }
+};

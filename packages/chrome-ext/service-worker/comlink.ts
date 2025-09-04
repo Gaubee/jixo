@@ -1,6 +1,6 @@
-import * as Comlink from "comlink";
+import { Comlink } from "@jixo/dev/comlink";
 import type {IsolatedContentScriptAPI} from "../web/isolated/lib/content-script-api.tsx";
-import {createBackgroundEndpoint, createEndpoint} from "./lib/comlink-extension/index.ts";
+import {createBackgroundEndpoint, createEndpoint} from "@/lib/comlink-extension/index.ts";
 import {sidePanelAPI} from "./sidepanel.ts";
 import {globalWebSocket} from "./websocket.ts";
 

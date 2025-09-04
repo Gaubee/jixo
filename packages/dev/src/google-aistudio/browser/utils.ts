@@ -6,12 +6,37 @@ export const restoreDirHandle = async (restoredHandle?: FileSystemDirectoryHandl
   if ((await restoredHandle?.queryPermission({mode: "readwrite"})) !== "granted") {
     restoredHandle = null;
   }
+  prepareDirHandle.reset();
   if (restoredHandle == null) {
-    prepareDirHandle.reset();
     restoredDirHandle = undefined;
   } else {
     console.log(`%c✅ Restored workspace access: %c${restoredHandle.name}`, styles.success, styles.code);
     restoredDirHandle = restoredHandle;
+  }
+};
+
+export const pickDirHandle = async (): Promise<FileSystemDirectoryHandle> => {
+  const ti = setTimeout(() => {
+    console.log("%c等待用户动作: 请选择一个文件夹", styles.info);
+  }, 100);
+  try {
+    const rootDirHandle = await window.showDirectoryPicker({mode: "readwrite"});
+    return rootDirHandle;
+  } catch (e) {
+    clearTimeout(ti);
+    if (e instanceof Error) {
+      if (e.name === "SecurityError" || e.name === "NotAllowedError") {
+        console.log("%c请将鼠标聚焦到窗口视图中", styles.info);
+        await delay(1000);
+        return pickDirHandle();
+      }
+      if (e.name === "AbortError") {
+        throw new DOMException("用户取消了文件夹选择", "AbortError");
+      }
+    }
+    throw e;
+  } finally {
+    clearTimeout(ti);
   }
 };
 
@@ -22,27 +47,9 @@ export const restoreDirHandle = async (restoredHandle?: FileSystemDirectoryHandl
  * @throws An error if the user cancels the prompt.
  */
 export const prepareDirHandle = func_remember(async (): Promise<FileSystemDirectoryHandle> => {
-  const ti = setTimeout(() => {
-    console.log("%c等待用户动作: 请选择一个文件夹，用来作为内容导入导出的协作目录.", styles.info);
-  }, 100);
-  try {
-    const rootDirHandle = restoredDirHandle ?? (await window.showDirectoryPicker({mode: "readwrite"}));
-    console.log(`%c✅ 根文件夹已选择: %c${rootDirHandle.name}`, styles.success, styles.code);
-    return rootDirHandle;
-  } catch (e) {
-    clearTimeout(ti);
-    if (e instanceof Error) {
-      if (e.name === "SecurityError" || e.name === "NotAllowedError") {
-        console.log("%c请将鼠标聚焦到窗口视图中", styles.info);
-        await delay(1000);
-        return prepareDirHandle();
-      }
-      if (e.name === "AbortError") {
-        throw new DOMException("用户取消了文件夹选择", "AbortError");
-      }
-    }
-    throw e;
-  }
+  const rootDirHandle = restoredDirHandle ?? (await pickDirHandle());
+  console.log(`%c✅ 根文件夹已选择，用来作为内容导入导出的协作目录: %c${rootDirHandle.name}`, styles.success, styles.code);
+  return rootDirHandle;
 });
 
 export const styles = {
@@ -67,12 +74,34 @@ export const delay = (ms: number) => new Promise((cb) => setTimeout(cb, ms));
 export const raf = () => new Promise((cb) => requestAnimationFrame(cb));
 export const whileRaf = async (condition: () => boolean, timeout = 3_000) => {
   const timeoutSignal = timeout > 0 ? AbortSignal.timeout(timeout) : null;
-  while (condition()) {
+  while (await condition()) {
+    await raf();
+    timeoutSignal?.throwIfAborted();
+  }
+};
+export const untilRaf = async (condition: () => boolean, timeout = 3_000) => {
+  const timeoutSignal = timeout > 0 ? AbortSignal.timeout(timeout) : null;
+  while (!(await condition())) {
     await raf();
     timeoutSignal?.throwIfAborted();
   }
 };
 
+export const whileDelay = async (condition: () => boolean | Promise<boolean>, timeout = 30_000, frameMs = 100) => {
+  const timeoutSignal = timeout > 0 ? AbortSignal.timeout(timeout) : null;
+  while (await condition()) {
+    await delay(frameMs);
+    timeoutSignal?.throwIfAborted();
+  }
+};
+
+export const untilDelay = async (condition: () => boolean | Promise<boolean>, timeout = 30_000, frameMs = 100) => {
+  const timeoutSignal = timeout > 0 ? AbortSignal.timeout(timeout) : null;
+  while (!(await condition())) {
+    await delay(frameMs);
+    timeoutSignal?.throwIfAborted();
+  }
+};
 export const aFollowedByB = (el: HTMLElement, aSelector: string, bSelector: string, cb: (aEle: HTMLElement, bEle: HTMLElement) => void) => {
   const run = () => {
     for (const bEle of el.querySelectorAll(`:scope > ${aSelector} + ${bSelector}`)) {

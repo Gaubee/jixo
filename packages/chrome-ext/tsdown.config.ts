@@ -1,3 +1,4 @@
+import path from "node:path";
 import {defineConfig, type UserConfig} from "tsdown";
 
 // 导出一个配置数组，tsdown 会依次执行它们
@@ -19,6 +20,9 @@ export default defineConfig(() => {
     outputOptions: {
       inlineDynamicImports: true,
       entryFileNames: "[name].js", // 仅 [name] 即可
+    },
+    alias: {
+      "@": path.resolve(__dirname, "src"),
     },
   } satisfies SimpleUserConfig;
 

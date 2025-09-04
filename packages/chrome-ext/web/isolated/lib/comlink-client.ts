@@ -1,5 +1,5 @@
-import * as Comlink from "comlink";
-import {createEndpoint} from "../../../service-worker/lib/comlink-extension/index.ts";
+import { Comlink } from "@jixo/dev/comlink";
+import {createEndpoint} from "@/lib/comlink-extension/index.ts";
 import type {BackgroundAPI, ContentScriptAPI, SidePanelAPI} from "./comlink-api-types.ts";
 
 // --- Singleton API Proxies ---

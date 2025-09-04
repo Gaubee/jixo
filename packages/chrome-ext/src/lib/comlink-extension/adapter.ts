@@ -1,4 +1,4 @@
-import * as Comlink from "comlink";
+import { Comlink } from "@jixo/dev/comlink";
 
 const SYMBOL = "__PORT__@";
 

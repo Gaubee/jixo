@@ -1,5 +1,5 @@
 import type {z} from "../../node/z-min.js";
-import {$, easy$, raf, while$, whileRaf} from "../utils.js";
+import {$, easy$, raf, while$, untilRaf} from "../utils.js";
 
 /**
  * 设置Function Call工具。
@@ -11,11 +11,11 @@ export const setPageFunctionCallTools = async (tools: z.core.JSONSchema.BaseSche
     if (btn) {
       if (btn.ariaChecked == null) {
         btn.click();
-        await whileRaf(() => btn.ariaChecked != null);
+        await untilRaf(() => btn.ariaChecked != null);
       }
       if (btn.ariaChecked != enable.toString()) {
         btn.click();
-        await whileRaf(() => btn.ariaChecked == enable.toString());
+        await untilRaf(() => btn.ariaChecked == enable.toString());
       }
     }
   };
@@ -60,7 +60,7 @@ export const setPageSystemPrompt = async (system: string) => {
   textareaEle.dispatchEvent(new Event("input"));
   if (inputClosed) {
     btn.click();
-    await whileRaf(() => btn.ariaDisabled !== "false");
+    await untilRaf(() => btn.ariaDisabled !== "false");
   }
 };
 
@@ -81,7 +81,7 @@ export const setPageModel = async (modelId: string) => {
   });
   if (modelCategoriesBtnEle) {
     modelCategoriesBtnEle.click();
-    whileRaf(() => modelCategoriesBtnEle.ariaSelected === "true");
+    untilRaf(() => modelCategoriesBtnEle.ariaSelected === "true");
   }
 
   const models = [...modelCarouselEle.querySelectorAll("ms-model-carousel-row")].map((ele) => {
@@ -95,7 +95,7 @@ export const setPageModel = async (modelId: string) => {
   const model = models.find((model) => model.name === modelId || model.id === modelId) || models.find((model) => model.id?.includes(modelId) || model.name?.includes(modelId));
   if (model?.btn) {
     model.btn.click();
-    await whileRaf(() => model.ele.classList.contains("selected"));
+    await untilRaf(() => model.ele.classList.contains("selected"));
   }
 };
 

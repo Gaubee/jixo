@@ -2,15 +2,16 @@ import {Button} from "@/components/ui/button.tsx";
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
 import type {AgentMetadata} from "@jixo/dev/browser";
-import * as Comlink from "comlink";
-import React, {useEffect, useState} from "react";
+import {Comlink} from "@jixo/dev/comlink";
+import React, {useContext, useEffect, useState} from "react";
 import type {MainContentScriptAPI} from "../../main/lib/content-script-api";
 import type {IsolatedContentScriptAPI} from "../lib/content-script-api.tsx";
 import {ConfigPanel} from "./ConfigPanel.tsx";
 import {useNotification} from "./Notification.tsx";
+import {SessionIdCtx} from "./context.ts";
 
 interface ControlPanelContentProps {
-  workspaceName: string;
+  workDirFullpath: string;
   onSelectWorkspace: () => Promise<void>;
   mainApi: Comlink.Remote<MainContentScriptAPI>;
   isolatedApi: IsolatedContentScriptAPI;
@@ -23,11 +24,12 @@ const initialMetadata: AgentMetadata = {
   mcp: [],
 };
 
-export function ControlPanelContent({workspaceName, onSelectWorkspace, mainApi, isolatedApi}: ControlPanelContentProps) {
+export function ControlPanelContent({workDirFullpath, onSelectWorkspace, mainApi, isolatedApi}: ControlPanelContentProps) {
   const [metadata, setMetadata] = useState<AgentMetadata>(initialMetadata);
   const [configDiffers, setConfigDiffers] = useState(false);
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
   const {addNotification} = useNotification();
+  const sessionId = useContext(SessionIdCtx);
 
   const handleAction = async (actionName: string, actionFn: () => Promise<any>) => {
     setIsLoading((prev) => ({...prev, [actionName]: true}));
@@ -44,7 +46,7 @@ export function ControlPanelContent({workspaceName, onSelectWorkspace, mainApi, 
 
   useEffect(() => {
     mainApi
-      .readConfigFile(false)
+      .readConfigFile(sessionId, false)
       .then((config) => {
         if (config?.metadata) {
           setMetadata(config.metadata);
@@ -56,7 +58,7 @@ export function ControlPanelContent({workspaceName, onSelectWorkspace, mainApi, 
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const [config, template] = await Promise.all([mainApi.readConfigFile(false), mainApi.readConfigFile(true)]);
+        const [config, template] = await Promise.all([mainApi.readConfigFile(sessionId, false), mainApi.readConfigFile(sessionId, true)]);
         setConfigDiffers(!!template && JSON.stringify(config) !== JSON.stringify(template));
       } catch {
         setConfigDiffers(false);
@@ -68,8 +70,8 @@ export function ControlPanelContent({workspaceName, onSelectWorkspace, mainApi, 
   const handleMetadataChange = async (newMetadata: AgentMetadata) => {
     setMetadata(newMetadata);
     try {
-      const currentConfig = (await mainApi.readConfigFile(false)) || {};
-      await mainApi.writeConfigFile({...currentConfig, metadata: newMetadata}, false);
+      const currentConfig = (await mainApi.readConfigFile(sessionId, false)) || {};
+      await mainApi.writeConfigFile(sessionId, false, JSON.stringify({...currentConfig, metadata: newMetadata}, null, 2));
     } catch (err) {
       addNotification("error", err instanceof Error ? err.message : "Failed to save metadata.");
     }
@@ -85,7 +87,7 @@ export function ControlPanelContent({workspaceName, onSelectWorkspace, mainApi, 
         <ConfigPanel
           metadata={metadata}
           onMetadataChange={handleMetadataChange}
-          onGenerateConfig={() => handleAction("Generate Config", () => isolatedApi.generateConfigFromMetadata(metadata))}
+          onGenerateConfig={() => handleAction("Generate Config", () => isolatedApi.generateConfigFromMetadata(sessionId, metadata))}
         />
       </TabsContent>
       <TabsContent value="synchronization">
@@ -96,21 +98,21 @@ export function ControlPanelContent({workspaceName, onSelectWorkspace, mainApi, 
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="bg-muted text-muted-foreground rounded border p-2">
-              <strong>Workspace:</strong> <Button onClick={onSelectWorkspace}>{workspaceName}</Button>
+              <strong>Workspace:</strong> <Button onClick={onSelectWorkspace}>{workDirFullpath}</Button>
             </div>
             <div className="space-y-3 border-t pt-4">
               <Button onClick={() => handleAction("Start Sync", mainApi.startSync)} className="w-full" disabled={isLoading["Start Sync"]}>
                 {isLoading["Start Sync"] ? "Starting..." : "Start Page Sync"}
               </Button>
               <Button
-                onClick={() => handleAction("Apply Template", mainApi.applyTemplateConfigFile)}
+                onClick={() => handleAction("Apply Template", () => mainApi.applyTemplateConfigFile(sessionId))}
                 className="w-full"
                 variant="secondary"
                 disabled={!configDiffers || isLoading["Apply Template"]}
               >
                 {isLoading["Apply Template"] ? "Applying..." : "Apply Template to Config"}
               </Button>
-              <Button onClick={() => handleAction("Apply Config", mainApi.applyConfigFile)} className="w-full" disabled={isLoading["Apply Config"]}>
+              <Button onClick={() => handleAction("Apply Config", () => mainApi.applyConfigFile(sessionId))} className="w-full" disabled={isLoading["Apply Config"]}>
                 {isLoading["Apply Config"] ? "Applying..." : "Apply Config to Page"}
               </Button>
             </div>

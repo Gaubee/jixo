@@ -1,5 +1,5 @@
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
-import * as Comlink from "comlink";
+import {Comlink} from "@jixo/dev/comlink";
 import {LoaderCircle, WifiOff} from "lucide-react";
 import React from "react";
 import type {MainContentScriptAPI} from "../../main/lib/content-script-api.ts";
@@ -17,7 +17,7 @@ interface ControlPanelProps {
 
 export function ControlPanel({mainApi, isolatedApi}: ControlPanelProps) {
   const serviceStatus = useServiceStatus();
-  const {workspaceStatus, workspaceName, selectWorkspace, isLoading} = useWorkspace(mainApi, isolatedApi);
+  const {workspaceStatus, workspaceName, workDirFullpath, selectWorkspace, isLoading} = useWorkspace(mainApi, isolatedApi);
 
   return (
     <NotificationProvider>
@@ -26,20 +26,20 @@ export function ControlPanel({mainApi, isolatedApi}: ControlPanelProps) {
           <Alert variant="destructive">
             <WifiOff className="h-4 w-4" />
             <AlertTitle>Disconnected</AlertTitle>
-            <AlertDescription>Cannot connect to JIXO service. Please run `deno run -A jsr:@jixo/cli start` in your terminal.</AlertDescription>
+            <AlertDescription>Cannot connect to JIXO service. Please run `deno run -A jsr:@jixo/cli/start ` in your terminal.</AlertDescription>
           </Alert>
         )}
         {serviceStatus === "connecting" && (
-          <div className="text-muted-foreground flex items-center justify-center p-4">
+          <div className="bg-muted text-muted-foreground flex items-center justify-center rounded-2xl p-4">
             <LoaderCircle className="mr-2 h-6 w-6 animate-spin" />
             <span>Connecting...</span>
           </div>
         )}
         {serviceStatus === "connected" &&
           (workspaceStatus === "ready" ? (
-            <ControlPanelContent workspaceName={workspaceName} onSelectWorkspace={selectWorkspace} mainApi={mainApi} isolatedApi={isolatedApi} />
+            <ControlPanelContent workDirFullpath={workDirFullpath} onSelectWorkspace={selectWorkspace} mainApi={mainApi} isolatedApi={isolatedApi} />
           ) : (
-            <WorkspaceSetup onSelectWorkspace={selectWorkspace} isLoading={isLoading} />
+            <WorkspaceSetup workspaceName={workspaceName} workspaceStatus={workspaceStatus} onSelectWorkspace={selectWorkspace} isLoading={isLoading} />
           ))}
       </div>
     </NotificationProvider>
