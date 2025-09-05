@@ -1,11 +1,11 @@
-import type {AgentMetadata} from "@jixo/dev/browser";
-import React from "react";
 import {Button} from "@/components/ui/button.tsx";
 import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
-import {CoderAgentConfigPanel} from "./CoderAgentConfigPanel.tsx";
+import type {AgentMetadata} from "@jixo/dev/browser";
 import {LoaderCircle} from "lucide-react";
+import React from "react";
+import {CoderAgentConfigPanel} from "./CoderAgentConfigPanel.tsx";
 
 interface ConfigPanelProps {
   metadata: AgentMetadata;
@@ -15,15 +15,18 @@ interface ConfigPanelProps {
   onMetadataChange: (metadata: AgentMetadata) => void;
   onApplyChanges: () => Promise<void>;
   onCancelChanges: () => Promise<void>;
+  onPreview: (patterns: string[]) => Promise<string[]>;
 }
 
-export function ConfigPanel({metadata, isDirty, isGenerating, isLoading, onMetadataChange, onApplyChanges, onCancelChanges}: ConfigPanelProps) {
+export function ConfigPanel({metadata, isDirty, isGenerating, isLoading, onMetadataChange, onApplyChanges, onCancelChanges, onPreview}: ConfigPanelProps) {
   const agentType = metadata.agent || "coder";
 
   const handleAgentChange = (value: string) => {
     if (value === "coder") {
       onMetadataChange({
         agent: "coder",
+        codeName: metadata.codeName,
+        workDir: metadata.workDir,
         dirs: metadata.dirs || [],
         docs: metadata.docs || [],
         mcp: metadata.mcp || [],
@@ -54,7 +57,7 @@ export function ConfigPanel({metadata, isDirty, isGenerating, isLoading, onMetad
 
         {agentType === "coder" && (
           <div className="border-t pt-4">
-            <CoderAgentConfigPanel metadata={metadata} onMetadataChange={onMetadataChange} />
+            <CoderAgentConfigPanel metadata={metadata} onMetadataChange={onMetadataChange} onPreview={onPreview} />
           </div>
         )}
       </CardContent>

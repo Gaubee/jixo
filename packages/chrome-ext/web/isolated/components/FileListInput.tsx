@@ -2,17 +2,20 @@ import React, {useState} from "react";
 import {Button} from "@/components/ui/button.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import {Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger} from "@/components/ui/dialog.tsx";
-import {X} from "lucide-react";
+import {LoaderCircle, X} from "lucide-react";
 
 interface FileListInputProps {
   label: string;
   values: string[];
   onChange: (values: string[]) => void;
   placeholder: string;
+  onPreview: (patterns: string[]) => Promise<string[]>;
 }
 
-export function FileListInput({label, values, onChange, placeholder}: FileListInputProps) {
+export function FileListInput({label, values, onChange, placeholder, onPreview}: FileListInputProps) {
   const [inputValue, setInputValue] = useState("");
+  const [previewFiles, setPreviewFiles] = useState<string[]>([]);
+  const [isPreviewing, setIsPreviewing] = useState(false);
 
   const handleAddItem = () => {
     if (inputValue.trim() && !values.includes(inputValue.trim())) {
@@ -32,6 +35,23 @@ export function FileListInput({label, values, onChange, placeholder}: FileListIn
     }
   };
 
+  const handlePreviewClick = async (patterns: string[]) => {
+    if (patterns.length === 0) {
+      setPreviewFiles([]);
+      return;
+    }
+    setIsPreviewing(true);
+    try {
+      const files = await onPreview(patterns);
+      setPreviewFiles(files);
+    } catch (error) {
+      console.error("Preview failed:", error);
+      setPreviewFiles(["Error fetching files."]);
+    } finally {
+      setIsPreviewing(false);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium text-gray-700">{label}</label>
@@ -45,18 +65,17 @@ export function FileListInput({label, values, onChange, placeholder}: FileListIn
         {values.length > 0 ? (
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="link" className="p-0 h-auto text-xs">
+              <Button variant="link" className="h-auto p-0 text-xs" onClick={() => handlePreviewClick(values)}>
+                {isPreviewing ? <LoaderCircle className="mr-1 h-3 w-3 animate-spin" /> : null}
                 Preview {values.length} selected path(s)
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{label} Paths</DialogTitle>
+                <DialogTitle>Matched Files for: {label}</DialogTitle>
               </DialogHeader>
-              <div className="max-h-60 overflow-y-auto font-mono text-xs space-y-1">
-                {values.map((value, index) => (
-                  <p key={index}>{value}</p>
-                ))}
+              <div className="bg-muted max-h-60 space-y-1 overflow-y-auto rounded p-2 font-mono text-xs">
+                {previewFiles.length > 0 ? previewFiles.map((file, index) => <p key={index}>{file}</p>) : <p>No files matched.</p>}
               </div>
             </DialogContent>
           </Dialog>
@@ -64,10 +83,10 @@ export function FileListInput({label, values, onChange, placeholder}: FileListIn
           "No paths added."
         )}
       </div>
-      <div className="space-y-1 max-h-24 overflow-y-auto pr-2">
+      <div className="max-h-24 space-y-1 overflow-y-auto pr-2">
         {values.map((value, index) => (
-          <div key={index} className="flex items-center justify-between bg-muted p-1 rounded text-xs">
-            <span className="font-mono truncate ml-2">{value}</span>
+          <div key={index} className="bg-muted flex items-center justify-between rounded p-1 text-xs">
+            <span className="ml-2 truncate font-mono">{value}</span>
             <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleRemoveItem(index)}>
               <X className="h-3 w-3" />
             </Button>

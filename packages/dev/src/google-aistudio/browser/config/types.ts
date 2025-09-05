@@ -2,7 +2,10 @@ import {z} from "../../node/z-min.js";
 
 export const zCoderAgentMetadata = z.object({
   agent: z.literal("coder"),
+  /// 任务代号
+  codeName: z.string(),
   dirs: z.array(z.string()),
+  workDir: z.string(),
   docs: z.array(z.string()),
   mcp: z.array(z.object({command: z.string(), prefix: z.optional(z.string())})),
 });

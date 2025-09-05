@@ -6,6 +6,7 @@ import http from "node:http";
 import path from "node:path";
 import {URL} from "node:url";
 import {WebSocket, WebSocketServer} from "ws";
+import {globFilesWithParams} from "../../gen-prompt/replacers/file-replacer.js";
 import {webSocketEndpoint} from "../../lib/comlink-adapters/web-socket-adapters.js";
 import type {AgentMetadata} from "../browser/index.js";
 import {genPageConfig} from "../node/config.js";
@@ -102,15 +103,19 @@ export class SessionAPI {
       this.#dir = Promise.withResolvers();
     }
   }
-  async generateConfigFromMetadata(metadata: AgentMetadata) {
+  generateConfigFromMetadata = Comlink.clone(async (metadata: AgentMetadata) => {
+    const config = await genPageConfig(metadata);
+    return config;
+  });
+  resolvePaths = Comlink.clone(async (paths: string[]): Promise<string[]> => {
     const workDir = await this.getWorkDir();
-    const config = await genPageConfig({
-      metadata: metadata,
-      workDir: workDir,
-      toolsDir: path.join(workDir, "tools"),
-    });
-    return Comlink.clone(config);
-  }
+    return paths.map((p) => path.resolve(workDir, p));
+  });
+  globFiles = Comlink.clone(async (patterns: string[]): Promise<string[]> => {
+    const workDir = await this.getWorkDir();
+    const allFiles = await Promise.all(patterns.map((p) => globFilesWithParams(p, workDir)));
+    return [...new Set(allFiles.flat())];
+  });
   async ping() {
     return "pong";
   }

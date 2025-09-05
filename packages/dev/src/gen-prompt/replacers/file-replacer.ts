@@ -1,5 +1,6 @@
 import {normalizeFilePath} from "@gaubee/nodekit";
 import {map_get_or_put_async} from "@gaubee/util";
+import {defaultParseSearch} from "@tanstack/router-core";
 import {globbySync, isDynamicPattern} from "globby";
 import fs from "node:fs";
 import path from "node:path";
@@ -66,6 +67,34 @@ export function useFileOrInject(
 }
 
 /**
+ * Core logic for globbing files with query-like parameters.
+ * This is the unified engine for both gen-prompt and frontend previews.
+ * @param patternWithParams - A single pattern string, e.g., "src?ignore=*.test.ts"
+ * @param baseDir - The current working directory.
+ * @returns An array of matched file paths.
+ */
+export function globFilesWithParams(patternWithParams: string, baseDir: string): string[] {
+  const [globOrFilepath, paramString] = patternWithParams.split("?");
+  const params = defaultParseSearch(paramString || "");
+  const isGlob = isDynamicPattern(globOrFilepath);
+
+  const isInsideBaseDir = (targetPath: string) => normalizeFilePath(path.resolve(baseDir, targetPath)).startsWith(normalizeFilePath(baseDir) + "/");
+  const isOutBaseDirFile = !isDynamicPattern(globOrFilepath) && !isInsideBaseDir(globOrFilepath);
+
+  const files = isOutBaseDirFile
+    ? [globOrFilepath]
+    : globbySync(
+        globOrFilepath,
+        paramsToGlobbyOptions(params, {
+          gitignore: isGlob ? true : false,
+          cwd: baseDir,
+        }),
+      ).map((entry) => (typeof entry === "string" ? entry : entry.path));
+
+  return files;
+}
+
+/**
  * Handles replacements for file-based sources like local file system, URLs, and internal jixo protocol.
  */
 export const handleFileReplacement: Replacer = async (options) => {
@@ -102,21 +131,8 @@ export const handleFileReplacement: Replacer = async (options) => {
  */
 export const localFileReplacement: Replacer = async (options) => {
   const {globOrFilepath, mode, params, rootResolver, baseDir} = options;
-  // Handle local file system paths
-  const isGlob = isDynamicPattern(globOrFilepath);
-  const isInsideBaseDir = (targetPath: string) => normalizeFilePath(path.resolve(baseDir, targetPath)).startsWith(normalizeFilePath(baseDir) + "/");
-  const isOutBaseDirFile = !isGlob && !isInsideBaseDir(globOrFilepath);
 
-  const files = isOutBaseDirFile
-    ? [globOrFilepath]
-    : globbySync(
-        globOrFilepath,
-        paramsToGlobbyOptions(params, {
-          // 如果是一个glob，那么默认启用 gitignore。这样意味着如果直接提供一个明确的文件路径，那么默认不会走gitignore判定
-          gitignore: isGlob ? true : false,
-          cwd: baseDir,
-        }),
-      ).map((entry) => (typeof entry === "string" ? entry : entry.path));
+  const files = globFilesWithParams(globOrFilepath, baseDir);
 
   if (files.length === 0) {
     const errorMsg = `No files found for pattern: ${globOrFilepath}`;

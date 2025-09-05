@@ -10,7 +10,7 @@ import type {MainContentScriptAPI} from "../../main/lib/content-script-api";
 import type {IsolatedContentScriptAPI} from "../lib/content-script-api.tsx";
 import {ConfigPanel} from "./ConfigPanel.tsx";
 import {useNotification} from "./Notification.tsx";
-import {SessionIdCtx} from "./context.ts";
+import {SessionAPICtx, SessionIdCtx} from "./context.ts";
 
 interface ControlPanelContentProps {
   workDirFullpath: string;
@@ -21,6 +21,8 @@ interface ControlPanelContentProps {
 
 const initialMetadata: AgentMetadata = {
   agent: "coder",
+  codeName: "",
+  workDir: "",
   dirs: [],
   docs: [],
   mcp: [],
@@ -41,6 +43,7 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace, mainApi
   const [isGenerating, setIsGenerating] = useState(false);
   const {addNotification} = useNotification();
   const sessionId = useContext(SessionIdCtx);
+  const sessionApi = useContext(SessionAPICtx);
 
   const stagedConfigKey = `staged-config-${sessionId}`;
 
@@ -113,7 +116,18 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace, mainApi
   const handleMetadataChange = async (newMetadata: AgentMetadata) => {
     setIsGenerating(true);
     try {
-      const newStagedConfig = await isolatedApi.generateConfigFromMetadata(sessionId, newMetadata);
+      // Frontend-driven path normalization
+      const resolvedDirs = (newMetadata.dirs || []).map((p) => (p.startsWith("/") || /^[a-zA-Z]:\\/.test(p) ? p : `${workDirFullpath}/${p}`));
+      const resolvedDocs = (newMetadata.docs || []).map((p) => (p.startsWith("/") || /^[a-zA-Z]:\\/.test(p) ? p : `${workDirFullpath}/${p}`));
+
+      const normalizedMetadata: AgentMetadata = {
+        ...newMetadata,
+        workDir: workDirFullpath,
+        dirs: [...new Set(resolvedDirs)],
+        docs: [...new Set(resolvedDocs)],
+      };
+
+      const newStagedConfig = await isolatedApi.generateConfigFromMetadata(sessionId, normalizedMetadata);
       setStagedConfig(newStagedConfig);
       await set(stagedConfigKey, newStagedConfig);
     } catch (err) {
@@ -138,6 +152,10 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace, mainApi
     addNotification("info", "Changes have been discarded.");
   };
 
+  const handlePreview = (patterns: string[]) => {
+    return sessionApi.globFiles(patterns);
+  };
+
   return (
     <Tabs defaultValue="configuration">
       <TabsList className="grid w-full grid-cols-2">
@@ -153,6 +171,7 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace, mainApi
           isLoading={isLoading["Apply Config"] || false}
           onApplyChanges={handleApplyChanges}
           onCancelChanges={handleCancelChanges}
+          onPreview={handlePreview}
         />
       </TabsContent>
       <TabsContent value="synchronization">

@@ -18,32 +18,35 @@ export interface GenPageConfigOptions {
  * @param options - Configuration options including metadata, work directory, and tools directory.
  * @returns A promise that resolves to the generated PageConfig object.
  */
-export const genPageConfig = async ({metadata, workDir, toolsDir}: GenPageConfigOptions): Promise<PageConfig> => {
+export const genPageConfig = async (metadata: AgentMetadata): Promise<PageConfig> => {
   const systemPromptTemplate: string[] = ["[JIXO:CODER](@INJECT)"];
-  const tools: any[] = [];
+  const tools: Array<{name: string; description: string; parameters: any}> = [];
 
-  // 1. Dynamically generate tool declarations from the filesystem
-  try {
-    const functionCallModules = await defineFunctionCalls(toolsDir);
-    for (const fc of functionCallModules.values()) {
-      const {name, description, paramsSchema} = fc.module;
-      let parameters = {};
-      if (paramsSchema) {
-        try {
-          // Convert Zod schema to JSON schema for the tool definition
-          parameters = z.toJSONSchema(z.object(paramsSchema));
-        } catch (error) {
-          console.warn(`Could not convert Zod schema for tool "${name}":`, error);
+  const toolsDirs = [metadata.workDir, path.join(metadata.workDir, "tools")];
+  for (const toolsDir of toolsDirs) {
+    // 1. Dynamically generate tool declarations from the filesystem
+    try {
+      const functionCallModules = await defineFunctionCalls(toolsDir);
+      for (const [baseName, fc] of functionCallModules) {
+        const {name, description, paramsSchema} = fc.module;
+        let parameters = {};
+        if (paramsSchema) {
+          try {
+            // Convert Zod schema to JSON schema for the tool definition
+            parameters = z.toJSONSchema(z.object(paramsSchema));
+          } catch (error) {
+            console.warn(`Could not convert Zod schema for tool "${name}":`, error);
+          }
         }
+        tools.push({
+          name: name ?? baseName,
+          description: description || "No description provided.",
+          parameters,
+        });
       }
-      tools.push({
-        name,
-        description: description || "No description provided.",
-        parameters,
-      });
+    } catch (error) {
+      console.error(`Error defining function calls from ${toolsDir}:`, error);
     }
-  } catch (error) {
-    console.error(`Error defining function calls from ${toolsDir}:`, error);
   }
 
   // 2. Build the system prompt template from metadata
@@ -60,9 +63,9 @@ export const genPageConfig = async ({metadata, workDir, toolsDir}: GenPageConfig
   }
 
   // 3. Use gen-prompt engine to render the final system prompt
-  const workDirResolver = createResolver(workDir);
+  const workDirResolver = createResolver(metadata.workDir);
   const finalSystemPrompt = await _gen_content(
-    path.basename(workDir), // Use workDir name as codeName
+    (metadata.codeName || metadata.workDir.split(/[\/\\]+/).findLast((v) => !v.startsWith("."))) ?? "NoNameJob", // Use workDir name as codeName
     systemPromptTemplate.join("\n"),
     workDirResolver,
   );
