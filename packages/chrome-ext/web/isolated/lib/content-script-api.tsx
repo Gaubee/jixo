@@ -1,3 +1,4 @@
+import {PortalContainerCtx} from "@/components/ui/context.ts";
 import type {AgentMetadata} from "@jixo/dev/browser";
 import type {} from "@jixo/dev/node";
 import React from "react";
@@ -104,17 +105,24 @@ export const isolatedContentScriptAPI = {
       }
     };
 
+    // 1. 找到自定义元素
+    const host = document.querySelector("jixo-draggable-dialog") as HTMLElement;
+    // 2. 把 shadowRoot 作为挂载点
+    const shadowHost = host?.shadowRoot ?? null;
+
     reactRoot.render(
       <React.StrictMode>
-        <SessionIdCtx.Provider value={sessionId}>
-          <MainAPICtx.Provider value={mainContentScriptAPI}>
-            <IsolatedAPICtx.Provider value={isolatedContentScriptAPI}>
-              <SessionAPICtx.Provider value={sessionApi}>
-                <Render />
-              </SessionAPICtx.Provider>
-            </IsolatedAPICtx.Provider>
-          </MainAPICtx.Provider>
-        </SessionIdCtx.Provider>
+        <PortalContainerCtx.Provider value={shadowHost}>
+          <SessionIdCtx.Provider value={sessionId}>
+            <MainAPICtx.Provider value={mainContentScriptAPI}>
+              <IsolatedAPICtx.Provider value={isolatedContentScriptAPI}>
+                <SessionAPICtx.Provider value={sessionApi}>
+                  <Render />
+                </SessionAPICtx.Provider>
+              </IsolatedAPICtx.Provider>
+            </MainAPICtx.Provider>
+          </SessionIdCtx.Provider>
+        </PortalContainerCtx.Provider>
       </React.StrictMode>,
     );
     if (!jobId) return true;

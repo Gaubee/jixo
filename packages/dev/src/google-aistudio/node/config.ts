@@ -1,59 +1,77 @@
+import {createResolver} from "@gaubee/nodekit";
 import path from "node:path";
-import {type AgentMetadata} from "../browser/index.js";
+import {z} from "zod";
+import {_gen_content} from "../../gen-prompt.js";
+import type {AgentMetadata, PageConfig} from "../browser/index.js";
+import {defineFunctionCalls} from "./function_call.js";
 
 export interface GenPageConfigOptions {
   metadata?: AgentMetadata;
+  workDir: string;
+  toolsDir: string;
 }
 
 /**
- * Generates a configuration file based on provided metadata.
- * In the future, this will call gen-prompt to produce a sophisticated system prompt.
+ * Dynamically generates a complete page configuration based on agent metadata.
+ * This function is pure and has no side effects; it reads metadata and returns a config object.
  *
- * @JIXO 这个函数暂时留作TODO：
- * <todo>
- * 这里应该使用 gen_prompt 函数来进行生成 systemPrompt。
- * 以jixo-coder为例，传入的参数应该是：
- * ```js
- * {
- *   agent: "coder",// 声明使用coder模式，以下的配置将针对coder，最终生成系统提示词和tools
- *   dirs: ["/xxx/xxx","xxx/ccc"], // 指定要处理的目录
- *   docs: ["/xxx"], // 知识库文件夹或者文件
- *   mcp: ["pnpx xxx"], // 一些额外的mcp配置，会被自动转成 tools
- * }
- * ```
- * </todo>
+ * @param options - Configuration options including metadata, work directory, and tools directory.
+ * @returns A promise that resolves to the generated PageConfig object.
  */
-export const genPageConfig = async ({metadata}: GenPageConfigOptions) => {
-  const systemPromptLines = ["You are a helpful assistant."];
+export const genPageConfig = async ({metadata, workDir, toolsDir}: GenPageConfigOptions): Promise<PageConfig> => {
+  const systemPromptTemplate: string[] = ["[JIXO:CODER](@INJECT)"];
   const tools: any[] = [];
 
-  if (metadata) {
-    if (metadata.dirs?.length) {
-      systemPromptLines.push("\n# Relevant Directories:\n" + metadata.dirs.join("\n"));
-    }
-    if (metadata.docs?.length) {
-      systemPromptLines.push("\n# Reference Documents:\n" + metadata.docs.join("\n"));
-    }
-    if (metadata.mcp?.length) {
-      // Placeholder: In the future, we'll execute these commands to get tool schemas.
-      // For now, we just create dummy tool definitions.
-      metadata.mcp.forEach((m) => {
-        if (m.command) {
-          tools.push({
-            name: `${m.prefix || ""}${path.basename(m.command)}`,
-            description: `A tool generated from the MCP command: ${m.command}`,
-            parameters: {type: "object", properties: {}},
-          });
+  // 1. Dynamically generate tool declarations from the filesystem
+  try {
+    const functionCallModules = await defineFunctionCalls(toolsDir);
+    for (const fc of functionCallModules.values()) {
+      const {name, description, paramsSchema} = fc.module;
+      let parameters = {};
+      if (paramsSchema) {
+        try {
+          // Convert Zod schema to JSON schema for the tool definition
+          parameters = z.toJSONSchema(z.object(paramsSchema));
+        } catch (error) {
+          console.warn(`Could not convert Zod schema for tool "${name}":`, error);
         }
+      }
+      tools.push({
+        name,
+        description: description || "No description provided.",
+        parameters,
       });
     }
+  } catch (error) {
+    console.error(`Error defining function calls from ${toolsDir}:`, error);
   }
 
-  const finalConfig = {
-    model: "gemini-1.5-pro-latest",
-    systemPrompt: systemPromptLines.join("\n"),
+  // 2. Build the system prompt template from metadata
+  if (metadata) {
+    if (metadata.dirs?.length) {
+      systemPromptTemplate.push("\n# Relevant Directories:\n");
+      metadata.dirs.forEach((dir) => systemPromptTemplate.push(`[${dir}](@FILE_TREE)`));
+    }
+    if (metadata.docs?.length) {
+      systemPromptTemplate.push("\n# Reference Documents:\n");
+      metadata.docs.forEach((doc) => systemPromptTemplate.push(`[${doc}](@FILE)`));
+    }
+    // MCP integration can be added here in the future
+  }
+
+  // 3. Use gen-prompt engine to render the final system prompt
+  const workDirResolver = createResolver(workDir);
+  const finalSystemPrompt = await _gen_content(
+    path.basename(workDir), // Use workDir name as codeName
+    systemPromptTemplate.join("\n"),
+    workDirResolver,
+  );
+
+  const finalConfig: PageConfig = {
+    model: "gemini-2.5-pro", // Or make this configurable via metadata
+    systemPrompt: finalSystemPrompt,
     tools,
-    metadata, // Persist the metadata
+    metadata,
   };
 
   return finalConfig;

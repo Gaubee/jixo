@@ -3,6 +3,7 @@ import {XIcon} from "lucide-react";
 import * as React from "react";
 
 import {cn} from "@/lib/utils";
+import {PortalContainerCtx} from "./context.ts";
 
 function Dialog({...props}: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />;
@@ -13,16 +14,9 @@ function DialogTrigger({...props}: React.ComponentProps<typeof DialogPrimitive.T
 }
 
 function DialogPortal({...props}: React.ComponentProps<typeof DialogPrimitive.Portal>) {
-  const [shadowHost, setShadowHost] = React.useState<Element | DocumentFragment | null>(null);
+  const container = React.useContext(PortalContainerCtx);
 
-  React.useEffect(() => {
-    // 1. 找到自定义元素
-    const host = document.querySelector("jixo-draggable-dialog") as HTMLElement;
-    // 2. 把 shadowRoot 作为挂载点
-    setShadowHost(host?.shadowRoot ?? null);
-  }, []);
-
-  return <DialogPrimitive.Portal data-slot="dialog-portal" container={shadowHost} {...props} />;
+  return <DialogPrimitive.Portal data-slot="dialog-portal" container={container} {...props} />;
 }
 
 function DialogClose({...props}: React.ComponentProps<typeof DialogPrimitive.Close>) {

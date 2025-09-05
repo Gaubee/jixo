@@ -20,7 +20,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@gaubee/util": "^0.35.0",
+    "@gaubee/util": "^0.35.1",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-label": "^2.1.7",

@@ -3,6 +3,7 @@ import {CheckIcon, ChevronDownIcon, ChevronUpIcon} from "lucide-react";
 import * as React from "react";
 
 import {cn} from "@/lib/utils";
+import {PortalContainerCtx} from "./context.ts";
 
 function Select({...props}: React.ComponentProps<typeof SelectPrimitive.Root>) {
   return <SelectPrimitive.Root data-slot="select" {...props} />;
@@ -43,17 +44,11 @@ function SelectTrigger({
 }
 
 function SelectContent({className, children, position = "popper", ...props}: React.ComponentProps<typeof SelectPrimitive.Content>) {
-  const [shadowHost, setShadowHost] = React.useState<Element | DocumentFragment | null>(null);
 
-  React.useEffect(() => {
-    // 1. 找到自定义元素
-    const host = document.querySelector("jixo-draggable-dialog") as HTMLElement;
-    // 2. 把 shadowRoot 作为挂载点
-    setShadowHost(host?.shadowRoot ?? null);
-  }, []);
+  const container = React.useContext(PortalContainerCtx);
 
   return (
-    <SelectPrimitive.Portal container={shadowHost}>
+    <SelectPrimitive.Portal container={container}>
       <SelectPrimitive.Content
         data-slot="select-content"
         className={cn(

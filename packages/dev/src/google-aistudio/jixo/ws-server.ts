@@ -3,6 +3,7 @@ import {map_get_or_put} from "@gaubee/util";
 import {Comlink} from "@jixo/dev/comlink";
 import type {UIRenderCommand, UIResponse} from "@jixo/tools-uikit";
 import http from "node:http";
+import path from "node:path";
 import {URL} from "node:url";
 import {WebSocket, WebSocketServer} from "ws";
 import {webSocketEndpoint} from "../../lib/comlink-adapters/web-socket-adapters.js";
@@ -102,8 +103,11 @@ export class SessionAPI {
     }
   }
   async generateConfigFromMetadata(metadata: AgentMetadata) {
+    const workDir = await this.getWorkDir();
     const config = await genPageConfig({
       metadata: metadata,
+      workDir: workDir,
+      toolsDir: path.join(workDir, "tools"),
     });
     return Comlink.clone(config);
   }

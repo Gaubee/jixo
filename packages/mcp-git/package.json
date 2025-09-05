@@ -27,7 +27,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@gaubee/util": "^0.35.0",
+    "@gaubee/util": "^0.35.1",
     "@jixo/mcp-core": "workspace:^",
     "@modelcontextprotocol/sdk": "^1.17.0",
     "import-meta-ponyfill": "^3.2.2",

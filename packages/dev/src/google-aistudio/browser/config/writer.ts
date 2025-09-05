@@ -1,5 +1,5 @@
 import type {z} from "../../node/z-min.js";
-import {$, easy$, raf, while$, untilRaf} from "../utils.js";
+import {$, easy$, raf, untilRaf, while$} from "../utils.js";
 
 /**
  * 设置Function Call工具。
@@ -45,13 +45,29 @@ export const setPageFunctionCallTools = async (tools: z.core.JSONSchema.BaseSche
   await easy$<HTMLButtonElement>(`button[aria-label="Save the current function declarations"]`).click();
 };
 
+export const usingSettingPanel = async (callback: () => Promise<void>) => {
+  await untilRaf(() => {
+    return !!($('button[aria-label="Toggle run settings panel"]') || $("ms-run-settings"));
+  });
+  const toggleBtn = $<HTMLButtonElement>('button[aria-label="Toggle run settings panel"]');
+  if (toggleBtn) {
+    toggleBtn.click();
+  }
+  await untilRaf(() => $("ms-run-settings") != null);
+  await callback();
+  if (toggleBtn) {
+    await easy$<HTMLButtonElement>('button[aria-label="Close run settings panel"]').click();
+    await while$('button[aria-label="Toggle run settings panel"]');
+  }
+};
+
 /**
  * 设置系统提示词。
  * @param system - 要设置的系统提示词字符串。
  */
 export const setPageSystemPrompt = async (system: string) => {
   const btn = await while$<HTMLButtonElement>('button[aria-label="System instructions"]');
-  const inputClosed = btn.ariaDisabled !== "false";
+  const inputClosed = $("ms-system-instructions>textarea") == null;
   if (inputClosed) {
     btn.click();
   }
@@ -60,7 +76,7 @@ export const setPageSystemPrompt = async (system: string) => {
   textareaEle.dispatchEvent(new Event("input"));
   if (inputClosed) {
     btn.click();
-    await untilRaf(() => btn.ariaDisabled !== "false");
+    await untilRaf(() => $("ms-system-instructions>textarea") == null);
   }
 };
 
@@ -87,7 +103,7 @@ export const setPageModel = async (modelId: string) => {
   const models = [...modelCarouselEle.querySelectorAll("ms-model-carousel-row")].map((ele) => {
     return {
       name: ele.querySelector(".model-title")?.textContent?.trim(),
-      id: ele.querySelector(".model-title-text")?.textContent?.trim(),
+      id: ele.querySelector(".model-subtitle")?.textContent?.trim(),
       btn: ele.querySelector("button"),
       ele,
     };
@@ -96,6 +112,9 @@ export const setPageModel = async (modelId: string) => {
   if (model?.btn) {
     model.btn.click();
     await untilRaf(() => model.ele.classList.contains("selected"));
+  } else {
+    /// 如果没有找到，那么直接点击原本已经选中的，来关闭面板
+    modelCarouselEle.querySelector<HTMLButtonElement>("ms-model-carousel-row.selected button")?.click();
   }
 };
 

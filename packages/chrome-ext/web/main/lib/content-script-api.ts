@@ -1,5 +1,5 @@
-import type {PageConfig} from "@jixo/dev/browser";
-import {applyPageConfig as applyPageConfigToBrowser, getEasyFs, pickDirHandle, prepareDirHandle, restoreDirHandle, syncInput, syncOutput} from "@jixo/dev/browser";
+import type {PageConfig, Snapshot} from "@jixo/dev/browser";
+import {applyPageConfig as applyPageConfigToBrowser, getEasyFs, pickDirHandle, prepareDirHandle, restoreDirHandle, syncInput, syncOutput, whenFileChanged} from "@jixo/dev/browser";
 import {Comlink} from "@jixo/dev/comlink";
 import {getWorkspaceHandle, storeWorkspaceHandle} from "./workspace.ts";
 
@@ -77,7 +77,13 @@ export class MainContentScriptAPI {
   }
 
   async #applyPageConfig(config: PageConfig): Promise<void> {
-    return applyPageConfigToBrowser(config);
+    console.log("JIXO BROWSER: Applying page config...", config);
+    try {
+      await applyPageConfigToBrowser(config);
+    } catch (error) {
+      console.error("JIXO BROWSER: Failed to apply page config.", error);
+      throw error; // Re-throw to let the caller know
+    }
   }
 
   async readConfigFile(sessionId: string, isTemplate: boolean): Promise<PageConfig | null> {
@@ -105,6 +111,7 @@ export class MainContentScriptAPI {
     if (!config) {
       return {status: "ERROR", message: "Config file (config.json) not found."};
     }
+    await this.#applyPageConfig(config);
     return {status: "SUCCESS"};
   });
 
@@ -117,6 +124,26 @@ export class MainContentScriptAPI {
     await this.#applyPageConfig(templateConfig);
     return {status: "SUCCESS"};
   });
+
+  // Expose the new file watching utility
+  whenFileChanged = (...args: Parameters<typeof whenFileChanged>) => {
+    const res = whenFileChanged(...args);
+    return Comlink.proxy(res);
+  };
+
+  async getConfigFileSnap(sessionId: string, isTemplate: boolean): Promise<Snapshot> {
+    const fs = await getEasyFs();
+    const filename = isTemplate ? `${sessionId}.config-template.json` : `${sessionId}.config.json`;
+    try {
+      const statResult = await fs.stat(filename);
+      if (statResult.isFile) {
+        return {mtime: statResult.lastModified, size: statResult.size};
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
 
   async ping() {
     return true;
