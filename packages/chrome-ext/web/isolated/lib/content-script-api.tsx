@@ -67,11 +67,6 @@ export const isolatedContentScriptAPI = {
     return config;
   },
 
-  async handleStartSync(): Promise<{status: "SYNC_STARTED" | "ERROR"; message?: string}> {
-    const {mainContentScriptAPI} = await ensureJixoMainRuntime();
-    return mainContentScriptAPI.startSync();
-  },
-
   async renderComponent(componentName: string, jobId: string | null, props: any): Promise<any> {
     const {reactRoot, mainContentScriptAPI, sessionId, sessionApi} = await ensureJixoMainRuntime();
     const allProps = {jobId, props, key: jobId || componentName};
@@ -86,7 +81,7 @@ export const isolatedContentScriptAPI = {
     const Render = () => {
       switch (componentName) {
         case "App":
-          return <App mainApi={mainContentScriptAPI} isolatedApi={this} />;
+          return <App />;
           break;
         case "AskUserDialog":
           return <AskUserDialog {...(allProps as any)} />;

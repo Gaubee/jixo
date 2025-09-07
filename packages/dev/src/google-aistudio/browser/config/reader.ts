@@ -5,7 +5,7 @@ import {$, easy$, while$} from "../utils.js";
  */
 export const getPageModel = async (): Promise<string | null> => {
   const modelButton = await while$<HTMLButtonElement>("ms-prompt-run-settings ms-model-selector-v3>button");
-  const modelId = modelButton.querySelector(".model-title-text")?.textContent?.trim();
+  const modelId = modelButton.querySelector(".subtitle")?.textContent?.trim();
   return modelId || null;
 };
 

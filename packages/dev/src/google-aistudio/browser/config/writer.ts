@@ -1,5 +1,6 @@
 import type {z} from "../../node/z-min.js";
 import {$, easy$, raf, untilRaf, while$, whileRaf} from "../utils.js";
+import {getPageModel} from "./reader.js";
 
 /**
  * 设置Function Call工具。
@@ -34,6 +35,9 @@ export const setPageFunctionCallTools = async (tools: z.core.JSONSchema.BaseSche
     switchGoogleSearch(false),
     switchUrlContext(false),
   ]);
+
+  /// 确保开启
+  await switchFunctionCalling(true);
 
   /// 打开FunctionCall配置面板
   await easy$<HTMLButtonElement>(`button[aria-label="Edit function declarations"][aria-disabled="false"]`).click();
@@ -86,6 +90,10 @@ export const setPageSystemPrompt = async (system: string) => {
  */
 export const setPageModel = async (modelId: string) => {
   const btn = await while$<HTMLButtonElement>("ms-prompt-run-settings ms-model-selector-v3>button");
+
+  if ((await getPageModel()) === modelId) {
+    return;
+  }
 
   if ($("ms-model-carousel") === null) {
     btn.click();

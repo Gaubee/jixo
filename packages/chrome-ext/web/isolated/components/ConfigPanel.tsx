@@ -2,8 +2,8 @@ import {Button} from "@/components/ui/button.tsx";
 import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Label} from "@/components/ui/label.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
-import type {AgentMetadata} from "@jixo/dev/browser";
-import {LoaderCircle} from "lucide-react";
+import type {AgentMetadata, CoderAgentMetadata} from "@jixo/dev/browser";
+import {FolderSearch, LoaderCircle} from "lucide-react";
 import React from "react";
 import {CoderAgentConfigPanel} from "./CoderAgentConfigPanel.tsx";
 
@@ -16,9 +16,10 @@ interface ConfigPanelProps {
   onApplyChanges: () => Promise<void>;
   onCancelChanges: () => Promise<void>;
   onPreview: (patterns: string[]) => Promise<string[]>;
+  onSelectWorkspace: () => Promise<void>;
 }
 
-export function ConfigPanel({metadata, isDirty, isGenerating, isLoading, onMetadataChange, onApplyChanges, onCancelChanges, onPreview}: ConfigPanelProps) {
+export function ConfigPanel({metadata, isDirty, isGenerating, isLoading, onMetadataChange, onApplyChanges, onCancelChanges, onPreview, onSelectWorkspace}: ConfigPanelProps) {
   const agentType = metadata.agent || "coder";
 
   const handleAgentChange = (value: string) => {
@@ -44,7 +45,15 @@ export function ConfigPanel({metadata, isDirty, isGenerating, isLoading, onMetad
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="agent-select">Select Agent</Label>
+          <Label>Workspace (workDir)</Label>
+          <Button onClick={onSelectWorkspace} variant="outline" className="w-full justify-start text-left font-mono">
+            <FolderSearch className="mr-2 h-4 w-4" />
+            <span className="truncate">{metadata.workDir || "Click to select..."}</span>
+          </Button>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="agent-select">Agent</Label>
           <Select value={agentType} onValueChange={handleAgentChange}>
             <SelectTrigger id="agent-select" className="w-full">
               <SelectValue placeholder="Select an agent" />
@@ -55,22 +64,18 @@ export function ConfigPanel({metadata, isDirty, isGenerating, isLoading, onMetad
           </Select>
         </div>
 
-        {agentType === "coder" && (
-          <div className="border-t pt-4">
-            <CoderAgentConfigPanel metadata={metadata} onMetadataChange={onMetadataChange} onPreview={onPreview} />
-          </div>
-        )}
+        <div className="border-t pt-4">
+          {agentType === "coder" && <CoderAgentConfigPanel metadata={metadata as CoderAgentMetadata} onMetadataChange={onMetadataChange} onPreview={onPreview} />}
+        </div>
       </CardContent>
-      {isDirty && (
-        <CardFooter className="flex gap-2 border-t pt-6">
-          <Button onClick={onCancelChanges} variant="outline" className="flex-1">
-            Cancel
-          </Button>
-          <Button onClick={onApplyChanges} className="flex-1" disabled={isLoading}>
-            {isLoading ? "Applying..." : "Apply Changes"}
-          </Button>
-        </CardFooter>
-      )}
+      <CardFooter className="flex gap-2 border-t pt-6">
+        <Button onClick={onCancelChanges} variant="outline" className="flex-1" disabled={!isDirty || isLoading}>
+          Cancel
+        </Button>
+        <Button onClick={onApplyChanges} className="flex-1" disabled={!isDirty || isLoading}>
+          {isLoading ? "Applying..." : "Apply Changes"}
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

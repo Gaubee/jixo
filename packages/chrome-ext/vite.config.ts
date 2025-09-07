@@ -60,6 +60,7 @@ export default defineConfig(() => {
       alias: {
         "@": resolver("./src"),
       },
+      dedupe: ["react", "react-dom"],
     },
   } satisfies UserConfig;
 });

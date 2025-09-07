@@ -1,7 +1,20 @@
 import type {PageConfig, Snapshot} from "@jixo/dev/browser";
-import {applyPageConfig as applyPageConfigToBrowser, getEasyFs, pickDirHandle, prepareDirHandle, restoreDirHandle, syncInput, syncOutput, whenFileChanged} from "@jixo/dev/browser";
+import {
+  applyPageConfig as applyPageConfigToBrowser,
+  clearPageHistory,
+  getEasyFs,
+  pickDirHandle,
+  prepareDirHandle,
+  restoreDirHandle,
+  syncInput,
+  syncOutput,
+  whenFileChanged,
+} from "@jixo/dev/browser";
 import {Comlink} from "@jixo/dev/comlink";
+import {KeyValStore} from "@jixo/dev/idb-keyval";
 import {getWorkspaceHandle, storeWorkspaceHandle} from "./workspace.ts";
+
+const settingsStore = new KeyValStore<{isSyncEnabled?: boolean}>("jixo-settings");
 
 // --- API Definition ---
 export class MainContentScriptAPI {
@@ -50,7 +63,13 @@ export class MainContentScriptAPI {
     // handle.getFileHandle("click-me.sh",()=>)
   };
 
-  startSync = Comlink.clone(async (): Promise<{status: "SYNC_STARTED" | "ERROR"; message?: string}> => {
+  startSync = Comlink.clone(async (): Promise<{status: "SYNC_STARTED" | "SYNC_DISABLED" | "ERROR"; message?: string}> => {
+    const settings = await settingsStore.get(this.sessionId);
+    if (settings?.isSyncEnabled === false) {
+      console.log("JIXO BROWSER: Sync is disabled by user settings.");
+      return {status: "SYNC_DISABLED"};
+    }
+
     if (this.#syncAbortController) {
       this.#syncAbortController.abort();
     }
@@ -144,6 +163,8 @@ export class MainContentScriptAPI {
       return null;
     }
   }
+
+  clearPageHistory = Comlink.clone(clearPageHistory);
 
   async ping() {
     return true;

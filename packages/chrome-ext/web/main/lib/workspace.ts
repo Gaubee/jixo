@@ -1,17 +1,17 @@
-import {createStore, del, get, set} from "idb-keyval";
+import {KeyValStore} from "@jixo/dev/idb-keyval";
 
-const workspaceStore = createStore("jixo-workspace", "store");
+const workspaceStore = new KeyValStore<FileSystemDirectoryHandle>("jixo-workspace");
 
 export async function storeWorkspaceHandle(sessionId: string, handle: FileSystemDirectoryHandle): Promise<void> {
   if (await verifyPermission(handle)) {
-    await set(sessionId, handle, workspaceStore);
+    await workspaceStore.set(sessionId, handle);
   } else {
     throw new Error("Permission to access the directory was not granted.");
   }
 }
 
 export async function getWorkspaceHandle(sessionId: string): Promise<FileSystemDirectoryHandle | undefined> {
-  const handle = await get<FileSystemDirectoryHandle>(sessionId, workspaceStore);
+  const handle = await workspaceStore.get(sessionId);
   if (handle && (await verifyPermission(handle))) {
     return handle;
   }
@@ -19,7 +19,7 @@ export async function getWorkspaceHandle(sessionId: string): Promise<FileSystemD
 }
 
 export async function unsetWorkspaceHandle(sessionId: string): Promise<void> {
-  await del(sessionId, workspaceStore);
+  await workspaceStore.del(sessionId);
 }
 
 async function verifyPermission(handle: FileSystemDirectoryHandle): Promise<boolean> {

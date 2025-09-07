@@ -1,11 +1,11 @@
 import {type SessionAPI} from "@jixo/dev/browser";
 import {Comlink} from "@jixo/dev/comlink";
 import {webSocketEndpoint} from "@jixo/dev/comlink-adapters";
-import {createStore, get, set} from "idb-keyval";
+import {KeyValStore} from "@jixo/dev/idb-keyval";
 export const WS_PORT = 8765;
 const pendingRequests = new Map<string, {resolve: (value: any) => void; reject: (reason?: any) => void}>();
 
-const workDirStore = createStore("jixo-workDir", "store");
+const workDirStore = new KeyValStore<string>("jixo-workDir");
 
 export const connectSessionApi = async (sessionId: string) => {
   const job = Promise.withResolvers<Comlink.Remote<SessionAPI>>();
@@ -16,20 +16,20 @@ export const connectSessionApi = async (sessionId: string) => {
     console.log(`JIXO ISOLATED: Session WebSocket connected for ${sessionId}.`);
     const ep = webSocketEndpoint({webSocket: newSocket, messageChannel: sessionId});
     const api = Comlink.wrap<SessionAPI>(ep);
-    const workDir = await get<string>(sessionId, workDirStore);
+    const workDir = await workDirStore.get(sessionId);
     if (workDir != null) {
       await api.setWorkDir(workDir);
     } else {
       (async () => {
         // 初始化
         void api.getWorkDir().then((workDir) => {
-          set(sessionId, workDir, workDirStore);
+          workDirStore.set(sessionId, workDir);
         });
 
         // 监听变动
         while (newSocket.readyState === WebSocket.OPEN) {
           const workDir = await api.whenWorkDirChanged();
-          await set(sessionId, workDir, workDirStore);
+          await workDirStore.set(sessionId, workDir);
         }
       })();
     }

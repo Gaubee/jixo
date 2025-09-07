@@ -1,14 +1,8 @@
-import { Comlink } from "@jixo/dev/comlink";
 import React from "react";
-import type {MainContentScriptAPI} from "../../main/lib/content-script-api.ts";
-import type {IsolatedContentScriptAPI} from "../lib/content-script-api.tsx";
 import {ControlPanel} from "./ControlPanel.tsx";
 
-interface AppProps {
-  mainApi: Comlink.Remote<MainContentScriptAPI>;
-  isolatedApi: IsolatedContentScriptAPI;
-}
+interface AppProps {}
 
-export function App({mainApi, isolatedApi}: AppProps) {
-  return <ControlPanel mainApi={mainApi} isolatedApi={isolatedApi} />;
+export function App({}: AppProps) {
+  return <ControlPanel />;
 }

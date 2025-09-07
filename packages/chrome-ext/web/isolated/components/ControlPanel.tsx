@@ -1,21 +1,18 @@
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
-import {Comlink} from "@jixo/dev/comlink";
 import {LoaderCircle, WifiOff} from "lucide-react";
-import React from "react";
-import type {MainContentScriptAPI} from "../../main/lib/content-script-api.ts";
+import React, {useContext} from "react";
 import {useServiceStatus} from "../hooks/useServiceStatus.ts";
 import {useWorkspace} from "../hooks/useWorkspace.ts";
-import type {IsolatedContentScriptAPI} from "../lib/content-script-api.tsx";
 import {ControlPanelContent} from "./ControlPanelContent.tsx";
 import {NotificationProvider} from "./Notification.tsx";
 import {WorkspaceSetup} from "./WorkspaceSetup.tsx";
+import {IsolatedAPICtx, MainAPICtx} from "./context.ts";
 
-interface ControlPanelProps {
-  mainApi: Comlink.Remote<MainContentScriptAPI>;
-  isolatedApi: IsolatedContentScriptAPI;
-}
+interface ControlPanelProps {}
 
-export function ControlPanel({mainApi, isolatedApi}: ControlPanelProps) {
+export function ControlPanel({}: ControlPanelProps) {
+  const mainApi = useContext(MainAPICtx);
+  const isolatedApi = useContext(IsolatedAPICtx);
   const serviceStatus = useServiceStatus();
   const {workspaceStatus, workspaceName, workDirFullpath, selectWorkspace, isLoading} = useWorkspace(mainApi, isolatedApi);
 
@@ -37,7 +34,7 @@ export function ControlPanel({mainApi, isolatedApi}: ControlPanelProps) {
         )}
         {serviceStatus === "connected" &&
           (workspaceStatus === "ready" ? (
-            <ControlPanelContent workDirFullpath={workDirFullpath} onSelectWorkspace={selectWorkspace} mainApi={mainApi} isolatedApi={isolatedApi} />
+            <ControlPanelContent workDirFullpath={workDirFullpath} onSelectWorkspace={selectWorkspace} />
           ) : (
             <WorkspaceSetup workspaceName={workspaceName} workspaceStatus={workspaceStatus} onSelectWorkspace={selectWorkspace} isLoading={isLoading} />
           ))}

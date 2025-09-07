@@ -1,10 +1,11 @@
-import type {CoderAgentMetadata} from "@jixo/dev/browser";
-import React from "react";
 import {Button} from "@/components/ui/button.tsx";
 import {Input} from "@/components/ui/input.tsx";
-import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip.tsx";
-import {FileListInput} from "./FileListInput.tsx";
+import {Label} from "@/components/ui/label.tsx";
+import type {CoderAgentMetadata} from "@jixo/dev/browser";
 import {X} from "lucide-react";
+import React from "react";
+import {FileListInput} from "./FileListInput.tsx";
+import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip.tsx";
 
 interface CoderAgentConfigPanelProps {
   metadata: CoderAgentMetadata;
@@ -13,6 +14,10 @@ interface CoderAgentConfigPanelProps {
 }
 
 export function CoderAgentConfigPanel({metadata, onMetadataChange, onPreview}: CoderAgentConfigPanelProps) {
+  const handleCodeNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onMetadataChange({...metadata, codeName: e.target.value});
+  };
+
   const handleMcpChange = (index: number, field: "command" | "prefix", value: string) => {
     const newMcp = [...(metadata.mcp || [])];
     newMcp[index] = {...newMcp[index], [field]: value};
@@ -29,6 +34,10 @@ export function CoderAgentConfigPanel({metadata, onMetadataChange, onPreview}: C
 
   return (
     <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="codeName">Task Codename (codeName)</Label>
+        <Input id="codeName" value={metadata.codeName || ""} onChange={handleCodeNameChange} placeholder="e.g., feature-x-refactor" />
+      </div>
       <FileListInput
         label="Directories (dirs)"
         values={metadata.dirs || []}

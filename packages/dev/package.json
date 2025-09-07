@@ -6,6 +6,7 @@
   "sideEffects": false,
   "exports": {
     "./comlink": "./dist/lib/comlink.js",
+    "./idb-keyval": "./dist/lib/idb-keyval.js",
     "./comlink-adapters": "./dist/lib/comlink-adapters/web-socket-adapters.js",
     "./node": "./dist/google-aistudio/node/index.js",
     "./browser": "./dist/google-aistudio/browser/index.js",
@@ -63,6 +64,7 @@
     "debug": "^4.4.1",
     "globby": "^14.1.0",
     "hono": "^4.8.12",
+    "idb-keyval": "^6.2.2",
     "import-meta-ponyfill": "^3.2.2",
     "json5": "^2.2.3",
     "mdast-util-from-markdown": "^2.0.2",

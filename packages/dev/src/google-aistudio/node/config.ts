@@ -5,21 +5,15 @@ import {_gen_content} from "../../gen-prompt.js";
 import type {AgentMetadata, PageConfig} from "../browser/index.js";
 import {defineFunctionCalls} from "./function_call.js";
 
-export interface GenPageConfigOptions {
-  metadata?: AgentMetadata;
-  workDir: string;
-  toolsDir: string;
-}
-
 /**
  * Dynamically generates a complete page configuration based on agent metadata.
  * This function is pure and has no side effects; it reads metadata and returns a config object.
  *
- * @param options - Configuration options including metadata, work directory, and tools directory.
+ * @param metadata - The agent metadata object.
  * @returns A promise that resolves to the generated PageConfig object.
  */
 export const genPageConfig = async (metadata: AgentMetadata): Promise<PageConfig> => {
-  const systemPromptTemplate: string[] = ["[JIXO:CODER](@INJECT)"];
+  const systemPromptTemplate: string[] = ["[JIXO:CODER2](@INJECT)"];
   const tools: Array<{name: string; description: string; parameters: any}> = [];
 
   const toolsDirs = [metadata.workDir, path.join(metadata.workDir, "tools")];
@@ -70,12 +64,19 @@ export const genPageConfig = async (metadata: AgentMetadata): Promise<PageConfig
     workDirResolver,
   );
 
+  // 4. Construct the final config object
   const finalConfig: PageConfig = {
     model: "gemini-2.5-pro", // Or make this configurable via metadata
     systemPrompt: finalSystemPrompt,
     tools,
     metadata,
   };
+
+  // 5. Add title if codeName is available
+  if (metadata.agent && "codeName" in metadata && metadata.codeName) {
+    const agentName = metadata.agent.charAt(0).toUpperCase() + metadata.agent.slice(1);
+    finalConfig.title = `${agentName}: ${metadata.codeName}`;
+  }
 
   return finalConfig;
 };
