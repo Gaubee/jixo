@@ -1,5 +1,5 @@
 import type {z} from "../../node/z-min.js";
-import {$, easy$, raf, untilRaf, while$} from "../utils.js";
+import {$, easy$, raf, untilRaf, while$, whileRaf} from "../utils.js";
 
 /**
  * 设置Function Call工具。
@@ -134,5 +134,35 @@ export const clearPageHistory = async () => {
       deleteBtnEle.click();
     }
     await raf();
+  }
+};
+
+export const setTitleAndDescription = async (config: {title?: string; description?: string}) => {
+  await while$("ms-toolbar");
+  let needResize = null == $<HTMLButtonElement>('button[mattooltip="Edit title and description"]');
+  if (needResize) {
+    document.body.style.setProperty("width", "800px!important");
+  }
+  const btn = await while$<HTMLButtonElement>('button[mattooltip="Edit title and description"]');
+  btn.click();
+  const dialog = await while$<HTMLElement>("ms-save-prompt-dialog");
+  if (config.title != null) {
+    const titleInput = await while$<HTMLInputElement>('input[aria-label="Prompt name text field"]');
+    titleInput.value = config.title;
+    titleInput.dispatchEvent(new Event("input"));
+  }
+  if (config.description != null) {
+    const descriptionInput = await while$<HTMLTextAreaElement>('textarea[aria-label="Prompt description text field"]');
+    descriptionInput.value = config.description;
+    descriptionInput.dispatchEvent(new Event("input"));
+  }
+
+  const saveBtn = await while$<HTMLButtonElement>('button[aria-label="Save title and description"]');
+  saveBtn.click();
+
+  await whileRaf(() => document.body.contains(dialog));
+
+  if (needResize) {
+    document.body.style.removeProperty("width");
   }
 };

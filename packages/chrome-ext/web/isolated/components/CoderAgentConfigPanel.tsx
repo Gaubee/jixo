@@ -9,9 +9,10 @@ import {X} from "lucide-react";
 interface CoderAgentConfigPanelProps {
   metadata: CoderAgentMetadata;
   onMetadataChange: (metadata: CoderAgentMetadata) => void;
+  onPreview: (patterns: string[]) => Promise<string[]>;
 }
 
-export function CoderAgentConfigPanel({metadata, onMetadataChange}: CoderAgentConfigPanelProps) {
+export function CoderAgentConfigPanel({metadata, onMetadataChange, onPreview}: CoderAgentConfigPanelProps) {
   const handleMcpChange = (index: number, field: "command" | "prefix", value: string) => {
     const newMcp = [...(metadata.mcp || [])];
     newMcp[index] = {...newMcp[index], [field]: value};
@@ -28,24 +29,31 @@ export function CoderAgentConfigPanel({metadata, onMetadataChange}: CoderAgentCo
 
   return (
     <div className="space-y-4">
-      <FileListInput label="Directories (dirs)" values={metadata.dirs || []} onChange={(dirs) => onMetadataChange({...metadata, dirs})} placeholder="e.g., src/**/*.ts" />
+      <FileListInput
+        label="Directories (dirs)"
+        values={metadata.dirs || []}
+        onChange={(dirs) => onMetadataChange({...metadata, dirs})}
+        onPreview={onPreview}
+        placeholder="e.g., src/**/*.ts"
+      />
       <FileListInput
         label="Documentation (docs)"
         values={metadata.docs || []}
         onChange={(docs) => onMetadataChange({...metadata, docs})}
+        onPreview={onPreview}
         placeholder="e.g., docs/architecture.md"
       />
       <div className="space-y-2">
         <label className="block text-sm font-medium text-gray-700">MCP Tools</label>
-        <div className="space-y-2 max-h-32 overflow-y-auto pr-2">
+        <div className="max-h-32 space-y-2 overflow-y-auto pr-2">
           {(metadata.mcp || []).map((item, index) => (
-            <div key={index} className="flex gap-2 items-center">
+            <div key={index} className="flex items-center gap-2">
               <Input
                 type="text"
                 value={item.command}
                 onChange={(e) => handleMcpChange(index, "command", e.target.value)}
                 placeholder="MCP command (e.g., pnpx mcp-pnpm)"
-                className="flex-grow text-xs h-8"
+                className="h-8 flex-grow text-xs"
               />
               <TooltipProvider>
                 <Tooltip>
@@ -55,7 +63,7 @@ export function CoderAgentConfigPanel({metadata, onMetadataChange}: CoderAgentCo
                       value={item.prefix || ""}
                       onChange={(e) => handleMcpChange(index, "prefix", e.target.value)}
                       placeholder="Prefix"
-                      className="w-24 text-xs h-8"
+                      className="h-8 w-24 text-xs"
                     />
                   </TooltipTrigger>
                   <TooltipContent>
