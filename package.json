@@ -46,7 +46,9 @@
       "ai": "^4.3.16"
     },
     "patchedDependencies": {
-      "ai": "patches/ai.patch"
+      "ai": "patches/ai.patch",
+      "@radix-ui/react-dialog": "patches/@radix-ui__react-dialog.patch",
+      "@radix-ui/react-alert-dialog": "patches/@radix-ui__react-alert-dialog.patch"
     }
   },
   "dependencies": {

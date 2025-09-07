@@ -1,0 +1,103 @@
+diff --git a/dist/index.js b/dist/index.js
+index 7ea58ae6a1de1d9ca772f42af9c5cb039cea4f3b..120eaca46f2df3547191a86746f730341fe6b691 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -175,19 +175,19 @@ var AlertDialogCancel = React.forwardRef(
+ );
+ AlertDialogCancel.displayName = CANCEL_NAME;
+ var DescriptionWarning = ({ contentRef }) => {
+-  const MESSAGE = `\`${CONTENT_NAME}\` requires a description for the component to be accessible for screen reader users.
++//   const MESSAGE = `\`${CONTENT_NAME}\` requires a description for the component to be accessible for screen reader users.
+ 
+-You can add a description to the \`${CONTENT_NAME}\` by passing a \`${DESCRIPTION_NAME}\` component as a child, which also benefits sighted users by adding visible context to the dialog.
++// You can add a description to the \`${CONTENT_NAME}\` by passing a \`${DESCRIPTION_NAME}\` component as a child, which also benefits sighted users by adding visible context to the dialog.
+ 
+-Alternatively, you can use your own component as a description by assigning it an \`id\` and passing the same value to the \`aria-describedby\` prop in \`${CONTENT_NAME}\`. If the description is confusing or duplicative for sighted users, you can use the \`@radix-ui/react-visually-hidden\` primitive as a wrapper around your description component.
++// Alternatively, you can use your own component as a description by assigning it an \`id\` and passing the same value to the \`aria-describedby\` prop in \`${CONTENT_NAME}\`. If the description is confusing or duplicative for sighted users, you can use the \`@radix-ui/react-visually-hidden\` primitive as a wrapper around your description component.
+ 
+-For more information, see https://radix-ui.com/primitives/docs/components/alert-dialog`;
+-  React.useEffect(() => {
+-    const hasDescription = document.getElementById(
+-      contentRef.current?.getAttribute("aria-describedby")
+-    );
+-    if (!hasDescription) console.warn(MESSAGE);
+-  }, [MESSAGE, contentRef]);
++// For more information, see https://radix-ui.com/primitives/docs/components/alert-dialog`;
++//   React.useEffect(() => {
++//     const hasDescription = document.getElementById(
++//       contentRef.current?.getAttribute("aria-describedby")
++//     );
++//     if (!hasDescription) console.warn(MESSAGE);
++//   }, [MESSAGE, contentRef]);
+   return null;
+ };
+ var Root2 = AlertDialog;
+diff --git a/dist/index.mjs b/dist/index.mjs
+index add0e0a3ae665060603a405efd0063cf64425bff..c94c23975a8190f64c8ab5a35efa660cf09ac55c 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -122,19 +122,19 @@ var AlertDialogCancel = React.forwardRef(
+ );
+ AlertDialogCancel.displayName = CANCEL_NAME;
+ var DescriptionWarning = ({ contentRef }) => {
+-  const MESSAGE = `\`${CONTENT_NAME}\` requires a description for the component to be accessible for screen reader users.
++//   const MESSAGE = `\`${CONTENT_NAME}\` requires a description for the component to be accessible for screen reader users.
+ 
+-You can add a description to the \`${CONTENT_NAME}\` by passing a \`${DESCRIPTION_NAME}\` component as a child, which also benefits sighted users by adding visible context to the dialog.
++// You can add a description to the \`${CONTENT_NAME}\` by passing a \`${DESCRIPTION_NAME}\` component as a child, which also benefits sighted users by adding visible context to the dialog.
+ 
+-Alternatively, you can use your own component as a description by assigning it an \`id\` and passing the same value to the \`aria-describedby\` prop in \`${CONTENT_NAME}\`. If the description is confusing or duplicative for sighted users, you can use the \`@radix-ui/react-visually-hidden\` primitive as a wrapper around your description component.
++// Alternatively, you can use your own component as a description by assigning it an \`id\` and passing the same value to the \`aria-describedby\` prop in \`${CONTENT_NAME}\`. If the description is confusing or duplicative for sighted users, you can use the \`@radix-ui/react-visually-hidden\` primitive as a wrapper around your description component.
+ 
+-For more information, see https://radix-ui.com/primitives/docs/components/alert-dialog`;
+-  React.useEffect(() => {
+-    const hasDescription = document.getElementById(
+-      contentRef.current?.getAttribute("aria-describedby")
+-    );
+-    if (!hasDescription) console.warn(MESSAGE);
+-  }, [MESSAGE, contentRef]);
++// For more information, see https://radix-ui.com/primitives/docs/components/alert-dialog`;
++//   React.useEffect(() => {
++//     const hasDescription = document.getElementById(
++//       contentRef.current?.getAttribute("aria-describedby")
++//     );
++//     if (!hasDescription) console.warn(MESSAGE);
++//   }, [MESSAGE, contentRef]);
+   return null;
+ };
+ var Root2 = AlertDialog;
+diff --git a/src/alert-dialog.tsx b/src/alert-dialog.tsx
+index 9ba643999deac5d17d6b10d69cbfb9b4689964e2..316b7fe99299a4d9636fba1d41a9809ad09db12b 100644
+--- a/src/alert-dialog.tsx
++++ b/src/alert-dialog.tsx
+@@ -244,20 +244,20 @@ type DescriptionWarningProps = {
+ };
+ 
+ const DescriptionWarning: React.FC<DescriptionWarningProps> = ({ contentRef }) => {
+-  const MESSAGE = `\`${CONTENT_NAME}\` requires a description for the component to be accessible for screen reader users.
++//   const MESSAGE = `\`${CONTENT_NAME}\` requires a description for the component to be accessible for screen reader users.
+ 
+-You can add a description to the \`${CONTENT_NAME}\` by passing a \`${DESCRIPTION_NAME}\` component as a child, which also benefits sighted users by adding visible context to the dialog.
++// You can add a description to the \`${CONTENT_NAME}\` by passing a \`${DESCRIPTION_NAME}\` component as a child, which also benefits sighted users by adding visible context to the dialog.
+ 
+-Alternatively, you can use your own component as a description by assigning it an \`id\` and passing the same value to the \`aria-describedby\` prop in \`${CONTENT_NAME}\`. If the description is confusing or duplicative for sighted users, you can use the \`@radix-ui/react-visually-hidden\` primitive as a wrapper around your description component.
++// Alternatively, you can use your own component as a description by assigning it an \`id\` and passing the same value to the \`aria-describedby\` prop in \`${CONTENT_NAME}\`. If the description is confusing or duplicative for sighted users, you can use the \`@radix-ui/react-visually-hidden\` primitive as a wrapper around your description component.
+ 
+-For more information, see https://radix-ui.com/primitives/docs/components/alert-dialog`;
++// For more information, see https://radix-ui.com/primitives/docs/components/alert-dialog`;
+ 
+-  React.useEffect(() => {
+-    const hasDescription = document.getElementById(
+-      contentRef.current?.getAttribute('aria-describedby')!
+-    );
+-    if (!hasDescription) console.warn(MESSAGE);
+-  }, [MESSAGE, contentRef]);
++//   React.useEffect(() => {
++//     const hasDescription = document.getElementById(
++//       contentRef.current?.getAttribute('aria-describedby')!
++//     );
++//     if (!hasDescription) console.warn(MESSAGE);
++//   }, [MESSAGE, contentRef]);
+ 
+   return null;
+ };

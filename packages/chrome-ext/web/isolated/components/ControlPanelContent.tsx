@@ -1,12 +1,10 @@
-import {Button} from "@/components/ui/button.tsx";
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
 import {isEqualCanonical} from "@/lib/utils.ts";
 import type {AgentMetadata, PageConfig} from "@jixo/dev/browser";
 import {KeyValStore} from "@jixo/dev/idb-keyval";
 import {useDebounce} from "@uidotdev/usehooks";
 import React, {useContext, useEffect, useRef, useState} from "react";
-import {ConfigPanel} from "./ConfigPanel.tsx";
+import {ConfigPanel, type AgentFormValues} from "./ConfigPanel.tsx";
 import {useNotification} from "./Notification.tsx";
 import {SettingsPanel} from "./SettingsPanel.tsx";
 import {IsolatedAPICtx, MainAPICtx, SessionAPICtx, SessionIdCtx} from "./context.ts";
@@ -62,22 +60,18 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace}: Contro
   const [isDirty, setIsDirty] = useState(false);
   const [isLoading, setIsLoading] = useState<Record<string, boolean>>({});
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isSyncEnabled, setIsSyncEnabled] = useState(true);
+  const [settings, setSettings] = useState({isSyncEnabled: true});
   const {addNotification} = useNotification();
   const sessionId = useContext(SessionIdCtx);
   const sessionApi = useContext(SessionAPICtx);
 
   const stagedConfigKey = `staged-config-${sessionId}`;
-  useDebugLog("ControlPanelContent", {activeConfig, stagedConfig, isDirty, isLoading, isGenerating, isSyncEnabled});
+  useDebugLog("ControlPanelContent", {activeConfig, stagedConfig, isDirty, isLoading, isGenerating, settings});
 
   // Effect for initializing settings
   useEffect(() => {
-    settingsStore.get(sessionId).then((settings) => {
-      if (settings?.isSyncEnabled !== undefined) {
-        setIsSyncEnabled(settings.isSyncEnabled);
-      } else {
-        setIsSyncEnabled(true); // Default to enabled
-      }
+    settingsStore.get(sessionId).then((storedSettings) => {
+      setSettings({isSyncEnabled: storedSettings?.isSyncEnabled ?? true});
     });
   }, [sessionId]);
 
@@ -100,7 +94,7 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace}: Contro
         setStagedConfig(finalStagedConfig);
         console.log("[syncState] Atomic sync complete.");
       } catch (err) {
-        addNotification("error", "Failed to initialize configuration.");
+        addNotification({type: "error", message: "Failed to initialize configuration."});
       }
     };
 
@@ -174,7 +168,7 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace}: Contro
           return finalConfig;
         });
       } catch (err) {
-        addNotification("error", "Failed to generate config template.");
+        addNotification({type: "error", message: "Failed to generate config template."});
       } finally {
         setIsGenerating(false);
       }
@@ -182,22 +176,33 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace}: Contro
     generate();
   }, [debouncedMetadata, isDirty, isolatedApi, sessionId, stagedConfigKey, addNotification]);
 
-  const handleAction = async (actionName: string, actionFn: () => Promise<any>) => {
+  const handleAction = async (actionName: string, actionFn: () => Promise<any>, notificationId?: string) => {
     setIsLoading((prev) => ({...prev, [actionName]: true}));
+    if (notificationId) {
+      addNotification({id: notificationId, type: "info", message: `${actionName}...`, duration: 0});
+    }
     try {
       await actionFn();
-      addNotification("success", `${actionName} completed successfully.`);
+      if (notificationId) {
+        addNotification({id: notificationId, type: "success", message: `${actionName} completed successfully.`});
+      } else {
+        addNotification({type: "success", message: `${actionName} completed successfully.`});
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-      addNotification("error", errorMessage);
+      if (notificationId) {
+        addNotification({id: notificationId, type: "error", message: errorMessage, duration: 0});
+      } else {
+        addNotification({type: "error", message: errorMessage});
+      }
     } finally {
       setIsLoading((prev) => ({...prev, [actionName]: false}));
     }
   };
 
-  const handleMetadataChange = (newMetadata: AgentMetadata) => {
-    console.log("[HANDLER] handleMetadataChange called.");
-    setStagedConfig((prev) => ({...prev, metadata: newMetadata}));
+  const handleValuesChange = (values: AgentFormValues) => {
+    console.log("[HANDLER] handleValuesChange (from form) called with:", values);
+    setStagedConfig((prev) => ({...prev, metadata: values.metadata as AgentMetadata}));
   };
 
   const handleApplyChanges = async () => {
@@ -215,7 +220,7 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace}: Contro
     console.log("[HANDLER] handleCancelChanges called.");
     setStagedConfig(activeConfig);
     await agentConfigStore.del(stagedConfigKey);
-    addNotification("info", "Changes have been discarded.");
+    addNotification({type: "info", message: "Changes have been discarded."});
     console.log("[HANDLER] Cancel complete.");
   };
 
@@ -223,14 +228,13 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace}: Contro
     return sessionApi.globFiles(patterns);
   };
 
-  const handleSyncToggle = async (enabled: boolean) => {
-    setIsSyncEnabled(enabled);
-    await settingsStore.set(sessionId, {isSyncEnabled: enabled});
-    if (enabled) {
-      await handleAction("Start Sync", mainApi.startSync);
-    } else {
-      await handleAction("Stop Sync", mainApi.stopSync);
-    }
+  const handleSettingsSubmit = async (values: {isSyncEnabled?: boolean}) => {
+    const {isSyncEnabled = true} = values;
+    setSettings({isSyncEnabled});
+    await settingsStore.set(sessionId, {isSyncEnabled});
+    const actionName = isSyncEnabled ? "Start Sync" : "Stop Sync";
+    const actionFn = isSyncEnabled ? mainApi.startSync : mainApi.stopSync;
+    await handleAction(actionName, actionFn, "sync-status");
   };
 
   return (
@@ -241,8 +245,8 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace}: Contro
       </TabsList>
       <TabsContent value="agent">
         <ConfigPanel
-          metadata={{...(stagedConfig.metadata ?? initialMetadata), workDir: workDirFullpath}}
-          onMetadataChange={handleMetadataChange}
+          values={{metadata: {...(stagedConfig.metadata ?? initialMetadata), workDir: workDirFullpath}}}
+          onValuesChange={handleValuesChange}
           isDirty={isDirty}
           isGenerating={isGenerating}
           isLoading={isLoading["Apply Config"] || false}
@@ -254,10 +258,10 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace}: Contro
       </TabsContent>
       <TabsContent value="settings">
         <SettingsPanel
-          isSyncEnabled={isSyncEnabled}
+          initialValues={settings}
           isLoading={isLoading["Clear History"] || false}
-          onSyncToggle={handleSyncToggle}
-          onClearHistory={() => handleAction("Clear History", mainApi.clearPageHistory)}
+          onSubmit={handleSettingsSubmit}
+          onClearHistory={() => handleAction("Clear History", mainApi.clearPageHistory, "clear-history-status")}
         />
       </TabsContent>
     </Tabs>

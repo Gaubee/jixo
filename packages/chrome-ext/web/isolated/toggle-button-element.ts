@@ -44,6 +44,7 @@ export async function addToggleButton() {
   JIXODraggableDialogIsolatedHelper.onOpenChanged((opened) => {
     btn.dataset.open = `${opened}`;
   });
+  toolbarRightEle.querySelectorAll("button.jixo-toggle-button").forEach((ele) => ele.remove());
   toolbarRightEle.insertBefore(btn, toolbarRightEle.firstElementChild);
   JIXODraggableDialogIsolatedHelper.onDestroy(() => {
     btn.remove();

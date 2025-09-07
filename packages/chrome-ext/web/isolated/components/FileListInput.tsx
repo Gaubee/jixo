@@ -8,11 +8,12 @@ interface FileListInputProps {
   label: string;
   values: string[];
   onChange: (values: string[]) => void;
+  onBlur?: () => void;
   placeholder: string;
   onPreview: (patterns: string[]) => Promise<string[]>;
 }
 
-export function FileListInput({label, values, onChange, placeholder, onPreview}: FileListInputProps) {
+export function FileListInput({label, values, onChange, onBlur, placeholder, onPreview}: FileListInputProps) {
   const [inputValue, setInputValue] = useState("");
   const [previewFiles, setPreviewFiles] = useState<string[]>([]);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -56,8 +57,16 @@ export function FileListInput({label, values, onChange, placeholder, onPreview}:
     <div className="space-y-2">
       <label className="block text-sm font-medium text-gray-700">{label}</label>
       <div className="flex gap-2">
-        <Input type="text" value={inputValue} onChange={(e) => setInputValue(e.target.value)} onKeyDown={handleKeyDown} placeholder={placeholder} className="flex-grow" />
-        <Button onClick={handleAddItem} variant="secondary">
+        <Input
+          type="text"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={onBlur}
+          placeholder={placeholder}
+          className="flex-grow"
+        />
+        <Button type="button" onClick={handleAddItem} onBlur={onBlur} variant="secondary">
           Add
         </Button>
       </div>
@@ -87,7 +96,7 @@ export function FileListInput({label, values, onChange, placeholder, onPreview}:
         {values.map((value, index) => (
           <div key={index} className="bg-muted flex items-center justify-between rounded p-1 text-xs">
             <span className="ml-2 truncate font-mono">{value}</span>
-            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleRemoveItem(index)}>
+            <Button type="button" variant="ghost" size="icon" className="h-5 w-5" onClick={() => handleRemoveItem(index)} onBlur={onBlur}>
               <X className="h-3 w-3" />
             </Button>
           </div>

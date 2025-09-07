@@ -1,0 +1,66 @@
+diff --git a/dist/index.js b/dist/index.js
+index ce328f1bc67710ca5c3bf303d552ba7be0b87a2e..238d385f0f1ddcb28c7f75a8d4aba1678f2090ee 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -336,18 +336,18 @@ var [WarningProvider, useWarningContext] = (0, import_react_context.createContex
+   docsSlug: "dialog"
+ });
+ var TitleWarning = ({ titleId }) => {
+-  const titleWarningContext = useWarningContext(TITLE_WARNING_NAME);
+-  const MESSAGE = `\`${titleWarningContext.contentName}\` requires a \`${titleWarningContext.titleName}\` for the component to be accessible for screen reader users.
++//   const titleWarningContext = useWarningContext(TITLE_WARNING_NAME);
++//   const MESSAGE = `\`${titleWarningContext.contentName}\` requires a \`${titleWarningContext.titleName}\` for the component to be accessible for screen reader users.
+ 
+-If you want to hide the \`${titleWarningContext.titleName}\`, you can wrap it with our VisuallyHidden component.
++// If you want to hide the \`${titleWarningContext.titleName}\`, you can wrap it with our VisuallyHidden component.
+ 
+-For more information, see https://radix-ui.com/primitives/docs/components/${titleWarningContext.docsSlug}`;
+-  React.useEffect(() => {
+-    if (titleId) {
+-      const hasTitle = document.getElementById(titleId);
+-      if (!hasTitle) console.error(MESSAGE);
+-    }
+-  }, [MESSAGE, titleId]);
++// For more information, see https://radix-ui.com/primitives/docs/components/${titleWarningContext.docsSlug}`;
++//   React.useEffect(() => {
++//     if (titleId) {
++//       const hasTitle = document.getElementById(titleId);
++//       if (!hasTitle) console.error(MESSAGE);
++//     }
++//   }, [MESSAGE, titleId]);
+   return null;
+ };
+ var DESCRIPTION_WARNING_NAME = "DialogDescriptionWarning";
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 13581033b5a5635796d4cf492f0828e853d011c4..681e02d76df859fd01f7027cdd4136be45b18576 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -284,18 +284,18 @@ var [WarningProvider, useWarningContext] = createContext(TITLE_WARNING_NAME, {
+   docsSlug: "dialog"
+ });
+ var TitleWarning = ({ titleId }) => {
+-  const titleWarningContext = useWarningContext(TITLE_WARNING_NAME);
+-  const MESSAGE = `\`${titleWarningContext.contentName}\` requires a \`${titleWarningContext.titleName}\` for the component to be accessible for screen reader users.
++//   const titleWarningContext = useWarningContext(TITLE_WARNING_NAME);
++//   const MESSAGE = `\`${titleWarningContext.contentName}\` requires a \`${titleWarningContext.titleName}\` for the component to be accessible for screen reader users.
+ 
+-If you want to hide the \`${titleWarningContext.titleName}\`, you can wrap it with our VisuallyHidden component.
++// If you want to hide the \`${titleWarningContext.titleName}\`, you can wrap it with our VisuallyHidden component.
+ 
+-For more information, see https://radix-ui.com/primitives/docs/components/${titleWarningContext.docsSlug}`;
+-  React.useEffect(() => {
+-    if (titleId) {
+-      const hasTitle = document.getElementById(titleId);
+-      if (!hasTitle) console.error(MESSAGE);
+-    }
+-  }, [MESSAGE, titleId]);
++// For more information, see https://radix-ui.com/primitives/docs/components/${titleWarningContext.docsSlug}`;
++//   React.useEffect(() => {
++//     if (titleId) {
++//       const hasTitle = document.getElementById(titleId);
++//       if (!hasTitle) console.error(MESSAGE);
++//     }
++//   }, [MESSAGE, titleId]);
+   return null;
+ };
+ var DESCRIPTION_WARNING_NAME = "DialogDescriptionWarning";

@@ -3,6 +3,7 @@ import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import {defineConfig, type UserConfig} from "vite";
+// import webExtension from "vite-plugin-web-extension";
 const resolver = createResolver(import.meta.dirname);
 
 // https://vitejs.dev/config/
@@ -55,6 +56,7 @@ export default defineConfig(() => {
           },
         };
       })(),
+      // webExtension({manifest: "./public/manifest.json"}),
     ],
     resolve: {
       alias: {

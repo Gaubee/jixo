@@ -66,7 +66,7 @@ export class JIXODraggableDialogElement extends HTMLElement {
         corner-shape: superellipse(2);
         overflow: hidden; /* 确保模糊效果不会溢出 */
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-        backdrop-filter: blur(10px) contrast(1.1);
+        backdrop-filter: blur(10px) saturate(2);
         border: 1px solid rgba(255, 255, 255, 0.18);
         background: rgba(255, 255, 255, 0.2); /* 半透明白色背景 */
         transition-duration: 0.2s;
@@ -139,11 +139,11 @@ export class JIXODraggableDialogElement extends HTMLElement {
    * 静态方法，用于创建 JIXODraggableDialog 的实例。
    * 保持与 Web Component 版本的 `createElement` 接口一致。
    */
-  static createElement(sessionId:string): JIXODraggableDialogElement {
+  static createElement(sessionId: string): JIXODraggableDialogElement {
     // return new JIXODraggableDialogElement();
-    const ele= document.createElement(JIXODraggableDialogElement.is) as JIXODraggableDialogElement;
-    ele.dataset.sessionId = sessionId
-    return ele
+    const ele = document.createElement(JIXODraggableDialogElement.is) as JIXODraggableDialogElement;
+    ele.dataset.sessionId = sessionId;
+    return ele;
   }
 
   /**
