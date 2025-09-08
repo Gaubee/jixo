@@ -40,9 +40,21 @@ interface ConfigPanelProps {
   onCancelChanges: () => Promise<void>;
   onPreview: (patterns: string[]) => Promise<string[]>;
   onSelectWorkspace: () => Promise<void>;
+  onInitTools: () => Promise<void>;
 }
 
-export function ConfigPanel({values, isDirty, isGenerating, isLoading, onValuesChange, onApplyChanges, onCancelChanges, onPreview, onSelectWorkspace}: ConfigPanelProps) {
+export function ConfigPanel({
+  values,
+  isDirty,
+  isGenerating,
+  isLoading,
+  onValuesChange,
+  onApplyChanges,
+  onCancelChanges,
+  onPreview,
+  onSelectWorkspace,
+  onInitTools,
+}: ConfigPanelProps) {
   const form = useForm<AgentFormValues>({
     resolver: zodResolver(AgentFormSchema),
     values,
@@ -107,7 +119,9 @@ export function ConfigPanel({values, isDirty, isGenerating, isLoading, onValuesC
                 </FormItem>
               )}
             />
-            <div className="border-t pt-4">{watchedValues.metadata?.agent === "coder" && <CoderAgentConfigPanel control={form.control} onPreview={onPreview} />}</div>
+            <div className="border-t pt-4">
+              {watchedValues.metadata?.agent === "coder" && <CoderAgentConfigPanel control={form.control} onPreview={onPreview} onInitTools={onInitTools} />}
+            </div>
           </CardContent>
           <CardFooter className="flex gap-2 border-t pt-6">
             <Button type="button" onClick={onCancelChanges} variant="outline" className="flex-1" disabled={!isDirty || isLoading}>

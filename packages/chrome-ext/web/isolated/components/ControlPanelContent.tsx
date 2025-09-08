@@ -228,6 +228,10 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace}: Contro
     return sessionApi.globFiles(patterns);
   };
 
+  const handleInitTools = async () => {
+    await handleAction("Initialize Tools", () => sessionApi.initToolsInWorkspace(), "init-tools-status");
+  };
+
   const handleSettingsSubmit = async (values: {isSyncEnabled?: boolean}) => {
     const {isSyncEnabled = true} = values;
     setSettings({isSyncEnabled});
@@ -254,12 +258,13 @@ export function ControlPanelContent({workDirFullpath, onSelectWorkspace}: Contro
           onCancelChanges={handleCancelChanges}
           onPreview={handlePreview}
           onSelectWorkspace={onSelectWorkspace}
+          onInitTools={handleInitTools}
         />
       </TabsContent>
       <TabsContent value="settings">
         <SettingsPanel
           initialValues={settings}
-          isLoading={isLoading["Clear History"] || false}
+          isLoading={isLoading["Clear History"] || isLoading["Initialize Tools"] || false}
           onSubmit={handleSettingsSubmit}
           onClearHistory={() => handleAction("Clear History", mainApi.clearPageHistory, "clear-history-status")}
         />

@@ -10,6 +10,7 @@ import {globFilesWithParams} from "../../gen-prompt/replacers/file-replacer.js";
 import {webSocketEndpoint} from "../../lib/comlink-adapters/web-socket-adapters.js";
 import type {AgentMetadata} from "../browser/index.js";
 import {genPageConfig} from "../node/config.js";
+import {initTools} from "./init.js";
 
 const globalWsMap = new Map<string, WebSocket>();
 const sessionWsMap = new Map<
@@ -113,9 +114,15 @@ export class SessionAPI {
   });
   globFiles = Comlink.clone(async (patterns: string[]): Promise<string[]> => {
     const workDir = await this.getWorkDir();
-    const allFiles = await Promise.all(patterns.map((p) => globFilesWithParams(p, workDir)));
+    const allFiles = await Promise.all(patterns.map((p) => globFilesWithParams(p, workDir, {})));
     return [...new Set(allFiles.flat())];
   });
+  async initToolsInWorkspace() {
+    const workDir = await this.getWorkDir();
+    const toolsDir = path.join(workDir, "tools");
+    await initTools({dir: toolsDir, force: true});
+    return `Tools initialized in ${toolsDir}`;
+  }
   async ping() {
     return "pong";
   }

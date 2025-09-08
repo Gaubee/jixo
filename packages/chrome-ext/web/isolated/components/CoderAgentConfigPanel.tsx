@@ -2,7 +2,7 @@ import {Button} from "@/components/ui/button.tsx";
 import {FormControl, FormField, FormItem, FormLabel} from "@/components/ui/form.tsx";
 import {Input} from "@/components/ui/input.tsx";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip.tsx";
-import {X} from "lucide-react";
+import {Download, X} from "lucide-react";
 import React from "react";
 import {useFieldArray, type Control} from "react-hook-form";
 import {FileListInput} from "./FileListInput.tsx";
@@ -11,9 +11,10 @@ import type {AgentFormValues} from "./ConfigPanel.tsx";
 interface CoderAgentConfigPanelProps {
   control: Control<AgentFormValues>;
   onPreview: (patterns: string[]) => Promise<string[]>;
+  onInitTools: () => Promise<void>;
 }
 
-export function CoderAgentConfigPanel({control, onPreview}: CoderAgentConfigPanelProps) {
+export function CoderAgentConfigPanel({control, onPreview, onInitTools}: CoderAgentConfigPanelProps) {
   const {fields, append, remove} = useFieldArray({
     control,
     name: "metadata.mcp",
@@ -111,9 +112,15 @@ export function CoderAgentConfigPanel({control, onPreview}: CoderAgentConfigPane
             </div>
           ))}
         </div>
-        <Button type="button" onClick={() => append({command: "", prefix: ""})} variant="secondary" size="sm">
-          Add MCP Tool
-        </Button>
+        <div className="flex gap-2">
+          <Button type="button" onClick={() => append({command: "", prefix: ""})} variant="secondary" size="sm">
+            Add MCP Tool
+          </Button>
+          <Button type="button" onClick={onInitTools} variant="outline" size="sm">
+            <Download className="mr-1 h-4 w-4" />
+            Initialize Tools
+          </Button>
+        </div>
       </div>
     </div>
   );
