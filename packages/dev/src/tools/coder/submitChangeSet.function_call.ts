@@ -1,5 +1,5 @@
+import {z} from "zod/v4";
 import type {FunctionCallFn} from "../types.js";
-import { z } from "zod/v4";
 
 export const name = "submitChangeSet";
 
@@ -26,7 +26,7 @@ export const paramsSchema = z.object({
  * @param context - The context containing the `render` function.
  * @returns The original operations if approved, so the host can execute them.
  */
-export const functionCall: FunctionCallFn<z.infer<typeof paramsSchema>> = async (args, context) => {
+export const functionCall = (async (args, context) => {
   console.log("Proposing changeset to user via UI for final approval.");
 
   try {
@@ -54,4 +54,4 @@ export const functionCall: FunctionCallFn<z.infer<typeof paramsSchema>> = async 
     console.error("Failed to get changeset approval:", error);
     throw error;
   }
-};
+}) satisfies FunctionCallFn<z.infer<typeof paramsSchema>>;

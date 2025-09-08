@@ -1,5 +1,5 @@
-import type {FunctionCallFn} from "../types.js";
 import {z} from "zod/v4";
+import type {FunctionCallFn} from "../types.js";
 
 export const name = "askUser";
 
@@ -16,7 +16,7 @@ export const paramsSchema = z.object({
  * @param context - The context containing the `render` function.
  * @returns A promise that resolves with the user's response.
  */
-export const functionCall: FunctionCallFn<z.infer<typeof paramsSchema>> = async (args, context) => {
+export const functionCall = (async (args, context) => {
   console.log(`Asking user via UI: "${args.question}"`);
 
   try {
@@ -35,4 +35,4 @@ export const functionCall: FunctionCallFn<z.infer<typeof paramsSchema>> = async 
     // Rethrow the error to let the caller know the FC failed.
     throw error;
   }
-};
+}) satisfies FunctionCallFn<z.infer<typeof paramsSchema>>;

@@ -1,7 +1,7 @@
 import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import {afterEach, beforeEach, describe, expect, it, type TestContext} from "vitest";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {getJunDir, readMeta, updateMeta, writeLog} from "../state.js";
 import {junRmLogic} from "./rm.js";
 
@@ -18,10 +18,10 @@ describe("junRmLogic", () => {
     junDir = await getJunDir();
 
     await updateMeta(junDir, (tasks) => {
-      tasks.set(1, {pid: 1, command: "c1", args: [], startTime: "t1", status: "completed"});
-      tasks.set(2, {pid: 2, command: "c2", args: [], startTime: "t2", status: "error"});
-      tasks.set(3, {pid: 3, command: "c3", args: [], startTime: "t3", status: "running"});
-      tasks.set(4, {pid: 4, command: "c4", args: [], startTime: "t4", status: "killed"});
+      tasks.set(1, {pid: 1, command: "c1", args: [], startTime: "t1", status: "completed", mode: "tty", output: "raw"});
+      tasks.set(2, {pid: 2, command: "c2", args: [], startTime: "t2", status: "error", mode: "tty", output: "raw"});
+      tasks.set(3, {pid: 3, command: "c3", args: [], startTime: "t3", status: "running", mode: "tty", output: "raw"});
+      tasks.set(4, {pid: 4, command: "c4", args: [], startTime: "t4", status: "killed", mode: "tty", output: "raw"});
     });
     await writeLog(junDir, 1, {type: "stdout", content: "log1", time: "t"});
     await writeLog(junDir, 2, {type: "stdout", content: "log2", time: "t"});
@@ -56,7 +56,7 @@ describe("junRmLogic", () => {
   it("should keep recent and running tasks with --auto", async () => {
     await updateMeta(junDir, (tasks) => {
       for (let i = 5; i <= 12; i++) {
-        tasks.set(i, {pid: i, command: `c${i}`, args: [], startTime: `t${i}`, status: "completed"});
+        tasks.set(i, {pid: i, command: `c${i}`, args: [], startTime: `t${i}`, status: "completed", mode: "tty", output: "raw"});
       }
     });
 

@@ -1,5 +1,5 @@
+import {z} from "zod/v4";
 import type {FunctionCallFn} from "../types.js";
-import { z } from "zod/v4";
 
 export const name = "proposePlan";
 
@@ -17,7 +17,7 @@ export const paramsSchema = z.object({
  * @param context - The context containing the `render` function.
  * @returns A promise resolving with an approval status.
  */
-export const functionCall: FunctionCallFn<z.infer<typeof paramsSchema>> = async (args, context) => {
+export const functionCall = (async (args, context) => {
   console.log("Proposing plan to user via UI:", args.plan_summary);
 
   try {
@@ -38,4 +38,4 @@ export const functionCall: FunctionCallFn<z.infer<typeof paramsSchema>> = async 
     // Re-throw the error to ensure the AI knows the tool failed.
     throw error;
   }
-};
+}) satisfies FunctionCallFn<z.infer<typeof paramsSchema>>;

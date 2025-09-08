@@ -76,7 +76,7 @@ describe("junKillLogic", () => {
   });
 
   it("should kill a running process and update its status", async () => {
-    const fakeProcess = execaNode(cliPath, ["run", "sleep", "10"], {detached: true, stdio: "ignore"});
+    const fakeProcess = execaNode(cliPath, ["start", "sleep", "10"], {detached: true, stdio: "ignore"});
     backgroundProcesses.push(fakeProcess);
     fakeProcess.unref();
 
@@ -100,7 +100,7 @@ describe("junKillLogic", () => {
   it("should report a failure when trying to kill a non-running process", async () => {
     const junDir = await getJunDir();
     await updateMeta(junDir, (tasks) => {
-      const completedTask: JunTask = {pid: 1, command: "echo", args: [], startTime: "t", status: "completed", mode: "tty"};
+      const completedTask: JunTask = {pid: 1, command: "echo", args: [], startTime: "t", status: "completed", mode: "tty", output: "raw"};
       tasks.set(1, completedTask);
     });
 
@@ -111,10 +111,10 @@ describe("junKillLogic", () => {
   });
 
   it("should handle killing all running processes", async () => {
-    const p1 = execaNode(cliPath, ["run", "sleep", "10"], {detached: true, stdio: "ignore"});
+    const p1 = execaNode(cliPath, ["start", "sleep", "10"], {detached: true, stdio: "ignore"});
     backgroundProcesses.push(p1);
     p1.unref();
-    const p2 = execaNode(cliPath, ["run", "sleep", "10"], {detached: true, stdio: "ignore"});
+    const p2 = execaNode(cliPath, ["start", "sleep", "10"], {detached: true, stdio: "ignore"});
     backgroundProcesses.push(p2);
     p2.unref();
 
@@ -123,7 +123,7 @@ describe("junKillLogic", () => {
 
     const junDir = await getJunDir();
     await updateMeta(junDir, (tasks) => {
-      tasks.set(3, {pid: 3, command: "echo", args: [], startTime: "t", status: "completed", mode: "tty"});
+      tasks.set(3, {pid: 3, command: "echo", args: [], startTime: "t", status: "completed", mode: "tty", output: "raw"});
     });
 
     const {killedCount} = await junKillLogic({all: true});

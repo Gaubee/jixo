@@ -1,10 +1,10 @@
-import {junRunLogic} from "@jixo/jun";
+import {junStartLogic} from "@jixo/jun";
 import {z} from "zod/v4";
 import type {FunctionCallFn} from "../types.js";
 
-export const name = "shellRun";
+export const name = "shellStart";
 
-export const description = "使用jun代理在前台执行一个shell命令。此工具会等待命令执行完成，并返回最终的退出码。";
+export const description = "使用jun代理在后台启动一个shell命令。此工具会立即返回任务pid，而不会等待命令完成。";
 
 export const paramsSchema = z.object({
   command: z.string().describe("要执行的主命令。"),
@@ -25,11 +25,11 @@ export const paramsSchema = z.object({
         "比如`tsc --build --watch`是会在编译的时候刷新tty窗口。",
         "比如`tsc --build`则是一次性任务输出，那么使用cp模式会更方便。",
         "**默认值:**",
-        "默认使用cp模式。",
+        "默认使用tty模式。",
       ].join("\n"),
     )
     .optional()
-    .default("cp"),
+    .default("tty"),
   output: z
     .union([z.literal("raw"), z.literal("text"), z.literal("html")])
     .describe(
@@ -46,22 +46,39 @@ export const paramsSchema = z.object({
 });
 
 /**
- * 调用 @jixo/jun 的 junRunLogic 来执行前台命令。
+ * 调用 @jixo/jun 的 junStartLogic 来执行后台命令。
  * @param args - 符合paramsSchema的参数
- * @returns 一个包含命令执行结果的对象
+ * @returns 一个包含jun任务信息的对象
  */
 export const functionCall = (async (args) => {
-  const exitCode = await junRunLogic({
-    command: args.command,
-    commandArgs: args.args,
-    json: true,
-    output: args.output,
-    mode: args.mode,
-  });
+  // For background tasks, we capture the JSON output to get the PID.
+  let pid = -1;
+  let osPid = -1;
+  const originalConsoleLog = console.log;
+  let jsonOutput = "";
+  console.log = (data) => {
+    jsonOutput = data;
+  }; // Hijack console.log
+
+  try {
+    await junStartLogic({
+      command: args.command,
+      commandArgs: args.args,
+      json: true,
+      output: args.output,
+      mode: args.mode,
+    });
+    const parsed = JSON.parse(jsonOutput);
+    pid = parsed.pid;
+    osPid = parsed.osPid;
+  } finally {
+    console.log = originalConsoleLog; // Restore console.log
+  }
 
   return {
-    status: exitCode === 0 ? "COMPLETED" : "ERROR",
-    exit_code: exitCode,
+    status: "STARTED_IN_BACKGROUND",
+    pid: pid,
+    osPid: osPid,
     command: args.command,
     args: args.args,
   };

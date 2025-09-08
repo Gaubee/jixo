@@ -1,36 +1,28 @@
 import pty from "@lydell/node-pty";
 import Debug from "debug";
-import {execa, execaNode, type ResultPromise} from "execa";
-import {import_meta_ponyfill} from "import-meta-ponyfill";
-import {fileURLToPath} from "node:url";
+import {execa} from "execa";
+import {createRequire} from "node:module";
+import stripAnsi from "strip-ansi";
 import {getJunDir, readMeta, updateMeta, writeLog} from "../state.js";
 import type {JunTask, JunTaskOutput, StdioLogEntry} from "../types.js";
+const require = createRequire(import.meta.url);
+const AnsiToHtmlConvert = require("ansi-to-html") as typeof import("ansi-to-html");
 
 const debug = Debug("jun:run");
-
-// ANSI escape code regex
-const ansiRegex = new RegExp(
-  "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*)?\\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))",
-  "g",
-);
-
-const stripAnsi = (str: string) => str.replace(ansiRegex, "");
 
 export interface JunRunOptions {
   command: string;
   commandArgs: string[];
-  background: boolean;
   json: boolean;
-  output: JunTaskOutput;
+  output?: JunTaskOutput;
   mode?: "tty" | "cp";
-  onBackgroundProcess?: (processPromise: ResultPromise) => void;
 }
 
 /**
  * Executes a command in TTY mode using node-pty.
  * This mode provides a pseudo-terminal, mixing stdout and stderr.
  */
-async function runTty(pid: number, {command, commandArgs, json, output}: JunRunOptions): Promise<number> {
+async function runTty(pid: number, {command, commandArgs, json}: JunRunOptions, onData: (data: string) => void): Promise<number> {
   const junDir = await getJunDir();
   debug(`Spawning pty with command: ${command} ${commandArgs.join(" ")}`);
 
@@ -47,8 +39,7 @@ async function runTty(pid: number, {command, commandArgs, json, output}: JunRunO
   ptyProcess.onData((data) => {
     log(data);
     if (!json) {
-      const contentToWrite = output === "text" ? stripAnsi(data) : data;
-      process.stdout.write(contentToWrite);
+      onData(data);
     }
   });
 
@@ -77,7 +68,7 @@ async function runTty(pid: number, {command, commandArgs, json, output}: JunRunO
  * Executes a command in Child Process mode using execa.
  * This mode separates stdout and stderr.
  */
-async function runCp(pid: number, {command, commandArgs, json, output}: JunRunOptions): Promise<number> {
+async function runCp(pid: number, {command, commandArgs, json}: JunRunOptions, onStdout: (data: string) => void, onStdErr: (data: string) => void): Promise<number> {
   const junDir = await getJunDir();
   debug(`Spawning child_process with command: ${command} ${commandArgs.join(" ")}`);
 
@@ -93,12 +84,12 @@ async function runCp(pid: number, {command, commandArgs, json, output}: JunRunOp
   cp.stdout?.on("data", (data) => {
     const content = data.toString();
     log("stdout", content);
-    if (!json) process.stdout.write(output === "text" ? stripAnsi(content) : content);
+    if (!json) onStdout(data);
   });
   cp.stderr?.on("data", (data) => {
     const content = data.toString();
     log("stderr", content);
-    if (!json) process.stderr.write(output === "text" ? stripAnsi(content) : content);
+    if (!json) onStdErr(data);
   });
 
   await updateMeta(junDir, (tasks) => {
@@ -115,7 +106,7 @@ async function runCp(pid: number, {command, commandArgs, json, output}: JunRunOp
 
   try {
     const result = await cp;
-    return result.exitCode;
+    return result.code;
   } catch (e: any) {
     // execa throws an error for non-zero exit codes
     return e.exitCode ?? 1;
@@ -123,8 +114,17 @@ async function runCp(pid: number, {command, commandArgs, json, output}: JunRunOp
 }
 
 export async function junRunLogic(options: JunRunOptions): Promise<number> {
-  const {command, commandArgs, background, json, output, mode = "tty", onBackgroundProcess} = options;
+  const {command, commandArgs, json, output = "raw", mode = "tty"} = options;
   const junDir = await getJunDir();
+
+  let formatOuput = (data: string) => data;
+  if (output === "text") {
+    formatOuput = stripAnsi;
+  }
+  if (output === "html") {
+    const convert = new AnsiToHtmlConvert({stream: true});
+    formatOuput = (data) => convert.toHtml(data);
+  }
 
   // Get the new PID and create the initial task entry atomically.
   let newPid = 0;
@@ -136,40 +136,22 @@ export async function junRunLogic(options: JunRunOptions): Promise<number> {
       args: commandArgs,
       startTime: new Date().toISOString(),
       status: "running",
-      output,
+      output: "raw",
       mode,
     };
     tasks.set(newPid, task);
   });
 
-  if (background) {
-    debug("Starting background task");
-    const cliPath = fileURLToPath(await import_meta_ponyfill(import.meta).resolve("#cli"));
-    // Ensure the mode is passed to the background process
-    const backgroundArgs = ["run", "--output", output, "--mode", mode, "--", command, ...commandArgs];
-    const subprocess = execaNode(cliPath, backgroundArgs, {
-      detached: true,
-      stdio: "ignore",
-    });
-    subprocess.unref();
-    onBackgroundProcess?.(subprocess);
-
-    debug(`Background process spawned with OS PID: ${subprocess.pid}`);
-    await updateMeta(junDir, (tasks) => {
-      const task = tasks.get(newPid);
-      if (task) task.osPid = subprocess.pid;
-    });
-
-    if (json) {
-      console.log(JSON.stringify({status: "STARTED_IN_BACKGROUND", pid: newPid, osPid: subprocess.pid}));
-    } else {
-      console.log(`[jun] Started background task ${newPid} (OS PID: ${subprocess.pid}): ${command} ${commandArgs.join(" ")}`);
-    }
-    return 0;
-  }
-
   // --- Foreground task logic ---
-  const exitCode = await (mode === "tty" ? runTty(newPid, options) : runCp(newPid, options));
+  const exitCode = await (mode === "tty"
+    ? //
+      runTty(newPid, options, (data) => process.stdout.write(formatOuput(data)))
+    : runCp(
+        newPid,
+        options,
+        (data) => process.stdout.write(formatOuput(data)),
+        (data) => process.stderr.write(formatOuput(data)),
+      ));
 
   const endTime = new Date().toISOString();
   await updateMeta(junDir, (tasks) => {

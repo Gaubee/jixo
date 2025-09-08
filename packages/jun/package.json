@@ -24,11 +24,13 @@
   },
   "dependencies": {
     "@lydell/node-pty": "^1.1.0",
+    "ansi-to-html": "^0.7.2",
     "date-fns": "^4.1.0",
     "debug": "^4.4.1",
     "execa": "^9.6.0",
     "import-meta-ponyfill": "^3.3.1",
     "proper-lockfile": "^4.1.2",
+    "strip-ansi": "^7.1.0",
     "yargs-parser": "^22.0.0"
   },
   "devDependencies": {

@@ -1,7 +1,8 @@
+import assert from "node:assert";
 import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import {afterEach, beforeEach, describe, expect, it, type TestContext} from "vitest";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {getJunDir, updateMeta, writeLog} from "../state.js";
 import {junCatLogic} from "./cat.js";
 
@@ -24,15 +25,15 @@ describe("junCatLogic", () => {
   it("should return task details and stdio in a success record", async () => {
     const junDir = await getJunDir();
     await updateMeta(junDir, (tasks) => {
-      tasks.set(1, {pid: 1, command: "echo", args: ["hi"], startTime: "t1", status: "completed"});
+      tasks.set(1, {pid: 1, command: "echo", args: ["hi"], startTime: "t1", status: "completed", mode: "tty", output: "text"});
     });
     await writeLog(junDir, 1, {type: "stdout", content: "hi\n", time: "t2"});
 
     const {success, failed} = await junCatLogic([1]);
     expect(Object.keys(failed).length).toBe(0);
-    expect(success[1]).toBeDefined();
 
     const taskLog = success[1];
+    assert.ok(taskLog);
     expect(taskLog.pid).toBe(1);
     expect(taskLog.command).toBe("echo");
     expect(taskLog.stdio.length).toBe(1);
@@ -42,7 +43,7 @@ describe("junCatLogic", () => {
   it("should handle multiple pids and report not found pids in a failed record", async () => {
     const junDir = await getJunDir();
     await updateMeta(junDir, (tasks) => {
-      tasks.set(1, {pid: 1, command: "echo", args: ["hi"], startTime: "t1", status: "completed"});
+      tasks.set(1, {pid: 1, command: "echo", args: ["hi"], startTime: "t1", status: "completed", mode: "tty", output: "text"});
     });
 
     const {success, failed} = await junCatLogic([1, 99]);

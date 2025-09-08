@@ -20,7 +20,7 @@ export const paramsSchema = z.object({
  * @param context - The context containing the `render` function.
  * @returns A simple status object.
  */
-export const functionCall: FunctionCallFn<z.infer<typeof paramsSchema>> = async (args, context) => {
+export const functionCall = (async (args, context) => {
   console.log(`Logging thought #${args.step}/${args.total_steps} to UI:`, args.thought);
 
   // We await the render call to ensure the message is sent before the tool returns.
@@ -37,4 +37,4 @@ export const functionCall: FunctionCallFn<z.infer<typeof paramsSchema>> = async 
   };
 
   return result;
-};
+}) satisfies FunctionCallFn<z.infer<typeof paramsSchema>>;

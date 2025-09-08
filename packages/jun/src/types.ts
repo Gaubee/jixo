@@ -9,7 +9,7 @@ export interface JunTask {
   startTime: string;
   endTime?: string;
   status: "running" | "completed" | "error" | "killed";
-  output?: JunTaskOutput;
+  output: JunTaskOutput;
   mode: "tty" | "cp";
 }
 

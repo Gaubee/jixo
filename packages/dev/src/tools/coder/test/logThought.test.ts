@@ -1,17 +1,17 @@
 import type {RenderPayload} from "@jixo/tools-uikit";
-import {assertEquals, assertExists} from "jsr:@std/assert";
-import {describe, it} from "jsr:@std/testing/bdd";
-import type {ToolContext} from "../coder/askUser.js";
-import {functionCall, paramsSchema} from "../coder/logThought.js";
+import assert from "node:assert";
+import {describe, expect, it} from "vitest";
+import type {ToolContext} from "../../types.js";
+import {functionCall, paramsSchema} from "../logThought.function_call.js";
 
 describe("logThought tool", () => {
   it("should call the render function with the correct payload", async () => {
-    let capturedPayload: RenderPayload | null = null;
+    let capturedPayload: RenderPayload | undefined;
     const mockRender = (payload: RenderPayload): Promise<void> => {
       capturedPayload = payload;
       return Promise.resolve(); // Display-only tools don't need a return value.
     };
-    const mockContext: ToolContext = {render: mockRender};
+    const mockContext: ToolContext = {render: mockRender, sessionId: "test-session"};
 
     const args = {
       thought: "First, I need to analyze the problem.",
@@ -23,10 +23,10 @@ describe("logThought tool", () => {
 
     const result = await functionCall(args, mockContext);
 
-    assertEquals(result.status, "THOUGHT_LOGGED_TO_UI");
+    expect(result.status).toBe("THOUGHT_LOGGED_TO_UI");
 
-    assertExists(capturedPayload);
-    assertEquals(capturedPayload.component, "LogThoughtPanel");
-    assertEquals(capturedPayload.props, args);
+    assert.ok(capturedPayload);
+    expect(capturedPayload.component).toBe("LogThoughtPanel");
+    expect(capturedPayload.props).toEqual(args);
   });
 });

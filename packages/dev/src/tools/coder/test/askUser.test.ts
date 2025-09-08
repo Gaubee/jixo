@@ -1,11 +1,12 @@
 import type {RenderPayload} from "@jixo/tools-uikit";
-import {assertEquals, assertExists} from "jsr:@std/assert";
-import {describe, it} from "jsr:@std/testing/bdd";
-import {functionCall, paramsSchema, type ToolContext} from "./askUser.js";
+import assert from "node:assert";
+import {describe, expect, it} from "vitest";
+import type {ToolContext} from "../../types.js";
+import {functionCall, paramsSchema} from "../askUser.function_call.js";
 
 describe("askUser tool", () => {
   it("should call the render function with the correct payload", async () => {
-    let capturedPayload: RenderPayload | null = null;
+    let capturedPayload: RenderPayload | undefined;
 
     // Create a mock render function for testing.
     const mockRender = (payload: RenderPayload): Promise<any> => {
@@ -15,6 +16,7 @@ describe("askUser tool", () => {
 
     const mockContext: ToolContext = {
       render: mockRender,
+      sessionId: "test-session",
     };
 
     const args = {
@@ -26,13 +28,13 @@ describe("askUser tool", () => {
     const result = await functionCall(args, mockContext);
 
     // Verify the result
-    assertEquals(result, "User answered 'Yes'");
+    expect(result).toBe("User answered 'Yes'");
 
     // Verify that the render function was called correctly
-    assertExists(capturedPayload);
-    assertEquals(capturedPayload.component, "AskUserDialog");
-    assertEquals(capturedPayload.props.question, "Proceed?");
-    assertEquals(capturedPoad.props.options, ["Yes", "No"]);
+    assert.ok(capturedPayload);
+    expect(capturedPayload.component).toBe("AskUserDialog");
+    expect(capturedPayload.props.question).toBe("Proceed?");
+    expect(capturedPayload.props.options).toEqual(["Yes", "No"]);
   });
 
   it("should handle rejection from the render function", async () => {
@@ -42,18 +44,11 @@ describe("askUser tool", () => {
 
     const mockContext: ToolContext = {
       render: mockRender,
+      sessionId: "test-session",
     };
 
     const args = {question: "Are you sure?"};
 
-    let caughtError: Error | null = null;
-    try {
-      await functionCall(args, mockContext);
-    } catch (e) {
-      caughtError = e;
-    }
-
-    assertExists(caughtError);
-    assertEquals(caughtError.message, "User cancelled");
+    await expect(functionCall(args, mockContext)).rejects.toThrow("User cancelled");
   });
 });

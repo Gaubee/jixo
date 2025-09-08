@@ -8,8 +8,7 @@ import type {JunRunOptions} from "./run.js";
  * @param args - The array of string arguments passed after 'jun run'.
  * @returns A structured options object for junRunLogic.
  */
-export function parseRunArgs(args: string[]): JunRunOptions | {error: string} {
-  let background = false;
+export function parseRunArgs(args: string[]): Omit<JunRunOptions, "onBackgroundProcess"> | {error: string} {
   let json = false;
   let output: JunTaskOutput = "raw";
   let mode: "tty" | "cp" = "tty";
@@ -22,11 +21,6 @@ export function parseRunArgs(args: string[]): JunRunOptions | {error: string} {
     if (arg === "--") {
       commandIndex = i + 1;
       break;
-    }
-
-    if (arg === "--background" || arg === "-b") {
-      background = true;
-      continue;
     }
 
     if (arg === "--json") {
@@ -71,7 +65,6 @@ export function parseRunArgs(args: string[]): JunRunOptions | {error: string} {
   return {
     command,
     commandArgs,
-    background,
     json,
     output,
     mode,

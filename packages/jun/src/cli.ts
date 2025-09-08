@@ -9,6 +9,7 @@ import {junLsLogic} from "./commands/ls.js";
 import {junRmLogic} from "./commands/rm.js";
 import {junRunLogic} from "./commands/run.js";
 import {parseRunArgs} from "./commands/run_args_parser.js";
+import {junStartLogic} from "./commands/start.js";
 import type {JunTask, JunTaskLog} from "./types.js";
 
 function printTasks(tasks: JunTask[]) {
@@ -38,7 +39,7 @@ function printTaskLogs(taskLog: JunTaskLog) {
 export async function main(argsArray: string[]): Promise<number> {
   if (argsArray.length === 0) {
     console.error("No command provided.");
-    console.log("Available commands: init, run, ls, history, cat, rm, kill");
+    console.log("Available commands: init, run, start, ls, history, cat, rm, kill");
     return 1;
   }
 
@@ -64,6 +65,15 @@ export async function main(argsArray: string[]): Promise<number> {
         return 1;
       }
       return await junRunLogic(runOpts);
+    }
+    case "start": {
+      // The parser for 'start' is the same as for 'run'.
+      const startOpts = parseRunArgs(commandArgs);
+      if ("error" in startOpts) {
+        console.error(`Error: ${startOpts.error}`);
+        return 1;
+      }
+      return await junStartLogic(startOpts);
     }
     case "ls": {
       const runningTasks = await junLsLogic();
@@ -124,7 +134,7 @@ export async function main(argsArray: string[]): Promise<number> {
       const runOpts = parseRunArgs(argsArray); // Parse the original, full args array.
       if ("error" in runOpts) {
         console.error(`Unknown command: ${command}`);
-        console.log("Available commands: init, run, ls, history, cat, rm, kill");
+        console.log("Available commands: init, run, start, ls, history, cat, rm, kill");
         return 1;
       }
       return await junRunLogic(runOpts);

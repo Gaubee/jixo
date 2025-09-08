@@ -7,7 +7,6 @@ describe("parseRunArgs", () => {
     expect(result).toEqual({
       command: "echo",
       commandArgs: ["hello"],
-      background: false,
       json: false,
       output: "raw",
       mode: "tty",
@@ -19,7 +18,6 @@ describe("parseRunArgs", () => {
     expect(result).toEqual({
       command: "tsc",
       commandArgs: ["--watch", "--project", "tsconfig.json"],
-      background: false,
       json: false,
       output: "raw",
       mode: "tty",
@@ -31,19 +29,6 @@ describe("parseRunArgs", () => {
     expect(result).toEqual({
       command: "echo",
       commandArgs: ["--version"],
-      background: false,
-      json: false,
-      output: "raw",
-      mode: "tty",
-    });
-  });
-
-  it("should parse the --background flag before the command", () => {
-    const result = parseRunArgs(["--background", "sleep", "10"]);
-    expect(result).toEqual({
-      command: "sleep",
-      commandArgs: ["10"],
-      background: true,
       json: false,
       output: "raw",
       mode: "tty",
@@ -55,19 +40,6 @@ describe("parseRunArgs", () => {
     expect(result).toEqual({
       command: "ls",
       commandArgs: ["-la"],
-      background: false,
-      json: true,
-      output: "raw",
-      mode: "tty",
-    });
-  });
-
-  it("should parse both --background and --json flags", () => {
-    const result = parseRunArgs(["-b", "--json", "--", "npm", "run", "dev"]);
-    expect(result).toEqual({
-      command: "npm",
-      commandArgs: ["run", "dev"],
-      background: true,
       json: true,
       output: "raw",
       mode: "tty",
@@ -80,7 +52,7 @@ describe("parseRunArgs", () => {
   });
 
   it("should return an error if only flags are provided", () => {
-    const result = parseRunArgs(["--background", "--json"]);
+    const result = parseRunArgs(["--json"]);
     expect("error" in result).toBe(true);
   });
 });

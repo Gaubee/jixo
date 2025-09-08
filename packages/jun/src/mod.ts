@@ -5,5 +5,6 @@ export * from "./commands/kill.js";
 export * from "./commands/ls.js";
 export * from "./commands/rm.js";
 export * from "./commands/run.js";
+export * from "./commands/start.js";
 export * from "./state.js";
 export * from "./types.js";

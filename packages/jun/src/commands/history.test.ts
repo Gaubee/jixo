@@ -1,7 +1,7 @@
 import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import {afterEach, beforeEach, describe, expect, it, type TestContext} from "vitest";
+import {afterEach, beforeEach, describe, expect, it} from "vitest";
 import {getJunDir, updateMeta} from "../state.js";
 import {junHistoryLogic} from "./history.js";
 
@@ -24,9 +24,9 @@ describe("junHistoryLogic", () => {
   it("should return all tasks sorted by pid descending", async () => {
     const junDir = await getJunDir();
     await updateMeta(junDir, (tasks) => {
-      tasks.set(1, {pid: 1, command: "sleep", args: ["10"], startTime: "t1", status: "running"});
-      tasks.set(2, {pid: 2, command: "echo", args: [], startTime: "t2", status: "completed"});
-      tasks.set(3, {pid: 3, command: "deno", args: [], startTime: "t3", status: "killed"});
+      tasks.set(1, {pid: 1, command: "sleep", args: ["10"], startTime: "t1", status: "running", mode: "tty", output: "raw"});
+      tasks.set(2, {pid: 2, command: "echo", args: [], startTime: "t2", status: "completed", mode: "tty", output: "raw"});
+      tasks.set(3, {pid: 3, command: "deno", args: [], startTime: "t3", status: "killed", mode: "tty", output: "raw"});
     });
 
     const allTasks = await junHistoryLogic();
