@@ -1,11 +1,9 @@
-export * from "./commands/cat.ts";
-export * from "./commands/history.ts";
-export * from "./commands/init.ts";
-export * from "./commands/kill.ts";
-export * from "./commands/ls.ts";
-export * from "./commands/rm.ts";
-export * from "./commands/run.ts";
-export * from "./state.ts";
-export * from "./types.ts";
-
-// JIXO_CODER_EOF
+export * from "./commands/cat.js";
+export * from "./commands/history.js";
+export * from "./commands/init.js";
+export * from "./commands/kill.js";
+export * from "./commands/ls.js";
+export * from "./commands/rm.js";
+export * from "./commands/run.js";
+export * from "./state.js";
+export * from "./types.js";

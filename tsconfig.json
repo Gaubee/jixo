@@ -30,9 +30,9 @@
         // {
         //     "path": "./packages/tools-uikit/tsconfig.json"
         // },
-        // {
-        //     "path": "./packages/jun/tsconfig.node-check.json"
-        // },
+        {
+            "path": "./packages/jun/tsconfig.json"
+        },
         // {
         //     "path": "./packages/chrome-ext/tsconfig.json"
         // },

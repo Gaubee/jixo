@@ -1,3 +1,5 @@
+export type JunTaskOutput = "raw" | "text" | "html";
+
 export interface JunTask {
   pid: number;
   osPid?: number; // Real OS PID for killing
@@ -7,10 +9,12 @@ export interface JunTask {
   startTime: string;
   endTime?: string;
   status: "running" | "completed" | "error" | "killed";
+  output?: JunTaskOutput;
+  mode: "tty" | "cp";
 }
 
 export type StdioLogEntry = {
-  type: "stdout" | "stderr" | "stdin";
+  type: "output" | "stdout" | "stderr" | "stdin";
   content: string;
   time: string;
 };
@@ -18,5 +22,3 @@ export type StdioLogEntry = {
 export interface JunTaskLog extends JunTask {
   stdio: Array<StdioLogEntry>;
 }
-
-// JIXO_CODER_EOF

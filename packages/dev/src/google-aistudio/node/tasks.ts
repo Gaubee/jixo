@@ -4,7 +4,7 @@ import {createHash} from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import {reactiveFs} from "../../reactive-fs/reactive-fs.js";
-import {createFunctionCallContext, defineFunctionCalls, type FunctionCallsMap} from "./function_call.js";
+import {createFunctionCallContext, defineFunctionCalls, type FunctionCallsMap} from "../../tools/function_call.js";
 import {zContentsSchema} from "./types.js";
 export interface GoogleAiStudioAutomationOptions {
   dir?: string; // This is now the WORK_DIR

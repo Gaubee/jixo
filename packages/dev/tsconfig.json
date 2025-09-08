@@ -19,8 +19,5 @@
   ],
   "exclude": [
     "src/groq.bak",
-    "../jun",
-    "../tools",
-    "../tools/uikit"
   ]
 }

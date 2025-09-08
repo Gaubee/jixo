@@ -2,7 +2,7 @@ import {blue} from "@gaubee/nodekit";
 import fs from "node:fs/promises";
 import path from "node:path";
 import z from "zod";
-import {defineFunctionCalls} from "../node/function_call.js";
+import {defineFunctionCalls} from "../../tools/function_call.js";
 
 export interface GenerateConfigOptions {
   workDir: string;

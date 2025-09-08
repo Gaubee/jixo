@@ -1,0 +1,43 @@
+{
+  "name": "@jixo/jun",
+  "version": "0.0.2",
+  "license": "MIT",
+  "type": "module",
+  "imports": {
+    "#cli": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/mod.js",
+    "./cli": "./dist/cli.js"
+  },
+  "bin": {
+    "jun": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "ts": "tsc --build",
+    "dev": "tsx --watch src/cli.ts",
+    "test": "vitest run",
+    "test:watch": "vitest watch"
+  },
+  "dependencies": {
+    "@lydell/node-pty": "^1.1.0",
+    "date-fns": "^4.1.0",
+    "debug": "^4.4.1",
+    "execa": "^9.6.0",
+    "import-meta-ponyfill": "^3.3.1",
+    "proper-lockfile": "^4.1.2",
+    "yargs-parser": "^22.0.0"
+  },
+  "devDependencies": {
+    "@types/debug": "^4.1.12",
+    "@types/node": "^24.1.0",
+    "@types/proper-lockfile": "^4.1.4",
+    "@types/yargs-parser": "^21.0.3",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

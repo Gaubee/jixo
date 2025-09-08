@@ -1,16 +1,15 @@
-#!/usr/bin/env -S deno run --allow-read --allow-write --allow-run --allow-env
-
-import {parseArgs} from "@std/cli";
-import {format as formatDate} from "@std/datetime";
-import {junCatLogic} from "./commands/cat.ts";
-import {junHistoryLogic} from "./commands/history.ts";
-import {junInitLogic} from "./commands/init.ts";
-import {junKillLogic} from "./commands/kill.ts";
-import {junLsLogic} from "./commands/ls.ts";
-import {junRmLogic} from "./commands/rm.ts";
-import {junRunLogic} from "./commands/run.ts";
-import {parseRunArgs} from "./commands/run_args_parser.ts";
-import type {JunTask, JunTaskLog} from "./types.ts";
+#!/usr/bin/env node
+import {format as formatDate} from "date-fns";
+import yargsParser from "yargs-parser";
+import {junCatLogic} from "./commands/cat.js";
+import {junHistoryLogic} from "./commands/history.js";
+import {junInitLogic} from "./commands/init.js";
+import {junKillLogic} from "./commands/kill.js";
+import {junLsLogic} from "./commands/ls.js";
+import {junRmLogic} from "./commands/rm.js";
+import {junRunLogic} from "./commands/run.js";
+import {parseRunArgs} from "./commands/run_args_parser.js";
+import type {JunTask, JunTaskLog} from "./types.js";
 
 function printTasks(tasks: JunTask[]) {
   if (tasks.length === 0) {
@@ -30,7 +29,9 @@ function printTaskLogs(taskLog: JunTaskLog) {
   console.log(`--- Log for PID ${taskLog.pid}: ${taskLog.command} ${taskLog.args.join(" ")} ---`);
   for (const log of taskLog.stdio) {
     const time = formatDate(new Date(log.time), "HH:mm:ss.SSS");
-    console.log(`[${time}][${log.type}] ${log.content.trimEnd()}`);
+    // Differentiate log output based on type for clarity
+    const prefix = log.type === "output" ? "" : `[${log.type}] `;
+    console.log(`[${time}]${prefix}${log.content.trimEnd()}`);
   }
 }
 
@@ -43,7 +44,12 @@ export async function main(argsArray: string[]): Promise<number> {
 
   const command = argsArray[0];
   const commandArgs = argsArray.slice(1);
-  const commonArgs = parseArgs(commandArgs, {boolean: ["json", "all", "auto"], string: ["_"]});
+  const commonArgs = yargsParser(commandArgs, {
+    boolean: ["json", "all", "auto"],
+    string: ["output"],
+    alias: {o: "output"},
+    configuration: {"strip-dashed": true},
+  });
 
   switch (command) {
     case "init": {
@@ -126,6 +132,10 @@ export async function main(argsArray: string[]): Promise<number> {
   }
 }
 
-if (import.meta.main) {
-  Deno.exit(await main(Deno.args));
+import {import_meta_ponyfill} from "import-meta-ponyfill";
+
+if (import_meta_ponyfill(import.meta).main) {
+  main(process.argv.slice(2)).then((exitCode) => {
+    process.exit(exitCode);
+  });
 }

@@ -1,90 +1,191 @@
-import {getJunDir, overwriteMeta, readMeta, writeLog} from "../state.ts";
-import type {JunTask} from "../types.ts";
+import pty from "@lydell/node-pty";
+import Debug from "debug";
+import {execa, execaNode, type ResultPromise} from "execa";
+import {import_meta_ponyfill} from "import-meta-ponyfill";
+import {fileURLToPath} from "node:url";
+import {getJunDir, readMeta, updateMeta, writeLog} from "../state.js";
+import type {JunTask, JunTaskOutput, StdioLogEntry} from "../types.js";
 
-async function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const debug = Debug("jun:run");
+
+// ANSI escape code regex
+const ansiRegex = new RegExp(
+  "[\\u001B\\u009B][[\\]()#;?]*(?:(?:(?:(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*|[a-zA-Z\\d]+(?:;[-a-zA-Z\\d\\/#&.:=?%@~_]+)*)?\\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-ntqry=><~]))",
+  "g",
+);
+
+const stripAnsi = (str: string) => str.replace(ansiRegex, "");
 
 export interface JunRunOptions {
   command: string;
   commandArgs: string[];
   background: boolean;
   json: boolean;
+  output: JunTaskOutput;
+  mode?: "tty" | "cp";
+  onBackgroundProcess?: (processPromise: ResultPromise) => void;
 }
 
-export async function junRunLogic({command, commandArgs, background, json}: JunRunOptions): Promise<number> {
+/**
+ * Executes a command in TTY mode using node-pty.
+ * This mode provides a pseudo-terminal, mixing stdout and stderr.
+ */
+async function runTty(pid: number, {command, commandArgs, json, output}: JunRunOptions): Promise<number> {
   const junDir = await getJunDir();
-  let tasks = await readMeta(junDir);
-  const newPid = (tasks.size > 0 ? Math.max(...tasks.keys()) : 0) + 1;
+  debug(`Spawning pty with command: ${command} ${commandArgs.join(" ")}`);
+
+  const ptyProcess = pty.spawn(command, commandArgs, {
+    name: "xterm-color",
+    cols: process.stdout.columns || 80,
+    rows: process.stdout.rows || 30,
+    cwd: process.cwd(),
+    env: process.env as {[key: string]: string},
+  });
+
+  const log = (content: string) => writeLog(junDir, pid, {type: "output", content, time: new Date().toISOString()});
+
+  ptyProcess.onData((data) => {
+    log(data);
+    if (!json) {
+      const contentToWrite = output === "text" ? stripAnsi(data) : data;
+      process.stdout.write(contentToWrite);
+    }
+  });
+
+  const exitCodeJob = Promise.withResolvers<number>();
+  ptyProcess.onExit(({exitCode}) => {
+    debug(`PTY process ${ptyProcess.pid} exited with code ${exitCode}`);
+    exitCodeJob.resolve(exitCode);
+  });
+
+  await updateMeta(junDir, (tasks) => {
+    const task = tasks.get(pid);
+    if (task) task.osPid = ptyProcess.pid;
+  });
+  debug(`Foreground task ${pid} registered with OS PID: ${ptyProcess.pid}`);
+
+  if (json) {
+    console.log(JSON.stringify({status: "STARTED_IN_FOREGROUND", pid, osPid: ptyProcess.pid}));
+  } else {
+    console.log(`[jun] Started task ${pid} (OS PID: ${ptyProcess.pid}): ${command} ${commandArgs.join(" ")}`);
+  }
+
+  return exitCodeJob.promise;
+}
+
+/**
+ * Executes a command in Child Process mode using execa.
+ * This mode separates stdout and stderr.
+ */
+async function runCp(pid: number, {command, commandArgs, json, output}: JunRunOptions): Promise<number> {
+  const junDir = await getJunDir();
+  debug(`Spawning child_process with command: ${command} ${commandArgs.join(" ")}`);
+
+  const cp = execa(command, commandArgs, {
+    cwd: process.cwd(),
+    env: process.env,
+    all: true, // Interleave stdout and stderr in the `all` property
+  });
+
+  const log = (type: StdioLogEntry["type"], content: string) => writeLog(junDir, pid, {type, content, time: new Date().toISOString()});
+
+  // Pipe stdout and stderr to both the logger and the console
+  cp.stdout?.on("data", (data) => {
+    const content = data.toString();
+    log("stdout", content);
+    if (!json) process.stdout.write(output === "text" ? stripAnsi(content) : content);
+  });
+  cp.stderr?.on("data", (data) => {
+    const content = data.toString();
+    log("stderr", content);
+    if (!json) process.stderr.write(output === "text" ? stripAnsi(content) : content);
+  });
+
+  await updateMeta(junDir, (tasks) => {
+    const task = tasks.get(pid);
+    if (task) task.osPid = cp.pid;
+  });
+  debug(`Foreground task ${pid} registered with OS PID: ${cp.pid}`);
+
+  if (json) {
+    console.log(JSON.stringify({status: "STARTED_IN_FOREGROUND", pid, osPid: cp.pid}));
+  } else {
+    console.log(`[jun] Started task ${pid} (OS PID: ${cp.pid}): ${command} ${commandArgs.join(" ")}`);
+  }
+
+  try {
+    const result = await cp;
+    return result.exitCode;
+  } catch (e: any) {
+    // execa throws an error for non-zero exit codes
+    return e.exitCode ?? 1;
+  }
+}
+
+export async function junRunLogic(options: JunRunOptions): Promise<number> {
+  const {command, commandArgs, background, json, output, mode = "tty", onBackgroundProcess} = options;
+  const junDir = await getJunDir();
+
+  // Get the new PID and create the initial task entry atomically.
+  let newPid = 0;
+  await updateMeta(junDir, (tasks) => {
+    newPid = (tasks.size > 0 ? Math.max(...tasks.keys()) : 0) + 1;
+    const task: JunTask = {
+      pid: newPid,
+      command,
+      args: commandArgs,
+      startTime: new Date().toISOString(),
+      status: "running",
+      output,
+      mode,
+    };
+    tasks.set(newPid, task);
+  });
 
   if (background) {
-    // For background tasks, we spawn jun itself as a detached process.
-    const backgroundRunner = new Deno.Command(Deno.execPath(), {
-      args: ["run", "-A", Deno.mainModule, "run", ...[command, ...commandArgs]],
-      // Key for daemonization: these streams are ignored, not piped.
-      stdin: "null",
-      stdout: "null",
-      stderr: "null",
-    }).spawn();
-    // Detach the child process from the parent.
-    backgroundRunner.unref();
+    debug("Starting background task");
+    const cliPath = fileURLToPath(await import_meta_ponyfill(import.meta).resolve("#cli"));
+    // Ensure the mode is passed to the background process
+    const backgroundArgs = ["run", "--output", output, "--mode", mode, "--", command, ...commandArgs];
+    const subprocess = execaNode(cliPath, backgroundArgs, {
+      detached: true,
+      stdio: "ignore",
+    });
+    subprocess.unref();
+    onBackgroundProcess?.(subprocess);
 
-    // We must manually create the initial task entry here.
-    const task: JunTask = {pid: newPid, osPid: backgroundRunner.pid, command, args: commandArgs, startTime: new Date().toISOString(), status: "running"};
-    tasks.set(newPid, task);
-    await overwriteMeta(junDir, tasks);
+    debug(`Background process spawned with OS PID: ${subprocess.pid}`);
+    await updateMeta(junDir, (tasks) => {
+      const task = tasks.get(newPid);
+      if (task) task.osPid = subprocess.pid;
+    });
 
     if (json) {
-      console.log(JSON.stringify({status: "STARTED_IN_BACKGROUND", pid: newPid, osPid: backgroundRunner.pid}));
+      console.log(JSON.stringify({status: "STARTED_IN_BACKGROUND", pid: newPid, osPid: subprocess.pid}));
     } else {
-      console.log(`[jun] Started background task ${newPid} (OS PID: ${backgroundRunner.pid}): ${command} ${commandArgs.join(" ")}`);
+      console.log(`[jun] Started background task ${newPid} (OS PID: ${subprocess.pid}): ${command} ${commandArgs.join(" ")}`);
     }
-    return 0; // The parent (this process) exits successfully.
+    return 0;
   }
 
   // --- Foreground task logic ---
-  const process = new Deno.Command(command, {
-    args: commandArgs,
-    stdout: "piped",
-    stderr: "piped",
-    stdin: "piped",
-  }).spawn();
-
-  process.stdin.close();
-
-  const task: JunTask = {pid: newPid, osPid: process.pid, command, args: commandArgs, startTime: new Date().toISOString(), status: "running"};
-  tasks.set(newPid, task);
-  await overwriteMeta(junDir, tasks);
-
-  if (json) {
-    console.log(JSON.stringify({status: "STARTED_IN_FOREGROUND", pid: newPid, osPid: process.pid}));
-  } else {
-    console.log(`[jun] Started task ${newPid} (OS PID: ${process.pid}): ${command} ${commandArgs.join(" ")}`);
-  }
-
-  const log = (type: "stdout" | "stderr" | "stdin", content: string) => writeLog(junDir, newPid, {type, content, time: new Date().toISOString()});
-
-  const handleStream = async (stream: ReadableStream<Uint8Array>, type: "stdout" | "stderr") => {
-    for await (const chunk of stream) {
-      if (!json) Deno[type].write(chunk); // Only proxy output if not in json mode
-      log(type, new TextDecoder().decode(chunk));
-    }
-  };
-
-  const [status] = await Promise.all([process.status, handleStream(process.stdout, "stdout"), handleStream(process.stderr, "stderr")]);
+  const exitCode = await (mode === "tty" ? runTty(newPid, options) : runCp(newPid, options));
 
   const endTime = new Date().toISOString();
+  await updateMeta(junDir, (tasks) => {
+    const task = tasks.get(newPid);
+    if (task && task.status === "running") {
+      task.status = exitCode === 0 ? "completed" : "error";
+      task.endTime = endTime;
+      task.osPid = undefined;
+      debug(`Task ${newPid} status updated to ${task.status}`);
+    }
+  });
 
-  tasks = await readMeta(junDir);
-  const currentTaskState = tasks.get(newPid);
-  if (currentTaskState && currentTaskState.status === "running") {
-    const finalStatus: JunTask["status"] = status.success ? "completed" : "error";
-    const finalTask = {...currentTaskState, osPid: undefined, endTime, status: finalStatus};
-    tasks.set(newPid, finalTask);
-    await overwriteMeta(junDir, tasks);
-    if (!json) console.log(`[jun] Task ${newPid} finished with status: ${finalStatus}`);
+  if (!json) {
+    const finalTask = (await readMeta(junDir)).get(newPid);
+    console.log(`\n[jun] Task ${newPid} finished with status: ${finalTask?.status}`);
   }
 
-  await delay(10);
-  return status.code;
+  return exitCode;
 }

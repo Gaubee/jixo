@@ -1,7 +1,7 @@
 import {blue, bold} from "@gaubee/nodekit";
 import {map_get_or_put} from "@gaubee/util";
 import {Comlink} from "@jixo/dev/comlink";
-import type {UIRenderCommand, UIResponse} from "@jixo/tools-uikit";
+import type {UIResponse} from "@jixo/tools-uikit";
 import http from "node:http";
 import path from "node:path";
 import {URL} from "node:url";
@@ -12,7 +12,7 @@ import type {AgentMetadata} from "../browser/index.js";
 import {genPageConfig} from "../node/config.js";
 import {initTools} from "./init.js";
 
-const globalWsMap = new Map<string, WebSocket>();
+export const globalWsMap = new Map<string, WebSocket>();
 const sessionWsMap = new Map<
   string,
   {
@@ -24,7 +24,7 @@ let globalSessionIdCounter = 0;
 
 // --- Render Service (Global Channel) ---
 type JobResolver = (response: any) => void;
-const jobListeners = new Map<string, JobResolver>();
+export const jobListeners = new Map<string, JobResolver>();
 
 function handleGlobalUserResponse(message: UIResponse) {
   const callback = jobListeners.get(message.jobId);
@@ -35,35 +35,6 @@ function handleGlobalUserResponse(message: UIResponse) {
     console.warn(`Received response for unknown or timed out job ID: ${message.jobId}`);
   }
 }
-
-export const webSocketRenderHandler = (sessionId: string, command: UIRenderCommand): Promise<any> => {
-  const ws = [...globalWsMap.values()].at(-1);
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
-    return Promise.reject(new Error(`No active global WebSocket session found.`));
-  }
-
-  return new Promise((resolve, reject) => {
-    const timeout = setTimeout(
-      () => {
-        jobListeners.delete(command.jobId);
-        reject(new Error(`UI render job ${command.jobId} timed out after 5 minutes.`));
-      },
-      5 * 60 * 1000,
-    );
-
-    const callback = (responsePayload: UIResponse["payload"]) => {
-      clearTimeout(timeout);
-      if (responsePayload.error) {
-        reject(new Error(responsePayload.error));
-      } else {
-        resolve(responsePayload.data);
-      }
-    };
-
-    jobListeners.set(command.jobId, callback);
-    ws.send(JSON.stringify(command));
-  });
-};
 
 // --- Session-level Request Handler ---
 export class SessionAPI {

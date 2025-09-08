@@ -1,4 +1,5 @@
-import {getJunDir, getLogPath, overwriteMeta, readMeta} from "../state.ts";
+import fsp from "node:fs/promises";
+import {getJunDir, getLogPath, readMeta, updateMeta} from "../state.js";
 
 interface RmOptions {
   pids?: number[];
@@ -26,24 +27,28 @@ export async function junRmLogic({pids = [], all = false, auto = false}: RmOptio
   if (pidsToRemove.length === 0) return {removed: [], skipped: {}};
 
   const removed: number[] = [];
-  for (const pid of pidsToRemove) {
-    if (tasks.get(pid)?.status === "running") {
-      skipped[pid] = "Task is currently running.";
-      continue;
-    }
-    if (tasks.delete(pid)) {
-      removed.push(pid);
-      try {
-        await Deno.remove(getLogPath(junDir, pid));
-      } catch (e) {
-        if (!(e instanceof Deno.errors.NotFound)) throw e;
+  await updateMeta(junDir, (tasksToUpdate) => {
+    for (const pid of pidsToRemove) {
+      if (tasksToUpdate.get(pid)?.status === "running") {
+        skipped[pid] = "Task is currently running.";
+        continue;
       }
-    } else {
-      skipped[pid] = "Task not found.";
+      if (tasksToUpdate.delete(pid)) {
+        removed.push(pid);
+      } else {
+        skipped[pid] = "Task not found.";
+      }
+    }
+  });
+
+  // Delete log files after meta has been updated
+  for (const pid of removed) {
+    try {
+      await fsp.rm(getLogPath(junDir, pid));
+    } catch (e: any) {
+      if (e.code !== "ENOENT") throw e;
     }
   }
-  await overwriteMeta(junDir, tasks);
+
   return {removed, skipped};
 }
-
-// JIXO_CODER_EOF

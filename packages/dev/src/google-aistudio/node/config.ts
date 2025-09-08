@@ -3,7 +3,7 @@ import path from "node:path";
 import {z} from "zod";
 import {_gen_content} from "../../gen-prompt.js";
 import type {AgentMetadata, PageConfig} from "../browser/index.js";
-import {defineFunctionCalls} from "./function_call.js";
+import {defineFunctionCalls} from "../../tools/function_call.js";
 
 /**
  * Dynamically generates a complete page configuration based on agent metadata.
