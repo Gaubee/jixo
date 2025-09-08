@@ -73,9 +73,12 @@ export function useFileOrInject(
  * @param baseDir - The current working directory.
  * @returns An array of matched file paths.
  */
-export function globFilesWithParams(patternWithParams: string, baseDir: string): string[] {
+export function globFilesWithParams(patternWithParams: string, baseDir: string, _params: Record<string, any> = {}): string[] {
   const [globOrFilepath, paramString] = patternWithParams.split("?");
-  const params = defaultParseSearch(paramString || "");
+  const params = {
+    ...defaultParseSearch(paramString || ""),
+    ..._params,
+  };
   const isGlob = isDynamicPattern(globOrFilepath);
 
   const isInsideBaseDir = (targetPath: string) => normalizeFilePath(path.resolve(baseDir, targetPath)).startsWith(normalizeFilePath(baseDir) + "/");
@@ -132,7 +135,7 @@ export const handleFileReplacement: Replacer = async (options) => {
 export const localFileReplacement: Replacer = async (options) => {
   const {globOrFilepath, mode, params, rootResolver, baseDir} = options;
 
-  const files = globFilesWithParams(globOrFilepath, baseDir);
+  const files = globFilesWithParams(globOrFilepath, baseDir, params);
 
   if (files.length === 0) {
     const errorMsg = `No files found for pattern: ${globOrFilepath}`;

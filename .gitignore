@@ -4,6 +4,7 @@ node_modules/
 .*/
 !.jixo/
 .jixo/memory/
+.jixo/review-report/
 !.github/
 *.bak
 .env
