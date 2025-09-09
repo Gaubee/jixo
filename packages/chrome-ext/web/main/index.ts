@@ -8,11 +8,11 @@ const initialize = async () => {
     customElements.define(JIXODraggableDialogElement.is, JIXODraggableDialogElement);
     await comlinkPrepare();
     while (true) {
-      await untilDelay(() => getTargetNamespace() !== "new_chat", 0);
+      await untilDelay(() => getTargetNamespace() !== "new_chat", {timeout: 0});
       const sessionId = getTargetNamespace();
       const ele = JIXODraggableDialogElement.createElement(sessionId);
       document.body.append(ele);
-      await untilDelay(() => sessionId !== getTargetNamespace(), 0);
+      await untilDelay(() => sessionId !== getTargetNamespace(), {timeout: 0});
       /// 如果sessionId发生改变，那么就移除会话元素
       ele.dispatchEvent(new CustomEvent("destroy"));
       ele.remove();

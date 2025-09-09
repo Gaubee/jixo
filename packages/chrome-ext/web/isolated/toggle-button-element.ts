@@ -3,7 +3,7 @@ import {JIXODraggableDialogIsolatedHelper} from "./draggable-dialog-isolated.ts"
 import {isolatedContentScriptAPI} from "./lib/content-script-api.tsx"; // Fixed import
 
 export async function addToggleButton() {
-  const toolbarRightEle = await while$("ms-toolbar .toolbar-right", 0);
+  const toolbarRightEle = await while$("ms-toolbar .toolbar-right", {timeout: 0});
   const template = document.createElement("template");
 
   const html = String.raw;

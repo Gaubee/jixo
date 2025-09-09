@@ -6,7 +6,7 @@ import {connectSessionApi} from "./lib/session-websocket";
 export const JIXODraggableDialogIsolatedHelper = {
   prepare: func_remember(
     async () => {
-      const jixoRootEle = await easy$<HTMLDialogElement>(`jixo-draggable-dialog`, 0);
+      const jixoRootEle = await easy$<HTMLDialogElement>(`jixo-draggable-dialog`, {timeout: 0});
       const sessionId = jixoRootEle.dataset.sessionId;
       if (!sessionId) {
         throw new Error("sessionId not found");

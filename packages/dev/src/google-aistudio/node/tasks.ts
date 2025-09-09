@@ -63,11 +63,11 @@ const parseContent = async (fcs: FunctionCallsMap, dir: string, basename: string
       const output = await functionCall(input, context);
 
       console.log(green("生成任务结果:"), taskFilename);
-      fs.writeFileSync(path.join(dir, taskFilename), JSON.stringify({input, output}, null, 2));
+      fs.writeFileSync(path.join(dir, taskFilename), JSON.stringify({...functionCallPart, input, output}, null, 2));
       return true;
     } catch (e) {
       console.log(red("任务执行失败:"), e);
-      fs.writeFileSync(path.join(dir, taskFilename), JSON.stringify({input, output: {error: e instanceof Error ? e.message : String(e)}}, null, 2));
+      fs.writeFileSync(path.join(dir, taskFilename), JSON.stringify({...functionCallPart, input, output: {error: e instanceof Error ? e.message : String(e)}}, null, 2));
       return false;
     }
   }
