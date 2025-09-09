@@ -1,5 +1,5 @@
+import type {JunRunCliOptions} from "../cli/run.js";
 import type {JunTaskOutput} from "../types.js";
-import type {JunRunOptions} from "./run.js";
 
 /**
  * Parses the arguments specifically for the 'run' command.
@@ -8,10 +8,12 @@ import type {JunRunOptions} from "./run.js";
  * @param args - The array of string arguments passed after 'jun run'.
  * @returns A structured options object for junRunLogic.
  */
-export function parseRunArgs(args: string[]): Omit<JunRunOptions, "onBackgroundProcess"> | {error: string} {
+export function parseRunArgs(args: string[]): JunRunCliOptions | {error: string} {
   let json = false;
   let output: JunTaskOutput = "raw";
-  let mode: "tty" | "cp" = "tty";
+  let mode: "tty" | "cp" = "cp";
+  let timeout: number | undefined;
+  let idleTimeout: number | undefined;
   let commandIndex = -1;
 
   // First, find the command and separate jun's flags from the command's args.
@@ -48,6 +50,20 @@ export function parseRunArgs(args: string[]): Omit<JunRunOptions, "onBackgroundP
       continue;
     }
 
+    if (arg === "--timeout") {
+      timeout = Number(args[i + 1]);
+      if (isNaN(timeout)) return {error: "Invalid timeout value."};
+      i++;
+      continue;
+    }
+
+    if (arg === "--idle-timeout") {
+      idleTimeout = Number(args[i + 1]);
+      if (isNaN(idleTimeout)) return {error: "Invalid idle-timeout value."};
+      i++;
+      continue;
+    }
+
     // The first non-flag argument is the command.
     if (!arg.startsWith("-")) {
       commandIndex = i;
@@ -68,5 +84,7 @@ export function parseRunArgs(args: string[]): Omit<JunRunOptions, "onBackgroundP
     json,
     output,
     mode,
+    timeout,
+    idleTimeout,
   };
 }

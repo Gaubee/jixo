@@ -7,9 +7,8 @@ import {junInitLogic} from "./commands/init.js";
 import {junKillLogic} from "./commands/kill.js";
 import {junLsLogic} from "./commands/ls.js";
 import {junRmLogic} from "./commands/rm.js";
-import {junRunLogic} from "./commands/run.js";
 import {parseRunArgs} from "./commands/run_args_parser.js";
-import {junStartLogic} from "./commands/start.js";
+import {parseStartArgs} from "./commands/start_args_parser.js";
 import type {JunTask, JunTaskLog} from "./types.js";
 
 function printTasks(tasks: JunTask[]) {
@@ -47,7 +46,7 @@ export async function main(argsArray: string[]): Promise<number> {
   const commandArgs = argsArray.slice(1);
   const commonArgs = yargsParser(commandArgs, {
     boolean: ["json", "all", "auto"],
-    string: ["output"],
+    string: ["output", "timeout", "idle-timeout"],
     alias: {o: "output"},
     configuration: {"strip-dashed": true},
   });
@@ -58,22 +57,13 @@ export async function main(argsArray: string[]): Promise<number> {
       console.log(`Jun directory initialized at: ${junDir}`);
       return 0;
     }
-    case "run": {
-      const runOpts = parseRunArgs(commandArgs);
-      if ("error" in runOpts) {
-        console.error(`Error: ${runOpts.error}`);
-        return 1;
-      }
-      return await junRunLogic(runOpts);
-    }
     case "start": {
-      // The parser for 'start' is the same as for 'run'.
-      const startOpts = parseRunArgs(commandArgs);
+      const startOpts = parseStartArgs(commandArgs);
       if ("error" in startOpts) {
         console.error(`Error: ${startOpts.error}`);
         return 1;
       }
-      return await junStartLogic(startOpts);
+      return await junStartLogicForCli(startOpts);
     }
     case "ls": {
       const runningTasks = await junLsLogic();
@@ -131,18 +121,20 @@ export async function main(argsArray: string[]): Promise<number> {
     }
     default: {
       // Default behavior: treat the command as a 'run' command.
-      const runOpts = parseRunArgs(argsArray); // Parse the original, full args array.
+      const runOpts = parseRunArgs(command === "run" ? commandArgs : argsArray); // Parse the original, full args array.
       if ("error" in runOpts) {
         console.error(`Unknown command: ${command}`);
         console.log("Available commands: init, run, start, ls, history, cat, rm, kill");
         return 1;
       }
-      return await junRunLogic(runOpts);
+      return await junRunLogicForCli(runOpts);
     }
   }
 }
 
 import {import_meta_ponyfill} from "import-meta-ponyfill";
+import {junRunLogicForCli} from "./cli/run.js";
+import {junStartLogicForCli} from "./cli/start.js";
 
 if (import_meta_ponyfill(import.meta).main) {
   main(process.argv.slice(2)).then((exitCode) => {

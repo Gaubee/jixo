@@ -7,11 +7,12 @@ interface RmOptions {
   auto?: boolean;
 }
 
-export async function junRmLogic({pids = [], all = false, auto = false}: RmOptions): Promise<{removed: number[]; skipped: Record<number, string>}> {
+export async function junRmLogic({pids = [], all = false, auto = false}: RmOptions): Promise<{removed: number[]; skipped: Array<{pid: number; reason: string}>}> {
   const junDir = await getJunDir();
   const tasks = await readMeta(junDir);
   let pidsToRemove: number[];
-  const skipped: Record<number, string> = {};
+  const removed: number[] = [];
+  const skipped: Array<{pid: number; reason: string}> = [];
 
   if (all) {
     pidsToRemove = [...tasks.keys()].filter((pid) => tasks.get(pid)?.status !== "running");
@@ -24,19 +25,18 @@ export async function junRmLogic({pids = [], all = false, auto = false}: RmOptio
     pidsToRemove = pids;
   }
 
-  if (pidsToRemove.length === 0) return {removed: [], skipped: {}};
+  if (pidsToRemove.length === 0) return {removed, skipped};
 
-  const removed: number[] = [];
   await updateMeta(junDir, (tasksToUpdate) => {
     for (const pid of pidsToRemove) {
       if (tasksToUpdate.get(pid)?.status === "running") {
-        skipped[pid] = "Task is currently running.";
+        skipped.push({pid, reason: "Task is currently running."});
         continue;
       }
       if (tasksToUpdate.delete(pid)) {
         removed.push(pid);
       } else {
-        skipped[pid] = "Task not found.";
+        skipped.push({pid, reason: "Task not found."});
       }
     }
   });

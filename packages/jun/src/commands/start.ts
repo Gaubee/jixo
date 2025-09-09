@@ -1,26 +1,21 @@
 import Debug from "debug";
-import {execaNode, type ResultPromise} from "execa";
-import {import_meta_ponyfill} from "import-meta-ponyfill";
-import {fileURLToPath} from "node:url";
 import {getJunDir, updateMeta} from "../state.js";
 import type {JunTask, JunTaskOutput} from "../types.js";
+import {spawnAndLog, updateTaskCompletion} from "./common.js";
 
 const debug = Debug("jun:start");
 
 export interface JunStartOptions {
   command: string;
   commandArgs: string[];
-  json: boolean;
   output?: JunTaskOutput;
   mode?: "tty" | "cp";
-  onBackgroundProcess?: (processPromise: ResultPromise) => void;
 }
 
-export async function junStartLogic(options: JunStartOptions): Promise<number> {
-  const {command, commandArgs, json, output = "raw", mode = "tty", onBackgroundProcess} = options;
+export async function junStartLogic(options: JunStartOptions): Promise<{pid: number}> {
+  const {command, commandArgs, output = "raw", mode = "tty"} = options;
   const junDir = await getJunDir();
 
-  // Get the new PID and create the initial task entry atomically.
   let newPid = 0;
   await updateMeta(junDir, (tasks) => {
     newPid = (tasks.size > 0 ? Math.max(...tasks.keys()) : 0) + 1;
@@ -36,27 +31,25 @@ export async function junStartLogic(options: JunStartOptions): Promise<number> {
     tasks.set(newPid, task);
   });
 
-  debug("Starting background task");
-  const cliPath = fileURLToPath(await import_meta_ponyfill(import.meta).resolve("#cli"));
-  // Pass the correct command ('run') to the background process
-  const backgroundArgs = ["run", "--output", output, "--mode", mode, "--", command, ...commandArgs];
-  const subprocess = execaNode(cliPath, backgroundArgs, {
-    detached: true,
-    stdio: "ignore",
+  const {osPid, resultPromise} = spawnAndLog({
+    pid: newPid,
+    junDir,
+    command,
+    args: commandArgs,
+    mode,
   });
-  subprocess.unref();
-  onBackgroundProcess?.(subprocess);
 
-  debug(`Background process spawned with OS PID: ${subprocess.pid}`);
+  // Chain the completion logic to the promise, but don't wait for it.
+  // This allows the main process to exit while the logging continues.
+  resultPromise.then((result) => updateTaskCompletion(junDir, result));
+
   await updateMeta(junDir, (tasks) => {
     const task = tasks.get(newPid);
-    if (task) task.osPid = subprocess.pid;
+    if (task) task.osPid = osPid;
   });
+  debug(`Background task ${newPid} registered with OS PID: ${osPid}`);
 
-  if (json) {
-    console.log(JSON.stringify({status: "STARTED_IN_BACKGROUND", pid: newPid, osPid: subprocess.pid}));
-  } else {
-    console.log(`[jun] Started background task ${newPid} (OS PID: ${subprocess.pid}): ${command} ${commandArgs.join(" ")}`);
-  }
-  return 0;
+  return {pid: newPid};
 }
+
+

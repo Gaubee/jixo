@@ -1,5 +1,5 @@
 import {junCatLogic} from "@jixo/jun";
-import { z } from "zod/v4";
+import {z} from "zod/v4";
 
 export const name = "shellCat";
 
@@ -17,11 +17,5 @@ export const paramsSchema = z.object({
 export const functionCall = async (args: z.infer<typeof paramsSchema>) => {
   console.log(`Executing jun cat logic for pids: ${args.pids.join(", ")}`);
 
-  const {success, failed} = await junCatLogic(args.pids);
-
-  return {
-    status: "SUCCESS",
-    tasks: success,
-    failed_pids: failed,
-  };
+  return await junCatLogic(args.pids);
 };

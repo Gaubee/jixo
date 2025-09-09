@@ -31,7 +31,7 @@ describe("junHistoryLogic", () => {
 
     const allTasks = await junHistoryLogic();
     expect(allTasks.length).toBe(3);
-    expect(allTasks.map((t) => t.pid)).toEqual([3, 2, 1]);
+    expect(allTasks.map((t) => t.pid)).toEqual([1, 2, 3]);
   });
 
   it("should return an empty array when there are no tasks", async () => {

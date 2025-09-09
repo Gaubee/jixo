@@ -9,7 +9,9 @@ describe("parseRunArgs", () => {
       commandArgs: ["hello"],
       json: false,
       output: "raw",
-      mode: "tty",
+      mode: "cp",
+      timeout: undefined,
+      idleTimeout: undefined,
     });
   });
 
@@ -20,7 +22,9 @@ describe("parseRunArgs", () => {
       commandArgs: ["--watch", "--project", "tsconfig.json"],
       json: false,
       output: "raw",
-      mode: "tty",
+      mode: "cp",
+      timeout: undefined,
+      idleTimeout: undefined,
     });
   });
 
@@ -31,7 +35,9 @@ describe("parseRunArgs", () => {
       commandArgs: ["--version"],
       json: false,
       output: "raw",
-      mode: "tty",
+      mode: "cp",
+      timeout: undefined,
+      idleTimeout: undefined,
     });
   });
 
@@ -42,7 +48,9 @@ describe("parseRunArgs", () => {
       commandArgs: ["-la"],
       json: true,
       output: "raw",
-      mode: "tty",
+      mode: "cp",
+      timeout: undefined,
+      idleTimeout: undefined,
     });
   });
 

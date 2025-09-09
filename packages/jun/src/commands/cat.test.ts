@@ -32,7 +32,7 @@ describe("junCatLogic", () => {
     const {success, failed} = await junCatLogic([1]);
     expect(Object.keys(failed).length).toBe(0);
 
-    const taskLog = success[1];
+    const taskLog = success.find((p) => p.pid === 1);
     assert.ok(taskLog);
     expect(taskLog.pid).toBe(1);
     expect(taskLog.command).toBe("echo");
@@ -47,8 +47,8 @@ describe("junCatLogic", () => {
     });
 
     const {success, failed} = await junCatLogic([1, 99]);
-    expect(success[1]).toBeDefined();
-    expect(failed[99]).toBeDefined();
-    expect(failed[99]).toBe("Task not found.");
+    assert.ok(success.find((p) => p.pid == 1));
+    assert.ok(failed.find((p) => p.pid == 99));
+    expect(failed.find((p) => p.pid == 99)?.reason).toBe("Task not found.");
   });
 });

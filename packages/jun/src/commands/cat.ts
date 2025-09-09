@@ -1,21 +1,24 @@
 import {getJunDir, readLog, readMeta} from "../state.js";
-import type {JunTaskLog} from "../types.js";
+import type {JunTaskLog, StdioLogEntry} from "../types.js";
 
-export async function junCatLogic(pids: number[]): Promise<{success: Record<number, JunTaskLog>; failed: Record<number, string>}> {
-  if (pids.length === 0) return {success: {}, failed: {}};
+export async function junCatLogic(pids: number[]): Promise<{success: Array<JunTaskLog & {stdio: StdioLogEntry[]}>; failed: Array<{pid: number; reason: string}>}> {
+  const success: JunTaskLog[] = [];
+  const failed: Array<{pid: number; reason: string}> = [];
+  if (pids.length === 0) return {success, failed};
   const junDir = await getJunDir();
   const tasks = await readMeta(junDir);
-  const success: Record<number, JunTaskLog> = {};
-  const failed: Record<number, string> = {};
-
   for (const pid of pids) {
     const task = tasks.get(pid);
     if (!task) {
-      failed[pid] = "Task not found.";
+      failed.push({pid, reason: "Task not found."});
       continue;
     }
-    const stdio = await readLog(junDir, pid);
-    success[pid] = {...task, stdio};
+    try {
+      const stdio = await readLog(junDir, pid);
+      success.push({...task, stdio});
+    } catch {
+      failed.push({pid, reason: "Failed to read log."});
+    }
   }
   return {success, failed};
 }

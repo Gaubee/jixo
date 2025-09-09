@@ -52,7 +52,7 @@ describe("jun CLI In-Process E2E", () => {
 
     const shellCommand = process.platform === "win32" ? "cmd.exe" : "sh";
     const shellArgs = process.platform === "win32" ? ["/c", 'echo "out test" & echo "err test" >&2'] : ["-c", 'echo "out test" && echo "err test" >&2'];
-    await invokeJun("run", shellCommand, ...shellArgs); // Note: 'sh' is the command here
+    await invokeJun("run", "--mode", "cp", "--", shellCommand, ...shellArgs);
 
     // Use the programmatic API to get the history reliably
     const history = await junHistoryLogic();
@@ -62,9 +62,8 @@ describe("jun CLI In-Process E2E", () => {
     const catResult = await invokeJun("cat", String(taskToCat.pid));
     const expectedCommandStr = [shellCommand, ...shellArgs].join(" ");
     expect(catResult.stdout).toContain(`--- Log for PID ${taskToCat!.pid}: ${expectedCommandStr} ---`);
-    // In default 'tty' mode, we don't distinguish stdout/stderr, so no prefix is added.
-    expect(catResult.stdout).toContain("out test");
-    expect(catResult.stdout).toContain("err test");
+    expect(catResult.stdout).toContain("[stdout] out test");
+    expect(catResult.stdout).toContain("[stderr] err test");
   });
 
   it("should run a simple command, show it in history, and then remove it", async () => {

@@ -4,7 +4,7 @@ import type {FunctionCallFn} from "../types.js";
 
 export const name = "shellRun";
 
-export const description = "使用jun代理在前台执行一个shell命令。此工具会等待命令执行完成，并返回最终的退出码。";
+export const description = "使用jun代理在前台执行一个shell命令。此工具会等待命令执行完成，并返回包含stdio和退出码的完整结果。";
 
 export const paramsSchema = z.object({
   command: z.string().describe("要执行的主命令。"),
@@ -15,54 +15,43 @@ export const paramsSchema = z.object({
       [
         //
         "**执行模式:**",
-        "- tty: 将使用 node-pty 来执行命令。",
-        "- cp: 将使用 node:child_process.spawn/pipe 来执行。",
-        "tty 模式意味着程序将执行在一个“窗口”下，程序可以精确控制窗口的渲染内容，但是 tty 模式只能获得 output 内容，无法区分stdout 和 stderr。",
-        "cp 模式则是管道，可以清晰地获得 stdout 和 stderr 的内容。",
-        "如果使用tty模式，这是用户在自己终端中执行命令默认会看到的内容。",
-        "如果只是要执行一些简单的命令，那么使用cp模式会更方便。",
-        "如果是要执行一些长时间运行的任务，这种任务通常会控制终端的输出而选择基于tty进行开发，那么建议使用tty模式。",
-        "比如`tsc --build --watch`是会在编译的时候刷新tty窗口。",
-        "比如`tsc --build`则是一次性任务输出，那么使用cp模式会更方便。",
-        "**默认值:**",
-        "默认使用cp模式。",
+        "- tty: 将使用 node-pty 来执行命令，混合stdout/stderr。",
+        "- cp: 将使用 node:child_process.spawn/pipe 来执行，区分stdout/stderr。",
+        "**默认值:** 'cp'，以便清晰地区分输出流。",
       ].join("\n"),
     )
     .optional()
     .default("cp"),
-  output: z
-    .union([z.literal("raw"), z.literal("text"), z.literal("html")])
-    .describe(
-      [
-        //
-        "**输出格式:**",
-        "- raw: 原始输出，不进行任何处理。",
-        "- text: 纯文本输出，在原始输出的基础上进行格式化。剔除颜色和样式。",
-        "- html: HTML输出，将ansi码转换为HTML。",
-      ].join("\n"),
-    )
-    .optional()
-    .default("text"),
+  timeout: z.number().int().positive().optional().describe("命令的最长执行时间（毫秒）。超时后命令将被终止。"),
+  idleTimeout: z.number().int().positive().optional().describe("自上次输出以来的最长空闲时间（毫秒）。超时后命令将被终止。"),
 });
 
 /**
  * 调用 @jixo/jun 的 junRunLogic 来执行前台命令。
  * @param args - 符合paramsSchema的参数
- * @returns 一个包含命令执行结果的对象
+ * @returns 一个包含命令执行结果的完整对象
  */
 export const functionCall = (async (args) => {
-  const exitCode = await junRunLogic({
+  const result = await junRunLogic({
     command: args.command,
     commandArgs: args.args,
-    json: true,
-    output: args.output,
     mode: args.mode,
+    timeout: args.timeout,
+    idleTimeout: args.idleTimeout,
   });
 
+  // Return a structured result for the AI
+
   return {
-    status: exitCode === 0 ? "COMPLETED" : "ERROR",
-    exit_code: exitCode,
-    command: args.command,
-    args: args.args,
+    status: result.isTimeout ? "TIMEOUT" : result.exitCode === 0 ? "COMPLETED" : "ERROR",
+    exitCode: result.exitCode,
+    ...(result.mode === "cp"
+      ? {
+          stdout: result.stdout,
+          stderr: result.stderr,
+        }
+      : {
+          output: result.output, // For tty mode
+        }),
   };
 }) satisfies FunctionCallFn<z.infer<typeof paramsSchema>>;

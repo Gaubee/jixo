@@ -1,5 +1,5 @@
 import {junLsLogic} from "@jixo/jun";
-import { z } from "zod/v4";
+import {z} from "zod/v4";
 
 export const name = "shellList";
 
@@ -16,10 +16,7 @@ export const functionCall = async (_args: z.infer<typeof paramsSchema>) => {
 
   const runningTasks = await junLsLogic();
 
-  return {
-    status: "SUCCESS",
-    running_tasks: runningTasks,
-  };
+  return runningTasks;
 };
 
 // JIXO_CODER_EOF

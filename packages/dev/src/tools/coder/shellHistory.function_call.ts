@@ -1,5 +1,5 @@
 import {junHistoryLogic} from "@jixo/jun";
-import { z } from "zod/v4";
+import {z} from "zod/v4";
 
 export const name = "shellHistory";
 
@@ -16,10 +16,7 @@ export const functionCall = async (_args: z.infer<typeof paramsSchema>) => {
 
   const history = await junHistoryLogic();
 
-  return {
-    status: "SUCCESS",
-    history,
-  };
+  return history;
 };
 
 // JIXO_CODER_EOF

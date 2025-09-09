@@ -1,3 +1,4 @@
+import assert from "node:assert";
 import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -35,7 +36,7 @@ describe("junRmLogic", () => {
   it("should remove specified pids and skip running ones", async () => {
     const {removed, skipped} = await junRmLogic({pids: [1, 2, 3]});
     expect(removed.sort()).toEqual([1, 2]);
-    expect(skipped[3]).toBeDefined();
+    assert.ok(skipped.find((p) => p.pid === 3));
 
     const tasks = await readMeta(junDir);
     expect(tasks.size).toBe(2); // 3 (running) and 4 (killed, but not in pids)

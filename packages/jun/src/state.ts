@@ -26,23 +26,108 @@ async function ensureFile(filePath: string) {
   }
 }
 
-export const getJunDir = async (): Promise<string> => {
-  const localDir = path.resolve(process.cwd(), ".jun");
+/**
+ * 确保目录存在，若不存在则创建（包括父目录）
+ * @param dirPath - 要确保存在的目录路径
+ * @throws 若创建失败或路径无效则抛出错误
+ */
+const ensureDirectoryExists = async (dirPath: string): Promise<void> => {
   try {
-    const stats = await fsp.stat(localDir);
+    await fsp.mkdir(dirPath, {recursive: true});
+  } catch (error) {
+    throw new Error(`Failed to create directory: ${dirPath}. Reason: ${error instanceof Error ? error.message : String(error)}`);
+  }
+};
+
+/**
+ * 向上遍历目录树，寻找最近的 .git 目录
+ * @param startDir - 起始目录路径
+ * @returns 找到的 .git 目录路径，或 null（未找到）
+ */
+const findNearestGitDir = async (startDir: string): Promise<string | null> => {
+  let currentDir = path.resolve(startDir);
+  const rootPath = path.parse(currentDir).root; // 获取根路径（如 "/" 或 "C:\\"）
+
+  while (currentDir !== rootPath) {
+    const gitDir = path.join(currentDir, ".git");
+    try {
+      const stats = await fsp.stat(gitDir);
+      if (stats.isDirectory()) {
+        return gitDir;
+      }
+    } catch (error: unknown) {
+      // ENOENT 表示文件/目录不存在，继续向上查找
+      if (!(error instanceof Error) || (error as NodeJS.ErrnoException).code !== "ENOENT") {
+        // 非“不存在”错误，向上抛出
+        throw new Error(`Error checking for .git at ${gitDir}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    // 向上移动一级目录
+    const parentDir = path.dirname(currentDir);
+    if (parentDir === currentDir) break; // 防止无限循环（已到根）
+    currentDir = parentDir;
+  }
+
+  // 检查根目录本身
+  const rootGitDir = path.join(rootPath, ".git");
+  try {
+    const stats = await fsp.stat(rootGitDir);
+    if (stats.isDirectory()) {
+      return rootGitDir;
+    }
+  } catch {
+    // 根目录无 .git，返回 null
+  }
+
+  return null;
+};
+
+/**
+ * 获取 Jun 配置目录路径
+ * 优先级：
+ * 1. 当前工作目录下的 `.jun` 目录（cwd/.jun）
+ * 2. 若不存在，则查找最近的 `.git` 目录，并在其内创建 `.jun` 子目录（如 cwd/../.git/.jun）
+ * 3. 若未找到 `.git`，则在用户主目录下创建并返回 `~/.jun`
+ *
+ * @returns Promise<string> - Jun 目录的绝对路径
+ * @throws 若无法创建目录或获取主目录则抛出错误
+ */
+export const getJunDir = async (): Promise<string> => {
+  const cwd = process.cwd();
+  const localJunDir = path.resolve(cwd, ".jun");
+
+  try {
+    // 优先检查当前目录是否存在 .jun 目录
+    const stats = await fsp.stat(localJunDir);
     if (!stats.isDirectory()) {
-      throw new Error(`Found local .jun, but it is not a directory.`);
+      throw new Error(`Found "${localJunDir}", but it is not a directory.`);
     }
-    return localDir;
-  } catch (e: any) {
-    if (e.code === "ENOENT") {
-      const home = process.env.HOME || process.env.USERPROFILE;
-      if (!home) throw new Error("Could not determine home directory.");
-      const globalDir = path.resolve(home, ".jun");
-      await ensureDir(globalDir);
-      return globalDir;
+    return localJunDir;
+  } catch (error: unknown) {
+    // 若 .jun 不存在或不是目录，则继续查找 .git
+    if (!(error instanceof Error) || (error as NodeJS.ErrnoException).code !== "ENOENT") {
+      // 非“不存在”错误，直接抛出
+      throw error;
     }
-    throw e;
+
+    // 查找最近的 .git 目录
+    const gitDir = await findNearestGitDir(cwd);
+    if (gitDir) {
+      // 在 .git 内创建 .jun 子目录
+      const junDirInGit = path.join(gitDir, ".jun");
+      await ensureDirectoryExists(junDirInGit);
+      return junDirInGit;
+    }
+
+    // 未找到 .git，回退到用户主目录
+    const homeDir = process.env.HOME || process.env.USERPROFILE;
+    if (!homeDir) {
+      throw new Error("Could not determine home directory. Ensure HOME or USERPROFILE environment variable is set.");
+    }
+
+    const globalJunDir = path.resolve(homeDir, ".jun");
+    await ensureDirectoryExists(globalJunDir);
+    return globalJunDir;
   }
 };
 
@@ -79,7 +164,7 @@ async function _readMetaUnsafe(junDir: string): Promise<Map<number, JunTask>> {
     try {
       const task = JSON.parse(line) as JunTask;
       tasks.set(task.pid, task);
-    } catch (e){
+    } catch (e) {
       console.error(`[jun] Error parsing task metadata: ${e}`);
       /* ignore malformed lines */
     }

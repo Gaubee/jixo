@@ -3,17 +3,23 @@ import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {getJunDir, readMeta} from "../state.js";
-import {junRunLogic} from "./run.js";
+import {junLsLogic} from "./ls.js";
+import {junStartLogic} from "./start.js";
 
-describe("junRunLogic", () => {
+async function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+describe("junStartLogic", () => {
   let testDir: string;
   let originalCwd: string;
 
   beforeEach(async (t) => {
     originalCwd = process.cwd();
-    testDir = await fsp.mkdtemp(path.join(os.tmpdir(), `jun_run_logic_test_${t.task.id}_`));
+    testDir = await fsp.mkdtemp(path.join(os.tmpdir(), `jun_start_logic_test_${t.task.id}_`));
     await fsp.mkdir(path.resolve(testDir, ".jun"));
     process.chdir(testDir);
+    vi.spyOn(console, "log").mockImplementation(() => {});
   });
 
   afterEach(async () => {
@@ -22,39 +28,25 @@ describe("junRunLogic", () => {
     vi.restoreAllMocks();
   });
 
-  it("should run a simple command to completion", async () => {
-    const exitCode = await junRunLogic({command: "echo", commandArgs: ["hello"], json: false, output: "raw"});
-    expect(exitCode).toBe(0);
+  it("should start a background command and return the pid", async () => {
+    const result = await junStartLogic({
+      command: "sleep",
+      commandArgs: ["1"],
+    });
 
-    const junDir = await getJunDir();
-    const tasks = await readMeta(junDir);
-    expect(tasks.size).toBe(1);
-    const task = tasks.get(1);
-    expect(task).toBeDefined();
-    expect(task?.status).toBe("completed");
-  });
+    expect(result.pid).toBe(1);
 
-  it("should run a foreground command with --json output", async () => {
-    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    // Allow some time for the process to be registered
+    await sleep(200);
 
-    await junRunLogic({command: "echo", commandArgs: ["hello"], json: true, output: "raw"});
+    const runningTasks = await junLsLogic();
+    expect(runningTasks.length).toBe(1);
+    expect(runningTasks[0]?.pid).toBe(1);
+    expect(runningTasks[0]?.status).toBe("running");
 
-    const stdout = logSpy.mock.calls.map((call) => call.join(" ")).join("\n");
-    const parsedOutput = JSON.parse(stdout);
-    expect(parsedOutput.status).toBe("STARTED_IN_FOREGROUND");
-    expect(parsedOutput.pid).toBe(1);
-    expect(parsedOutput.osPid).toBeDefined();
-  });
-
-  it("should strip ansi codes when output is 'text'", async () => {
-    const writeSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    const command = "node";
-    const commandArgs = ["-e", "console.log('\\u001b[31mHello\\u001b[39m')"]; // Node command to print red "Hello"
-
-    await junRunLogic({command, commandArgs, json: false, output: "text"});
-
-    const writtenContent = writeSpy.mock.calls.map((call) => call[0].toString()).join("");
-    expect(writtenContent).toContain("Hello");
-    expect(writtenContent).not.toContain("\u001b[31m");
+    // Wait for the task to finish on its own
+    await sleep(1000);
+    const finalTasks = await readMeta(await getJunDir());
+    expect(finalTasks.get(1)?.status).toBe("completed");
   });
 });

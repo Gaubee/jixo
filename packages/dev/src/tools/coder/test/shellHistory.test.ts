@@ -1,24 +1,19 @@
-import {junHistoryLogic} from "@jixo/jun";
-import {execaNode} from "execa";
+import {junRunLogic} from "@jixo/jun";
 import fsp from "node:fs/promises";
-import {createRequire} from "node:module";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-
-const require = createRequire(import.meta.url);
+import {functionCall as shellHistory} from "../shellHistory.function_call.js";
 
 describe("shellHistory tool", () => {
   let testDir: string;
   let originalCwd: string;
-  let cliPath: string;
 
   beforeEach(async () => {
     testDir = await fsp.mkdtemp(path.join(os.tmpdir(), "shell_history_test_"));
     originalCwd = process.cwd();
+    await fsp.mkdir(path.resolve(testDir, ".jun"));
     process.chdir(testDir);
-    cliPath = require.resolve("@jixo/jun/cli");
-    await execaNode(cliPath, ["init"]);
   });
 
   afterEach(async () => {
@@ -27,12 +22,17 @@ describe("shellHistory tool", () => {
   });
 
   it("should return a list of all tasks after running some", async () => {
-    await execaNode(cliPath, ["run", "echo", "task1"]);
-    await execaNode(cliPath, ["run", "false"]).catch(() => {}); // This one will have "error" status
+    // Setup
+    await junRunLogic({command: "echo", commandArgs: ["task1"], mode: "cp"});
+    await junRunLogic({command: "node", commandArgs: ["-e", "process.exit(1)"], mode: "cp"});
 
-    const result = await junHistoryLogic();
+    // Act
+    const result = await shellHistory({});
 
+    // Assert
     expect(result.length).toBe(2);
+    expect(result[0]?.pid).toBe(2); // Sorted descending
+    expect(result[1]?.pid).toBe(1);
     expect(result.some((task) => task.status === "completed")).toBe(true);
     expect(result.some((task) => task.status === "error")).toBe(true);
   });

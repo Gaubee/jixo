@@ -4,12 +4,12 @@ interface KillOptions {
   pids?: number[];
   all?: boolean;
 }
-export async function junKillLogic({pids = [], all = false}: KillOptions): Promise<{killedCount: number; failedPids: Record<number, string>}> {
+export async function junKillLogic({pids = [], all = false}: KillOptions): Promise<{killedCount: number; failedPids: Array<{pid: number; reason: string}>}> {
   const junDir = await getJunDir();
   const tasks = await readMeta(junDir);
   const runningTasks = [...tasks.values()].filter((t) => t.status === "running");
   let pidsToKill: number[];
-  const failedPids: Record<number, string> = {};
+  const failedPids: Array<{pid: number; reason: string}> = [];
 
   if (all) {
     pidsToKill = runningTasks.map((t) => t.pid);
@@ -17,21 +17,21 @@ export async function junKillLogic({pids = [], all = false}: KillOptions): Promi
     pidsToKill = pids;
   }
 
-  if (pidsToKill.length === 0) return {killedCount: 0, failedPids: {}};
+  if (pidsToKill.length === 0) return {killedCount: 0, failedPids};
 
   let killedCount = 0;
   await updateMeta(junDir, (tasksToUpdate) => {
     for (const pid of pidsToKill) {
       const task = tasksToUpdate.get(pid);
       if (!task || task.status !== "running" || typeof task.osPid !== "number") {
-        failedPids[pid] = "Task is not running or has no OS PID.";
+        failedPids.push({pid, reason: "Task is not running or has no OS PID."});
         continue;
       }
       try {
         process.kill(task.osPid, "SIGTERM");
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
-        failedPids[pid] = `Could not send kill signal: ${message}`;
+        failedPids.push({pid, reason: `Could not send kill signal: ${message}`});
       }
       task.status = "killed";
       task.endTime = new Date().toISOString();

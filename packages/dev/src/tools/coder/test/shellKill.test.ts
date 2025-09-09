@@ -1,12 +1,10 @@
-import {junHistoryLogic, junKillLogic, junLsLogic} from "@jixo/jun";
-import {execaNode, type ResultPromise} from "execa";
+import {junHistoryLogic, junLsLogic, junStartLogic} from "@jixo/jun";
+import assert from "node:assert";
 import fsp from "node:fs/promises";
-import {createRequire} from "node:module";
 import os from "node:os";
 import path from "node:path";
 import {afterEach, beforeEach, describe, expect, it} from "vitest";
-
-const require = createRequire(import.meta.url);
+import {functionCall as shellKill} from "../shellKill.function_call.js";
 
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -15,40 +13,47 @@ async function sleep(ms: number) {
 describe("shellKill tool", () => {
   let testDir: string;
   let originalCwd: string;
-  let cliPath: string;
-  let backgroundProcesses: ResultPromise[] = [];
 
   beforeEach(async () => {
     testDir = await fsp.mkdtemp(path.join(os.tmpdir(), "shell_kill_test_"));
     originalCwd = process.cwd();
+    await fsp.mkdir(path.resolve(testDir, ".jun"));
     process.chdir(testDir);
-    cliPath = require.resolve("@jixo/jun/cli");
-    await execaNode(cliPath, ["init"]);
   });
 
   afterEach(async () => {
     process.chdir(originalCwd);
     await fsp.rm(testDir, {recursive: true, force: true});
-    await Promise.allSettled(backgroundProcesses.map((p) => p.kill("SIGKILL")));
   });
 
   it("should kill a running process and report success", async () => {
-    const bgProcess = execaNode(cliPath, ["start", "sleep", "10"], {cwd: testDir});
-    backgroundProcesses.push(bgProcess);
+    // Setup: Start a background process using the programmatic API
+    const {pid} = await junStartLogic({
+      command: "sleep",
+      commandArgs: ["10"],
+    });
+    await sleep(500); // Give jun time to write the osPid
 
-    await sleep(500); // Wait for it to be listed
-    const listResult = await junLsLogic();
-    expect(listResult.length).toBeGreaterThan(0);
-    const runningTaskPid = listResult[0]!.pid;
+    // Pre-condition check
+    const runningTasksBefore = await junLsLogic();
+    expect(runningTasksBefore.length).toBe(1);
+    expect(runningTasksBefore[0]?.pid).toBe(pid);
 
-    const killResult = await junKillLogic({pids: [runningTaskPid]});
-    expect(killResult.killedCount).toBe(1);
+    // Act: Call the shellKill tool
+    const result = await shellKill({pids: [pid]});
 
-    const listAfterKill = await junLsLogic();
-    expect(listAfterKill.length).toBe(0);
+    // Assert the tool's return value
+    expect(result.status).toBe("SUCCESS");
+    expect(result.killed_count).toBe(1);
+    expect(result.failed_pids.length).toBe(0);
+
+    // Assert the side-effect
+    const runningTasksAfter = await junLsLogic();
+    expect(runningTasksAfter.length).toBe(0);
 
     const history = await junHistoryLogic();
-    const killedTask = history.find((t) => t.pid === runningTaskPid);
-    expect(killedTask?.status).toBe("killed");
+    const killedTask = history.find((t) => t.pid === pid);
+    assert.ok(killedTask);
+    expect(killedTask.status).toBe("killed");
   });
 });

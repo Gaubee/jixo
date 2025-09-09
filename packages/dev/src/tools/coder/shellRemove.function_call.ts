@@ -30,9 +30,8 @@ export const functionCall = async (args: z.infer<typeof paramsSchema>) => {
   });
 
   return {
-    status: "SUCCESS",
     removed_pids: removed,
-    skipped_pids: skipped,
+    skipped: skipped,
   };
 };
 
