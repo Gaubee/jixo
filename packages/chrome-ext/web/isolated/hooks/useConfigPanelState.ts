@@ -55,7 +55,7 @@ const initialConfig: PageConfig = {
   tools: [],
 };
 
-type WorkspaceStatus = "missing_handle" | "linking_required" | "ready";
+export type WorkspaceStatus = "missing_handle" | "linking_required" | "ready";
 
 export function useConfigPanelState() {
   const mainApi = useContext(MainAPICtx);
@@ -260,3 +260,5 @@ export function useConfigPanelState() {
     handleSelectWorkspace,
   };
 }
+
+export type ConfigPanelState = ReturnType<typeof useConfigPanelState>;

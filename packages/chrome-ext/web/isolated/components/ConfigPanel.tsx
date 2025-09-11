@@ -1,12 +1,14 @@
 import React from "react";
-import {useConfigPanelState} from "../hooks/useConfigPanelState.ts";
+import {type ConfigPanelState} from "../hooks/useConfigPanelState.ts";
 import {ConfigForm} from "./ConfigForm.tsx";
 import {WorkspaceLinker} from "./WorkspaceLinker.tsx";
 import {WorkspaceSelector} from "./WorkspaceSelector.tsx";
 
-export function ConfigPanel() {
-  const state = useConfigPanelState();
+interface ConfigPanelProps {
+  state: ConfigPanelState;
+}
 
+export function ConfigPanel({state}: ConfigPanelProps) {
   if (state.workspaceStatus === "missing_handle") {
     return <WorkspaceSelector onSelect={state.handleSelectWorkspace} isLoading={state.isSelecting} />;
   }

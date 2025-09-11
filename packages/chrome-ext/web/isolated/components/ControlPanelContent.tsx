@@ -1,6 +1,7 @@
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
 import {KeyValStore} from "@jixo/dev/idb-keyval";
-import React, {useContext, useEffect, useState} from "react";
+import React, {useCallback, useContext, useEffect, useState} from "react";
+import {useConfigPanelState} from "../hooks/useConfigPanelState.ts";
 import {ConfigPanel} from "./ConfigPanel.tsx";
 import {useNotification} from "./Notification.tsx";
 import {SettingsPanel} from "./SettingsPanel.tsx";
@@ -43,15 +44,31 @@ export function ControlPanelContent({}: ControlPanelContentProps) {
     }
   };
 
-  const handleSettingsSubmit = async (values: PanelSettings) => {
-    const {isSyncEnabled = true} = values;
-    setPanelSettings({isSyncEnabled});
-    await panelSettingsStore.set(sessionId, {isSyncEnabled});
-    const actionName = isSyncEnabled ? "Start Sync" : "Stop Sync";
-    const actionFn = isSyncEnabled ? mainApi.startSync : mainApi.stopSync;
-    await handleAction(actionName, actionFn, "sync-status");
-  };
+  const handleSettingsSubmit = useCallback(
+    async (values: PanelSettings) => {
+      await panelSettingsStore.set(sessionId, values);
+      setPanelSettings(values);
+    },
+    [sessionId],
+  );
 
+  /**
+   * 防止切换tab的时候
+   * 重新执行 useConfigPanelState
+   */
+  const state = useConfigPanelState();
+
+  // New effect to automatically start/stop sync based on settings and workspace status
+  useEffect(() => {
+    const {isSyncEnabled = true} = panelSettings;
+    const workspaceReady = state.workspaceStatus === "ready";
+    // Only perform action if the status should change based on current state
+    if (isSyncEnabled && workspaceReady) {
+      handleAction("Start Sync", mainApi.startSync, "sync-status");
+    } else {
+      handleAction("Stop Sync", mainApi.stopSync, "sync-status");
+    }
+  }, [panelSettings.isSyncEnabled, state.workspaceStatus, mainApi]);
   return (
     <PanelSettingsCtx.Provider value={panelSettings}>
       <Tabs defaultValue="agent">
@@ -60,7 +77,7 @@ export function ControlPanelContent({}: ControlPanelContentProps) {
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="agent">
-          <ConfigPanel />
+          <ConfigPanel state={state} />
         </TabsContent>
         <TabsContent value="settings">
           <SettingsPanel
