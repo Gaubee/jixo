@@ -11,7 +11,7 @@
     "b:vite": "vite build",
     "b:bundle": "tsdown --config ./tsdown.config.ts",
     "dev": "pnpm run \"/^d\\:.*/\" --watch",
-    "d:vite": "NODE_ENV=development vite build --mode development",
+    "d:vite": "vite build --mode development",
     "d:bundle": "tsdown --config ./tsdown.config.ts"
   },
   "keywords": [

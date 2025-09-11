@@ -7,7 +7,9 @@ import {defineConfig, type UserConfig} from "vite";
 const resolver = createResolver(import.meta.dirname);
 
 // https://vitejs.dev/config/
-export default defineConfig(() => {
+export default defineConfig(({mode}) => {
+  process.env.NODE_ENV = mode;
+
   return {
     publicDir: "public",
     server: {
