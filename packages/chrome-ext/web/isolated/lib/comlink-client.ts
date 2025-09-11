@@ -27,7 +27,7 @@ export async function getActiveContentScriptAPI(): Promise<Comlink.Remote<Conten
   if (contentScriptAPI) {
     try {
       // Use ping to check if connection is still alive
-      await contentScriptAPI.ping();
+      await contentScriptAPI.ready();
       return contentScriptAPI;
     } catch (e) {
       console.warn("Cached content script API seems dead, creating a new one.");

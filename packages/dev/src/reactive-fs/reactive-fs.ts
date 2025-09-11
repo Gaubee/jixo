@@ -91,6 +91,7 @@ const readDirByGlob = (dirname: string, glob: string | readonly string[] = "*", 
 const useReactiveFs = (
   run: () => Promise<void>,
   opts: {
+    signal?: AbortSignal;
     once?: boolean;
     fileWatchOptions?: ReactiveFileWatchOptions;
     dirWatchOptions?: ReactiveDirWatchOptions;
@@ -114,7 +115,7 @@ const useReactiveFs = (
       dirWatchOptions,
     ],
     () => {
-      return context.run();
+      return context.run(opts);
     },
   );
 };

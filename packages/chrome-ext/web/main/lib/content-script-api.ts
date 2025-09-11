@@ -11,10 +11,7 @@ import {
   whenFileChanged,
 } from "@jixo/dev/browser";
 import {Comlink} from "@jixo/dev/comlink";
-import {KeyValStore} from "@jixo/dev/idb-keyval";
 import {getWorkspaceHandle, storeWorkspaceHandle} from "./workspace.ts";
-
-const settingsStore = new KeyValStore<{isSyncEnabled?: boolean}>("jixo-settings");
 
 // --- API Definition ---
 export class MainContentScriptAPI {
@@ -23,6 +20,7 @@ export class MainContentScriptAPI {
 
   async getWorkspaceHandleName(): Promise<string | null> {
     const handle = await getWorkspaceHandle(this.sessionId);
+    await restoreDirHandle(handle);
     return handle?.name || null;
   }
   async #requestWorkspaceHandle() {
@@ -51,39 +49,33 @@ export class MainContentScriptAPI {
       await this.stopSync();
     }
     /// 将新的文件夹存储为当前工作空间
-    const newHandle = await this.#requestWorkspaceHandle();
-    // 恢复同步
-    if (startSync ?? isSyncing) {
-      await this.startSync();
+    try {
+      const newHandle = await this.#requestWorkspaceHandle();
+      // 恢复同步
+      if (startSync ?? isSyncing) {
+        await this.startSync();
+      }
+      return newHandle.name;
+    } catch {
+      return null;
     }
-    return newHandle?.name ?? null;
   }
-  initScriptFile = async () => {
-    const handle = await this.#requestWorkspaceHandle();
-    // handle.getFileHandle("click-me.sh",()=>)
-  };
 
-  startSync = Comlink.clone(async (): Promise<{status: "SYNC_STARTED" | "SYNC_DISABLED" | "ERROR"; message?: string}> => {
-    const settings = await settingsStore.get(this.sessionId);
-    if (settings?.isSyncEnabled === false) {
-      console.log("JIXO BROWSER: Sync is disabled by user settings.");
-      return {status: "SYNC_DISABLED"};
-    }
-
-    if (this.#syncAbortController) {
-      this.#syncAbortController.abort();
-    }
-    this.#syncAbortController = new AbortController();
-    const signal = this.#syncAbortController.signal;
-
+  startSync = Comlink.clone(async (): Promise<{status: "SYNC_STARTED" | "ERROR"; message?: string}> => {
+    this.#syncAbortController?.abort("restart");
+    this.#syncAbortController = null;
     try {
       const handle = await this.#requestWorkspaceHandle();
       if (!handle) throw new Error("Workspace not available for sync.");
       console.log(`JIXO BROWSER: Starting sync with workspace '${handle.name}'...`);
+
+      this.#syncAbortController = new AbortController();
+      const signal = this.#syncAbortController.signal;
       void syncOutput(signal);
       void syncInput(signal);
       return {status: "SYNC_STARTED"};
     } catch (e) {
+      this.#syncAbortController?.abort(e);
       this.#syncAbortController = null;
       return {status: "ERROR", message: e instanceof Error ? e.message : String(e)};
     }

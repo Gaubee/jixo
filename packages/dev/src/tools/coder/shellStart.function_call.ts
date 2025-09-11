@@ -1,16 +1,17 @@
 import {junStartLogic} from "@jixo/jun";
 import {z} from "zod/v4";
+import {toParamsSchema} from "../helper.js";
 import type {FunctionCallFn} from "../types.js";
 
 export const name = "shellStart";
 
 export const description = "使用jun代理在后台启动一个shell命令。此工具会立即返回任务pid，而不会等待命令完成。";
 
-export const paramsSchema = z.object({
+export const zParams = z.object({
   command: z.string().describe("要执行的主命令。"),
-  args: z.array(z.string()).optional().default([]).describe("命令的参数列表。"),
+  args: z.array(z.string()).optional().describe("命令的参数列表。"),
   mode: z
-    .union([z.literal("tty"), z.literal("cp")])
+    .string()
     .describe(
       [
         //
@@ -20,9 +21,9 @@ export const paramsSchema = z.object({
         "**默认值:** 'tty'，因为后台任务通常是服务或监听器，更适合终端模拟。",
       ].join("\n"),
     )
-    .optional()
-    .default("tty"),
+    .optional(),
 });
+export const paramsSchema = toParamsSchema(zParams);
 
 /**
  * 调用 @jixo/jun 的 junStartLogic 来执行后台命令。
@@ -32,7 +33,7 @@ export const paramsSchema = z.object({
 export const functionCall = (async (args) => {
   return await junStartLogic({
     command: args.command,
-    commandArgs: args.args,
-    mode: args.mode,
+    commandArgs: args.args ?? [],
+    mode: z.union([z.literal("tty"), z.literal("cp")]).safeParse(args.mode).data ?? "tty",
   });
-}) satisfies FunctionCallFn<z.infer<typeof paramsSchema>>;
+}) satisfies FunctionCallFn<z.infer<typeof zParams>>;

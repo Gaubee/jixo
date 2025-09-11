@@ -1,20 +1,66 @@
 import {Button} from "@/components/ui/button.tsx";
 import {FormControl, FormField, FormItem, FormLabel} from "@/components/ui/form.tsx";
 import {Input} from "@/components/ui/input.tsx";
+import {Switch} from "@/components/ui/switch.tsx";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip.tsx";
-import {Download, X} from "lucide-react";
+import {X} from "lucide-react";
 import React from "react";
-import {useFieldArray, type Control} from "react-hook-form";
+import {useFieldArray, type Control, useController} from "react-hook-form";
 import {FileListInput} from "./FileListInput.tsx";
-import type {AgentFormValues} from "./ConfigPanel.tsx";
+import type {AgentFormValues} from "../hooks/useConfigPanelState.ts";
 
 interface CoderAgentConfigPanelProps {
   control: Control<AgentFormValues>;
+  tools: Array<{name: string; filepath: string}>;
   onPreview: (patterns: string[]) => Promise<string[]>;
-  onInitTools: () => Promise<void>;
 }
 
-export function CoderAgentConfigPanel({control, onPreview, onInitTools}: CoderAgentConfigPanelProps) {
+function ToolsSwitchList({control, tools}: {control: Control<AgentFormValues>; tools: Array<{name: string; filepath: string}>}) {
+  const {field} = useController({
+    control,
+    name: "metadata.tools.exclude",
+    defaultValue: [],
+  });
+
+  const excludedTools = new Set(field.value || []);
+
+  const handleCheckedChange = (checked: boolean, toolName: string) => {
+    const newExcluded = new Set(excludedTools);
+    if (checked) {
+      newExcluded.delete(toolName);
+    } else {
+      newExcluded.add(toolName);
+    }
+    field.onChange(Array.from(newExcluded));
+  };
+
+  return (
+    <div className="space-y-2">
+      <FormLabel>Available Tools</FormLabel>
+      <div className="max-h-32 space-y-2 overflow-y-auto rounded-md border p-2 pr-3">
+        {tools.map((tool) => (
+          <TooltipProvider key={tool.name}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="flex items-center justify-between">
+                  <label htmlFor={`tool-switch-${tool.name}`} className="text-sm font-medium">
+                    {tool.name}
+                  </label>
+                  <Switch id={`tool-switch-${tool.name}`} checked={!excludedTools.has(tool.name)} onCheckedChange={(checked) => handleCheckedChange(checked, tool.name)} />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="font-mono text-xs">{tool.filepath}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function CoderAgentConfigPanel({control, tools, onPreview}: CoderAgentConfigPanelProps) {
   const {fields, append, remove} = useFieldArray({
     control,
     name: "metadata.mcp",
@@ -70,6 +116,7 @@ export function CoderAgentConfigPanel({control, onPreview, onInitTools}: CoderAg
           </FormItem>
         )}
       />
+      <ToolsSwitchList control={control} tools={tools} />
       <div className="space-y-2">
         <FormLabel>MCP Tools</FormLabel>
         <div className="max-h-32 space-y-2 overflow-y-auto pr-2">
@@ -115,10 +162,6 @@ export function CoderAgentConfigPanel({control, onPreview, onInitTools}: CoderAg
         <div className="flex gap-2">
           <Button type="button" onClick={() => append({command: "", prefix: ""})} variant="secondary" size="sm">
             Add MCP Tool
-          </Button>
-          <Button type="button" onClick={onInitTools} variant="outline" size="sm">
-            <Download className="mr-1 h-4 w-4" />
-            Initialize Tools
           </Button>
         </div>
       </div>

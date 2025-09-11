@@ -3,14 +3,11 @@ import {map_get_or_put} from "@gaubee/util";
 import {Comlink} from "@jixo/dev/comlink";
 import type {UIResponse} from "@jixo/tools-uikit";
 import http from "node:http";
-import path from "node:path";
 import {URL} from "node:url";
 import {WebSocket, WebSocketServer} from "ws";
-import {globFilesWithParams} from "../../gen-prompt/replacers/file-replacer.js";
 import {webSocketEndpoint} from "../../lib/comlink-adapters/web-socket-adapters.js";
-import type {AgentMetadata} from "../browser/index.js";
-import {genPageConfig} from "../node/config.js";
-import {initTools} from "./init.js";
+import {SessionAPI} from "./SessionAPI.js";
+export type {SessionAPI};
 
 export const globalWsMap = new Map<string, WebSocket>();
 const sessionWsMap = new Map<
@@ -36,68 +33,6 @@ function handleGlobalUserResponse(message: UIResponse) {
   }
 }
 
-// --- Session-level Request Handler ---
-export class SessionAPI {
-  constructor(
-    readonly nid: number,
-    readonly sessionId: string,
-  ) {}
-  #dir: string | PromiseWithResolvers<string> = Promise.withResolvers<string>();
-  #changeWitter: PromiseWithResolvers<string> | null = null;
-
-  async setWorkDir(workDir: string) {
-    if (typeof this.#dir === "object") {
-      this.#dir.resolve(workDir);
-    }
-    if (workDir !== this.#dir) {
-      this.#dir = workDir;
-      this.#changeWitter?.resolve(workDir);
-      this.#changeWitter = null;
-    }
-  }
-  async whenWorkDirChanged() {
-    if (this.#changeWitter == null) {
-      this.#changeWitter = Promise.withResolvers();
-    }
-    return this.#changeWitter.promise;
-  }
-  async getWorkDir() {
-    if (typeof this.#dir === "object") {
-      return this.#dir.promise;
-    }
-    return this.#dir;
-  }
-  async hasWorkDir() {
-    return typeof this.#dir === "string";
-  }
-  async unsetWorkDir() {
-    if (typeof this.#dir === "string") {
-      this.#dir = Promise.withResolvers();
-    }
-  }
-  generateConfigFromMetadata = Comlink.clone(async (metadata: AgentMetadata) => {
-    const config = await genPageConfig(metadata);
-    return config;
-  });
-  resolvePaths = Comlink.clone(async (paths: string[]): Promise<string[]> => {
-    const workDir = await this.getWorkDir();
-    return paths.map((p) => path.resolve(workDir, p));
-  });
-  globFiles = Comlink.clone(async (patterns: string[]): Promise<string[]> => {
-    const workDir = await this.getWorkDir();
-    const allFiles = await Promise.all(patterns.map((p) => globFilesWithParams(p, workDir, {})));
-    return [...new Set(allFiles.flat())];
-  });
-  async initToolsInWorkspace() {
-    const workDir = await this.getWorkDir();
-    const toolsDir = path.join(workDir, "tools");
-    await initTools({dir: toolsDir, force: true});
-    return `Tools initialized in ${toolsDir}`;
-  }
-  async ping() {
-    return "pong";
-  }
-}
 const getNid = () => {
   const nids = new Set(Array.from({length: sessionWsMap.size + 1}, (_, i) => i + 1));
   for (const session of sessionWsMap.values()) {

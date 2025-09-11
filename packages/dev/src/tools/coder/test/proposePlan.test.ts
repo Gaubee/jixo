@@ -2,7 +2,7 @@ import type {RenderPayload} from "@jixo/tools-uikit";
 import assert from "node:assert";
 import {describe, expect, it} from "vitest";
 import type {ToolContext} from "../../types.js";
-import {functionCall, paramsSchema} from "../proposePlan.function_call.js";
+import {functionCall, zParams} from "../proposePlan.function_call.js";
 
 describe("proposePlan tool", () => {
   const planArgs = {
@@ -19,7 +19,7 @@ describe("proposePlan tool", () => {
     };
     const mockContext: ToolContext = {render: mockRender, sessionId: "test-session"};
 
-    paramsSchema.parse(planArgs);
+    zParams.parse(planArgs);
     const result = await functionCall(planArgs, mockContext);
 
     expect(result.status).toBe("PLAN_APPROVED");

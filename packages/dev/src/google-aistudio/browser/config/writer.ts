@@ -1,12 +1,12 @@
-import type {z} from "../../node/z-min.js";
 import {$, easy$, raf, untilRaf, while$, whileRaf} from "../utils.js";
 import {getPageModel} from "./reader.js";
+import type {PageToolConfig} from "./types.js";
 
 /**
  * 设置Function Call工具。
  * @param tools - 一个符合JSON Schema格式的工具数组。
  */
-export const setPageFunctionCallTools = async (tools: z.core.JSONSchema.BaseSchema[]) => {
+export const setPageFunctionCallTools = async (tools: PageToolConfig[]) => {
   const switchBtn = async (label: string, enable: boolean) => {
     const btn = $<HTMLButtonElement>(`button[role="switch"][aria-label="${label}"]`);
     if (btn) {
@@ -43,7 +43,11 @@ export const setPageFunctionCallTools = async (tools: z.core.JSONSchema.BaseSche
   await easy$<HTMLButtonElement>(`button[aria-label="Edit function declarations"][aria-disabled="false"]`).click();
 
   const textareaEle = await while$<HTMLTextAreaElement>('ms-tab[label="Code Editor"] ms-text-editor>textarea');
-  textareaEle.value = JSON.stringify(tools, null, 2);
+  textareaEle.value = JSON.stringify(
+    tools.filter((t) => !t.disabled),
+    null,
+    2,
+  );
   textareaEle.dispatchEvent(new Event("input"));
 
   await easy$<HTMLButtonElement>(`button[aria-label="Save the current function declarations"]`).click();
@@ -149,7 +153,7 @@ export const setTitleAndDescription = async (config: {title?: string; descriptio
   await while$("ms-toolbar");
   let needResize = null == $<HTMLButtonElement>('button[mattooltip="Edit title and description"]');
   if (needResize) {
-    document.body.style.setProperty("width", "800px!important");
+    document.body.style.width = "1200px!important";
   }
   const btn = await while$<HTMLButtonElement>('button[mattooltip="Edit title and description"]');
   btn.click();

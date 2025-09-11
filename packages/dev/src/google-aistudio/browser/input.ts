@@ -37,7 +37,9 @@ const fillFunctionCall = async (signal?: AbortSignal) => {
     }
 
     const functionCallEle = functionCallEles.find(
-      (ele) => ele.querySelector("mat-panel-title")?.textContent?.trim() === `function ${taskResponse.name}` && ele.querySelector("code")?.textContent === taskResponse.parameters,
+      (ele) =>
+        ele.querySelector("mat-panel-title")?.textContent?.trim() === `function ${taskResponse.name}` &&
+        JSON.stringify(JSON.parse(ele.querySelector("code")?.textContent ?? "{}")) === taskResponse.parameters,
     );
     if (null == functionCallEle) {
       console.error(`找不到指定的可以进行function-call-ele: ${taskResponse.name}(${taskResponse.parameters})`);

@@ -16,10 +16,11 @@ export default defineConfig(() => {
     dts: false,
     minify: false,
     platform: "node",
-    external: ["@parcel/watcher"],
+    external: ["@parcel/watcher", "node-pty"],
     ignoreWatch: [/[\\/]assets[\\/]/, /[\\/]bundle[\\/]/, /[\\/]dist[\\/]/] as any,
     hooks: {
       "build:done": async () => {
+        /// link assets
         const source = assetsResolver.dirname;
         const target = path.resolve("assets");
         let canRetry = -1;
@@ -46,6 +47,7 @@ export default defineConfig(() => {
             throw e;
           }
         } while (canRetry > 0);
+        /// copy pty.node
       },
     },
     plugins: [

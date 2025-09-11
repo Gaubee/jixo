@@ -1,11 +1,12 @@
 import {gray} from "@gaubee/nodekit";
 import {func_remember, func_throttle} from "@gaubee/util";
 import {reactiveFs} from "../../reactive-fs/reactive-fs.js";
-import {googleAiStudioAutomation, type GoogleAiStudioAutomationOptions} from "./tasks.js";
+import {googleAiStudioAutomation, type GoogleAiStudioAutomationOptions} from "../../tools/tasks.js";
 export * from "./config.js";
 export * from "./types.js";
 export interface DoGoogleAiStudioAutomationOptions extends GoogleAiStudioAutomationOptions {
   watch?: boolean;
+  signal?: AbortSignal;
 }
 
 export const doGoogleAiStudioAutomation = async ({watch, ...opts}: DoGoogleAiStudioAutomationOptions) => {
@@ -22,6 +23,7 @@ export const doGoogleAiStudioAutomation = async ({watch, ...opts}: DoGoogleAiStu
       }
     },
     {
+      ...opts,
       once: !watch,
     },
   );

@@ -2,7 +2,7 @@ import type {RenderPayload} from "@jixo/tools-uikit";
 import assert from "node:assert";
 import {describe, expect, it} from "vitest";
 import type {ToolContext} from "../../types.js";
-import {functionCall, paramsSchema} from "../askUser.function_call.js";
+import {functionCall, zParams} from "../askUser.function_call.js";
 
 describe("askUser tool", () => {
   it("should call the render function with the correct payload", async () => {
@@ -23,7 +23,7 @@ describe("askUser tool", () => {
       question: "Proceed?",
       options: ["Yes", "No"],
     };
-    paramsSchema.parse(args);
+    zParams.parse(args);
 
     const result = await functionCall(args, mockContext);
 

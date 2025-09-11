@@ -40,7 +40,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9.31.0",
     "eslint-config-next": "15.4.4",
-    "tailwindcss": "^4.1.11",
-    "typescript": "^5"
+    "tailwindcss": "^4.1.11"
   }
 }

@@ -1,9 +1,7 @@
-import {createResolver} from "@gaubee/nodekit";
-import path from "node:path";
-import {z} from "zod";
+import {createResolver, } from "@gaubee/nodekit";
 import {_gen_content} from "../../gen-prompt.js";
 import type {AgentMetadata, PageConfig} from "../browser/index.js";
-import {defineFunctionCalls} from "../../tools/function_call.js";
+import { loadAgentTools } from "../../tools/load_tools.js";
 
 /**
  * Dynamically generates a complete page configuration based on agent metadata.
@@ -14,34 +12,9 @@ import {defineFunctionCalls} from "../../tools/function_call.js";
  */
 export const genPageConfig = async (metadata: AgentMetadata): Promise<PageConfig> => {
   const systemPromptTemplate: string[] = ["[JIXO:CODER2](@INJECT)"];
-  const tools: Array<{name: string; description: string; parameters: any}> = [];
 
-  const toolsDirs = [metadata.workDir, path.join(metadata.workDir, "tools")];
-  for (const toolsDir of toolsDirs) {
-    // 1. Dynamically generate tool declarations from the filesystem
-    try {
-      const functionCallModules = await defineFunctionCalls(toolsDir);
-      for (const [baseName, fc] of functionCallModules) {
-        const {name, description, paramsSchema} = fc.module;
-        let parameters = {};
-        if (paramsSchema) {
-          try {
-            // Convert Zod schema to JSON schema for the tool definition
-            parameters = z.toJSONSchema(z.object(paramsSchema));
-          } catch (error) {
-            console.warn(`Could not convert Zod schema for tool "${name}":`, error);
-          }
-        }
-        tools.push({
-          name: name ?? baseName,
-          description: description || "No description provided.",
-          parameters,
-        });
-      }
-    } catch (error) {
-      console.error(`Error defining function calls from ${toolsDir}:`, error);
-    }
-  }
+  // 1. Dynamically load tools from both built-in and user directories
+  const {toolDeclarations} = await loadAgentTools(metadata);
 
   // 2. Build the system prompt template from metadata
   if (metadata) {
@@ -66,9 +39,9 @@ export const genPageConfig = async (metadata: AgentMetadata): Promise<PageConfig
 
   // 4. Construct the final config object
   const finalConfig: PageConfig = {
-    model: "gemini-2.5-pro", // Or make this configurable via metadata
+    model: "gemini-1.5-pro", // Or make this configurable via metadata
     systemPrompt: finalSystemPrompt,
-    tools,
+    tools: toolDeclarations,
     metadata,
   };
 

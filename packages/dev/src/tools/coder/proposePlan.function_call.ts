@@ -1,15 +1,17 @@
 import {z} from "zod/v4";
+import {toParamsSchema} from "../helper.js";
 import type {FunctionCallFn} from "../types.js";
 
 export const name = "proposePlan";
 
 export const description = "向用户提出一个高层级的行动计划以供审批。";
 
-export const paramsSchema = z.object({
+export const zParams = z.object({
   plan_summary: z.string().describe("对整个计划的一句话总结。"),
   steps: z.array(z.string()).describe("一个有序列表，描述了计划执行的每一个具体步骤。"),
   estimated_tool_calls: z.array(z.string()).optional().describe("预估在计划批准后将会调用的主要工具列表。"),
 });
+export const paramsSchema = toParamsSchema(zParams);
 
 /**
  * Renders a plan to the user and awaits their approval or rejection.
@@ -38,4 +40,4 @@ export const functionCall = (async (args, context) => {
     // Re-throw the error to ensure the AI knows the tool failed.
     throw error;
   }
-}) satisfies FunctionCallFn<z.infer<typeof paramsSchema>>;
+}) satisfies FunctionCallFn<z.infer<typeof zParams>>;

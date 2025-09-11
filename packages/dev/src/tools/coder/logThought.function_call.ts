@@ -1,16 +1,18 @@
 import {z} from "zod/v4";
+import {toParamsSchema} from "../helper.js";
 import type {FunctionCallFn} from "../types.js";
 
 export const name = "logThought";
 
 export const description = "用于外部化和记录AI的思考过程，并将这个过程展示给用户。";
 
-export const paramsSchema = z.object({
+export const zParams = z.object({
   thought: z.string().describe("当前这一步的思考内容。可以是对问题的分析、一个假设、对风险的评估或一个初步想法。"),
-  step: z.number().int().min(1).describe("当前思考是第几步。"),
-  total_steps: z.number().int().min(1).describe("预估总共需要几步思考。"),
+  step: z.number().min(1).describe("当前思考是第几步。"),
+  total_steps: z.number().min(1).describe("预估总共需要几步思考。"),
   is_conclusive: z.boolean().describe("设置为true表示思考过程已结束。"),
 });
+export const paramsSchema = toParamsSchema(zParams);
 
 /**
  * Renders the AI's thought process into the UI.
@@ -37,4 +39,4 @@ export const functionCall = (async (args, context) => {
   };
 
   return result;
-}) satisfies FunctionCallFn<z.infer<typeof paramsSchema>>;
+}) satisfies FunctionCallFn<z.infer<typeof zParams>>;

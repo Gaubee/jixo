@@ -1,29 +1,29 @@
 {
     "references": [
-        {
-            "path": "./packages/agent/tsconfig.json"
-        },
+        // {
+        //     "path": "./packages/agent/tsconfig.json"
+        // },
         {
             "path": "./packages/cli/tsconfig.json"
         },
-        {
-            "path": "./packages/core/tsconfig.json"
-        },
+        // {
+        //     "path": "./packages/core/tsconfig.json"
+        // },
         {
             "path": "./packages/dev/tsconfig.json"
         },
-        {
-            "path": "./packages/mcp-core/tsconfig.json"
-        },
-        {
-            "path": "./packages/mcp-fs/tsconfig.json"
-        },
-        {
-            "path": "./packages/mcp-git/tsconfig.json"
-        },
-        {
-            "path": "./packages/mcp-pnpm/tsconfig.json"
-        },
+        // {
+        //     "path": "./packages/mcp-core/tsconfig.json"
+        // },
+        // {
+        //     "path": "./packages/mcp-fs/tsconfig.json"
+        // },
+        // {
+        //     "path": "./packages/mcp-git/tsconfig.json"
+        // },
+        // {
+        //     "path": "./packages/mcp-pnpm/tsconfig.json"
+        // },
         // {
         //     "path": "./packages/tools/tsconfig.json"
         // },

@@ -23,20 +23,10 @@ export const generateConfigTemplate = async ({workDir, toolsDir}: GenerateConfig
   const toolDeclarations = [...functionCallModules.values()].map((fc) => {
     const {name, description, paramsSchema} = fc.module;
 
-    let parameters = {};
-    if (paramsSchema) {
-      // Convert Zod schema to JSON schema, handling potential errors
-      try {
-        parameters = z.toJSONSchema(z.object(paramsSchema));
-      } catch (error) {
-        console.warn(`Could not convert Zod schema to JSON schema for tool "${name}":`, error);
-      }
-    }
-
     return {
       name,
-      description: description || "No description provided.",
-      parameters,
+      description: description || "",
+      parameters: paramsSchema,
     };
   });
 

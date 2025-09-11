@@ -34,7 +34,7 @@ export async function addToggleButton() {
 
   const btn = template.content.querySelector("button")!;
   btn.addEventListener("click", async () => {
-    await isolatedContentScriptAPI.renderComponent("App", null, {});
+    await isolatedContentScriptAPI.renderApp();
     if (JIXODraggableDialogIsolatedHelper.isOpend) {
       JIXODraggableDialogIsolatedHelper.closeDialog();
     } else {

@@ -5,25 +5,18 @@ import {Switch} from "@/components/ui/switch.tsx";
 import {zodResolver} from "@hookform/resolvers/zod";
 import React from "react";
 import {useForm} from "react-hook-form";
-import {z} from "zod";
 import {ConfirmDialog} from "./ConfirmDialog.tsx";
-
-const SettingsFormSchema = z.object({
-  isSyncEnabled: z.boolean().default(true).optional(),
-});
-
-type SettingsFormValues = z.infer<typeof SettingsFormSchema>;
+import {zPanelSettings, type PanelSettings} from "./context.ts";
 
 interface SettingsPanelProps {
-  initialValues: SettingsFormValues;
-  isLoading: boolean;
-  onSubmit: (values: SettingsFormValues) => void;
+  values: PanelSettings;
+  onSubmit: (values: PanelSettings) => void;
   onClearHistory: () => Promise<void>;
 }
 
-export function SettingsPanel({initialValues, isLoading, onSubmit, onClearHistory}: SettingsPanelProps) {
-  const form = useForm<SettingsFormValues>({
-    resolver: zodResolver(SettingsFormSchema),
+export function SettingsPanel({values: initialValues, onSubmit, onClearHistory}: SettingsPanelProps) {
+  const form = useForm<PanelSettings>({
+    resolver: zodResolver(zPanelSettings),
     values: initialValues, // Use values to sync from parent
   });
 
@@ -62,14 +55,14 @@ export function SettingsPanel({initialValues, isLoading, onSubmit, onClearHistor
             />
           </form>
         </Form>
-        <div className="space-y-3">
+        <div className="space-y-3 pt-4">
           <ConfirmDialog
             title="Are you absolutely sure?"
             description="This action cannot be undone. This will permanently clear the AI Studio page's chat history."
             onConfirm={onClearHistory}
             trigger={
-              <Button className="w-full" variant="destructive" disabled={isLoading}>
-                {isLoading ? "Clearing..." : "Clear Page History"}
+              <Button className="w-full" variant="destructive">
+                Clear Page History
               </Button>
             }
           />

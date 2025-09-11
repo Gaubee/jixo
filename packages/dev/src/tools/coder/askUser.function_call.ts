@@ -1,14 +1,16 @@
 import {z} from "zod/v4";
+import {toParamsSchema} from "../helper.js";
 import type {FunctionCallFn} from "../types.js";
 
 export const name = "askUser";
 
 export const description = "当遇到歧义、需要决策或缺少关键信息时，向用户提问并等待响应。";
 
-export const paramsSchema = z.object({
+export const zParams = z.object({
   question: z.string().describe("需要向用户提出的、清晰具体的问题。"),
   options: z.array(z.string()).optional().describe("如果提供，则向用户呈现一个选项列表，用户必须从中选择一个。"),
 });
+export const paramsSchema = toParamsSchema(zParams);
 
 /**
  * Uses the injected render function from the context to display a UI prompt.
@@ -35,4 +37,4 @@ export const functionCall = (async (args, context) => {
     // Rethrow the error to let the caller know the FC failed.
     throw error;
   }
-}) satisfies FunctionCallFn<z.infer<typeof paramsSchema>>;
+}) satisfies FunctionCallFn<z.infer<typeof zParams>>;

@@ -13,16 +13,31 @@ export const zCoderAgentMetadata = z.extend(zBaseAgentMetadata, {
   dirs: z.array(z.string()),
   docs: z.array(z.string()),
   mcp: z.array(z.object({command: z.string(), prefix: z.optional(z.string())})),
+  tools: z.optional(
+    z.object({
+      exclude: z.optional(z.array(z.string())),
+    }),
+  ),
 });
 export type CoderAgentMetadata = z.output<typeof zCoderAgentMetadata>;
 
 export const zAgentMetadata = z.union([zCoderAgentMetadata]);
 export type AgentMetadata = z.output<typeof zAgentMetadata>;
+
+export const zPageToolConfig = z.object({
+  name: z.string(),
+  description: z.string(),
+  parameters: z.any(),
+  filepath: z.string(),
+  disabled: z.optional(z.boolean()),
+});
+export type PageToolConfig = z.output<typeof zPageToolConfig>;
+
 export const zPageConfig = z.object({
   metadata: z.optional(zAgentMetadata),
   model: z.string(),
   systemPrompt: z.string(),
-  tools: z.array(z.any()),
+  tools: z.array(zPageToolConfig),
   title: z.optional(z.string()),
 });
 

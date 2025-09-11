@@ -1,5 +1,5 @@
 import {match, P} from "ts-pattern";
-import { z } from "../node/z-min.js";
+import {z} from "../node/z-min.js";
 
 // --------------------------------------------------------------------------
 // 1. TYPE DEFINITIONS
@@ -154,6 +154,7 @@ const TargetPartSchema = z.union([
 ]);
 
 const TargetMessageSchema = z.object({
+  id: z.optional(z.string()),
   role: z.string(),
   parts: z.array(TargetPartSchema),
 });
@@ -212,6 +213,7 @@ type SourceFunctionCallMessage = SourceBaseMessage & {
 type SourceMessage = SourceTextMessage | SourceImageMessage | SourceFunctionCallMessage;
 
 interface GroupedMessage {
+  id?: string;
   role: "user" | "model";
   items: SourceMessage[];
 }
@@ -252,8 +254,6 @@ const blobUrlToBase64 = (blobUrl: string): Promise<string> => {
 };
 
 // --- (All other helpers for function calls are unchanged) ---
-// (normalizeNcValue, normalizeNcMapToCanonicalArray, getCanonicalFunctionCall, parseArgValue, parseFunctionArgs)
-let normalizeNcMapToCanonicalArray: (map: Map<string, {[key in typeof KEYS.CONTENT_KEY]: any[]}>) => [string, any[]][];
 const normalizeNcValue = (ncWrapper: {[key in typeof KEYS.CONTENT_KEY]: any[]}): any[] => {
   const ncArray = ncWrapper[KEYS.CONTENT_KEY];
   return match(ncArray)
@@ -263,7 +263,7 @@ const normalizeNcValue = (ncWrapper: {[key in typeof KEYS.CONTENT_KEY]: any[]}):
     })
     .otherwise(() => ncArray);
 };
-normalizeNcMapToCanonicalArray = (map: Map<string, {[key in typeof KEYS.CONTENT_KEY]: any[]}>): [string, any[]][] => {
+const normalizeNcMapToCanonicalArray = (map: Map<string, {[key in typeof KEYS.CONTENT_KEY]: any[]}>): [string, any[]][] => {
   return Array.from(map.entries()).map(([key, valueWrapper]) => {
     const canonicalValueArray = normalizeNcValue(valueWrapper);
     return [key, canonicalValueArray];
@@ -287,14 +287,37 @@ const getCanonicalFunctionCall = (msg: SourceFunctionCallMessage): CanonicalFunc
     });
 };
 const parseArgValue = (arg: any): any => {
-  if (!Array.isArray(arg)) return arg;
+  if (!Array.isArray(arg)) {
+    if (typeof arg === "object" && arg !== null && KEYS.CONTENT_KEY in arg) {
+      return parseArgValue(arg[KEYS.CONTENT_KEY]);
+    }
+    return arg;
+  }
   return match(arg)
+    .with([P.any, P.any, P.any, P.any, P.any, {[KEYS.CONTENT_KEY]: [P.select()]}], (val) => {
+      if (Array.isArray(val)) {
+        return val.map(parseArgValue);
+      }
+      console.warn("unknown struct 1", val);
+      return null;
+    })
+    // .with([P.any, P.any, P.any, P.any, {[KEYS.CONTENT_KEY]: [P.select(P.instanceOf(Map))]}], (innerMap) => {
+    //   console.warn("unknown struct 2", innerMap);
+    //   const objEntries = Array.from(innerMap.entries()).map(([key, valueWrapper]) => {
+    //     const canonicalValueArray = normalizeNcValue(valueWrapper);
+    //     return [key, canonicalValueArray];
+    //   });
+    //   return Object.fromEntries(objEntries);
+    // })
     .with([P.any, P.any, P.any, P.any, P.select(P.array())], (nestedPairs) => parseFunctionArgs(nestedPairs[0] as any))
     .with([P.any, P.any, P.any, 1], () => true)
     .with([P.any, P.any, P.any, 0], () => false)
     .with([P.any, P.any, P.select(P.string)], (val) => val)
     .with([P.any, P.select(P.number)], (val) => val)
-    .otherwise(() => null);
+    .otherwise(() => {
+      console.warn("unknown struct 0", arg);
+      return null;
+    });
 };
 const parseFunctionArgs = (argList: [string, any[]][]): Record<string, any> => {
   if (!Array.isArray(argList)) return {};
@@ -377,10 +400,11 @@ export const convertMessages = async (sourceMessages: any[]): Promise<TargetMess
 
     // Step 3: Construct the final message(s) for this group
     if (parts.length > 0) {
-      finalMessages.push({role: group.role, parts});
+      finalMessages.push({id: group.id, role: group.role, parts});
     }
     if (functionResponseData) {
       finalMessages.push({
+        id: group.id,
         role: "user",
         parts: [
           {

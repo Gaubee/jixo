@@ -2,8 +2,8 @@ import {createRenderer} from "@jixo/tools-uikit";
 import {readdirSync, statSync, type Stats} from "node:fs";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
-import { webSocketRenderHandler } from "./ws_render.js";
-import { zFunctionCallMiniModule, zFunctionCallStandardModule, type FunctionCallFn, type FunctionCallStandardModule, type ToolContext } from "./types.js";
+import {zFunctionCallMiniModule, zFunctionCallStandardModule, type FunctionCallFn, type FunctionCallsMap, type FunctionCallStandardModule, type ToolContext} from "./types.js";
+import {webSocketRenderHandler} from "./ws_render.js";
 
 const safeParseModule = (unsafeModule: any) => {
   if (unsafeModule.default) {
@@ -21,7 +21,7 @@ const safeParseModule = (unsafeModule: any) => {
 };
 
 const esmImporter = async (codeEntry: CodeEntry) => {
-  const unsafeModule = await import(`${pathToFileURL(codeEntry.fullpath).href}?_=${codeEntry.stat.mtime}`);
+  const unsafeModule = await import(`${pathToFileURL(codeEntry.fullpath).href}?_=${codeEntry.stat?.mtime ?? ""}`);
 
   const safeModule = safeParseModule(unsafeModule);
   if (!safeModule) {
@@ -30,8 +30,8 @@ const esmImporter = async (codeEntry: CodeEntry) => {
   }
   return {
     name: safeModule.name ?? codeEntry.filename,
-    description: safeModule.description,
-    safeDescription: safeModule.description ?? String(safeModule.functionCall),
+    description: safeModule.description ?? String(safeModule.functionCall),
+    // safeDescription: safeModule.description ?? String(safeModule.functionCall),
     paramsSchema: safeModule.paramsSchema,
     functionCall: safeModule.functionCall as FunctionCallFn,
   } satisfies FunctionCallStandardModule;
@@ -59,10 +59,10 @@ type CodeEntry = {
   filename: string;
   dirname: string;
   fullpath: string;
-  stat: Stats;
+  stat?: Stats;
 };
 export const defineFunctionCalls = async (dir: string) => {
-  const codeEntries = new Map<
+  const codeEntries: FunctionCallsMap = new Map<
     string,
     {
       codeEntry: CodeEntry;
@@ -90,8 +90,6 @@ export const defineFunctionCalls = async (dir: string) => {
   }
   return codeEntries;
 };
-
-export type FunctionCallsMap = Awaited<ReturnType<typeof defineFunctionCalls>>;
 
 /**
  * Creates a context object to be passed to a function call.

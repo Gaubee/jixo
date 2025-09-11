@@ -1,4 +1,4 @@
-import {blue, createResolver, createResolverByRootFile, green, normalizeFilePath, writeJson} from "@gaubee/nodekit";
+import {blue, createResolverByRootFile, green, normalizeFilePath, writeJson} from "@gaubee/nodekit";
 import {import_meta_ponyfill} from "import-meta-ponyfill";
 import {mkdirSync} from "node:fs";
 import path, {dirname} from "node:path";
@@ -29,23 +29,6 @@ const doGenAssets = async () => {
     }
     writeJson(promptJsonFilepath, prompt_json_content, {space: 0});
     console.log(blue(new Date().toLocaleTimeString()), green(`[gen-assets]`), "Generated assets in", path.relative(process.cwd(), promptJsonFilepath));
-  }
-  /// tools
-  {
-    const toolsResolver = createResolver(createResolverByRootFile(import.meta.url, "tools/deno.json").dirname + "/tools/src");
-
-    const toolsJsonFilepath = assetsResolver("tools.json");
-    mkdirSync(dirname(toolsJsonFilepath), {recursive: true});
-
-    const filepaths = reactiveFs.readDirByGlob(toolsResolver.dirname, "*.function_call.ts");
-    const tools_json_content: Record<string, string> = {};
-    for (const filepath of filepaths) {
-      const file_content = reactiveFs.readFile(toolsResolver(filepath));
-      const filename_info = path.parse(filepath);
-      tools_json_content[filename_info.base] = file_content;
-    }
-    writeJson(toolsJsonFilepath, tools_json_content, {space: 0});
-    console.log(blue(new Date().toLocaleTimeString()), green(`[gen-assets]`), "Generated assets in", path.relative(process.cwd(), toolsJsonFilepath));
   }
 };
 

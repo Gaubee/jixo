@@ -1,14 +1,11 @@
 import {PortalContainerCtx} from "@/components/ui/context.ts";
+import {pureEvent} from "@gaubee/util";
 import type {AgentMetadata} from "@jixo/dev/browser";
 import type {} from "@jixo/dev/node";
-import React from "react";
+import React, {useContext, useEffect, useState} from "react";
 import {createRoot, type Root} from "react-dom/client";
 import {App} from "../components/App.tsx";
-import {AskUserDialog} from "../components/AskUserDialog.tsx";
-import {IsolatedAPICtx, MainAPICtx, SessionAPICtx, SessionIdCtx} from "../components/context.ts";
-import {LogThoughtPanel} from "../components/LogThoughtPanel.tsx";
-import {ProposePlanDialog} from "../components/ProposePlanDialog.tsx";
-import {SubmitChangeSetPanel} from "../components/SubmitChangeSetPanel.tsx";
+import {FunctionCallRenderJobsCtx, IsolatedAPICtx, MainAPICtx, SessionAPICtx, SessionIdCtx, type FunctionCallRenderJob} from "../components/context.ts";
 import {JIXODraggableDialogIsolatedHelper} from "../draggable-dialog-isolated.ts";
 
 let reactRootEle: HTMLDivElement | null = null;
@@ -55,8 +52,11 @@ window.addEventListener("jixo-user-response", ((event: CustomEvent) => {
   }
 }) as EventListener);
 
-export const isolatedContentScriptAPI = {
-  async generateConfigFromMetadata(sessionId: string, metadata: AgentMetadata): Promise<any> {
+export const isolatedContentScriptAPI = new (class IsolatedContentScriptAPI {
+  async ready() {
+    await ensureJixoMainRuntime();
+  }
+  async generateConfigFromMetadata(sessionId: string, metadata: AgentMetadata) {
     const {mainContentScriptAPI, sessionApi} = await ensureJixoMainRuntime();
     const workDirHandle = await mainContentScriptAPI.getWorkspaceHandleName();
     if (!workDirHandle) throw new Error("Workspace not selected.");
@@ -65,45 +65,28 @@ export const isolatedContentScriptAPI = {
 
     await mainContentScriptAPI.writeConfigFile(sessionId, true, JSON.stringify(config, null, 2));
     return config;
-  },
-
-  async renderComponent(componentName: string, jobId: string | null, props: any): Promise<any> {
+  }
+  async renderApp() {
     const {reactRoot, mainContentScriptAPI, sessionId, sessionApi} = await ensureJixoMainRuntime();
-    const allProps = {jobId, props, key: jobId || componentName};
-
-    if (jobId) {
-      jobResponseListeners.set(jobId, (payload: {data?: any; error?: string}) => {
-        if (payload.error) throw new Error(payload.error);
-        else return payload.data;
-      });
-    }
-
-    const Render = () => {
-      switch (componentName) {
-        case "App":
-          return <App />;
-          break;
-        case "AskUserDialog":
-          return <AskUserDialog {...(allProps as any)} />;
-          break;
-        case "LogThoughtPanel":
-          return <LogThoughtPanel {...allProps} />;
-          break;
-        case "ProposePlanDialog":
-          return <ProposePlanDialog {...(allProps as any)} />;
-          break;
-        case "SubmitChangeSetPanel":
-          return <SubmitChangeSetPanel {...(allProps as any)} />;
-          break;
-        default:
-          return <p>Error: Unknown component '{componentName}'</p>;
-      }
-    };
-
     // 1. 找到自定义元素
     const host = document.querySelector("jixo-draggable-dialog") as HTMLElement;
     // 2. 把 shadowRoot 作为挂载点
     const shadowHost = host?.shadowRoot ?? null;
+    const Render = () => {
+      const [jobs, setJobs] = useState(useContext(FunctionCallRenderJobsCtx));
+      useEffect(() => {
+        this.#onRenderJob((job) => {
+          setJobs((jobs) => {
+            return [...jobs, job];
+          });
+        });
+      }, []);
+      return (
+        <FunctionCallRenderJobsCtx.Provider value={jobs}>
+          <App />
+        </FunctionCallRenderJobsCtx.Provider>
+      );
+    };
 
     reactRoot.render(
       <React.StrictMode>
@@ -120,12 +103,13 @@ export const isolatedContentScriptAPI = {
         </PortalContainerCtx.Provider>
       </React.StrictMode>,
     );
-    if (!jobId) return true;
-  },
+  }
 
-  ping() {
-    return true;
-  },
-};
+  // @TODO 这里应该存储 job + promise
+  #onRenderJob = pureEvent<FunctionCallRenderJob>();
+  async renderJob(job: FunctionCallRenderJob): Promise<any> {
+    this.#onRenderJob.emit(job);
+  }
+})();
 
 export type IsolatedContentScriptAPI = typeof isolatedContentScriptAPI;

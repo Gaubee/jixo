@@ -1,20 +1,14 @@
 import {Alert, AlertDescription, AlertTitle} from "@/components/ui/alert.tsx";
 import {LoaderCircle, WifiOff} from "lucide-react";
-import React, {useContext} from "react";
+import React from "react";
 import {useServiceStatus} from "../hooks/useServiceStatus.ts";
-import {useWorkspace} from "../hooks/useWorkspace.ts";
 import {ControlPanelContent} from "./ControlPanelContent.tsx";
 import {NotificationProvider} from "./Notification.tsx";
-import {WorkspaceSetup} from "./WorkspaceSetup.tsx";
-import {IsolatedAPICtx, MainAPICtx} from "./context.ts";
 
 interface ControlPanelProps {}
 
 export function ControlPanel({}: ControlPanelProps) {
-  const mainApi = useContext(MainAPICtx);
-  const isolatedApi = useContext(IsolatedAPICtx);
   const serviceStatus = useServiceStatus();
-  const {workspaceStatus, workspaceName, workDirFullpath, selectWorkspace, isLoading} = useWorkspace(mainApi, isolatedApi);
 
   return (
     <NotificationProvider>
@@ -32,12 +26,7 @@ export function ControlPanel({}: ControlPanelProps) {
             <span>Connecting...</span>
           </div>
         )}
-        {serviceStatus === "connected" &&
-          (workspaceStatus === "ready" ? (
-            <ControlPanelContent workDirFullpath={workDirFullpath} onSelectWorkspace={selectWorkspace} />
-          ) : (
-            <WorkspaceSetup workspaceName={workspaceName} workspaceStatus={workspaceStatus} onSelectWorkspace={selectWorkspace} isLoading={isLoading} />
-          ))}
+        {serviceStatus === "connected" && <ControlPanelContent />}
       </div>
     </NotificationProvider>
   );

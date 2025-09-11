@@ -1,16 +1,17 @@
 import {junRunLogic} from "@jixo/jun";
 import {z} from "zod/v4";
+import {toParamsSchema} from "../helper.js";
 import type {FunctionCallFn} from "../types.js";
 
 export const name = "shellRun";
 
 export const description = "使用jun代理在前台执行一个shell命令。此工具会等待命令执行完成，并返回包含stdio和退出码的完整结果。";
 
-export const paramsSchema = z.object({
+export const zParams = z.object({
   command: z.string().describe("要执行的主命令。"),
-  args: z.array(z.string()).optional().default([]).describe("命令的参数列表。"),
+  args: z.array(z.string()).optional().describe("命令的参数列表。"),
   mode: z
-    .union([z.literal("tty"), z.literal("cp")])
+    .string()
     .describe(
       [
         //
@@ -20,11 +21,11 @@ export const paramsSchema = z.object({
         "**默认值:** 'cp'，以便清晰地区分输出流。",
       ].join("\n"),
     )
-    .optional()
-    .default("cp"),
-  timeout: z.number().int().positive().optional().describe("命令的最长执行时间（毫秒）。超时后命令将被终止。"),
-  idleTimeout: z.number().int().positive().optional().describe("自上次输出以来的最长空闲时间（毫秒）。超时后命令将被终止。"),
+    .optional(),
+  timeout: z.number().optional().describe("命令的最长执行时间（毫秒）。超时后命令将被终止。"),
+  idleTimeout: z.number().optional().describe("自上次输出以来的最长空闲时间（毫秒）。超时后命令将被终止。"),
 });
+export const paramsSchema = toParamsSchema(zParams);
 
 /**
  * 调用 @jixo/jun 的 junRunLogic 来执行前台命令。
@@ -34,8 +35,8 @@ export const paramsSchema = z.object({
 export const functionCall = (async (args) => {
   const result = await junRunLogic({
     command: args.command,
-    commandArgs: args.args,
-    mode: args.mode,
+    commandArgs: args.args ?? [],
+    mode: z.union([z.literal("tty"), z.literal("cp")]).safeParse(args.mode).data ?? "cp",
     timeout: args.timeout,
     idleTimeout: args.idleTimeout,
   });
@@ -54,4 +55,4 @@ export const functionCall = (async (args) => {
           output: result.output, // For tty mode
         }),
   };
-}) satisfies FunctionCallFn<z.infer<typeof paramsSchema>>;
+}) satisfies FunctionCallFn<z.infer<typeof zParams>>;

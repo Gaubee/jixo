@@ -7,5 +7,5 @@ export default defineConfig(() => {
     format: "esm",
     noExternal: /./,
     dts: false,
-  };
+  } as const;
 });

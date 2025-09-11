@@ -1,4 +1,5 @@
 import {z} from "zod/v4";
+import {toParamsSchema} from "../helper.js";
 import type {FunctionCallFn} from "../types.js";
 
 export const name = "submitChangeSet";
@@ -12,11 +13,12 @@ const operationSchema = z.object({
   new_path: z.string().optional().describe("当type为'renameFile'时，提供文件的新路径。"),
 });
 
-export const paramsSchema = z.object({
+export const zParams = z.object({
   change_log: z.string().describe("严格符合Git Commit Message规范的变更日志。"),
   operations: z.array(operationSchema).describe("一个包含所有文件系统操作的原子列表。"),
   final_statement: z.string().describe("当这个变更集被成功应用后，你希望对用户说的总结性话语。"),
 });
+export const paramsSchema = toParamsSchema(zParams);
 
 /**
  * Renders a change set to the user for final approval, then returns the operations if approved.
@@ -54,4 +56,4 @@ export const functionCall = (async (args, context) => {
     console.error("Failed to get changeset approval:", error);
     throw error;
   }
-}) satisfies FunctionCallFn<z.infer<typeof paramsSchema>>;
+}) satisfies FunctionCallFn<z.infer<typeof zParams>>;

@@ -30,7 +30,7 @@ export function safeRegisterTool<I extends z.ZodRawShape, O extends z.ZodRawShap
   callback: SafeToolCallback<I, O>;
 } {
   // The SDK's registerTool does the actual registration.
-  const underlying = server.registerTool(name, config, callback as ToolCallback<I>);
+  const underlying = (server as any).registerTool(name, config, callback);// callback as ToolCallback<I>
   // We return a new object that includes the typed schemas for compile-time safety.
   return {
     underlying,

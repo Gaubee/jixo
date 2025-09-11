@@ -48,7 +48,7 @@ class GlobalWebSocket extends EventTarget {
 
         if (message.type === "RENDER_UI" && message.jobId && this.backgroundAPI) {
           this.backgroundAPI
-            .renderComponentInActiveTab(message.payload.component, message.jobId, message.payload.props)
+            .renderJobInActiveTab(message.payload.component, message.jobId, message.payload.props)
             .catch((err) => console.error("JIXO BG: Error relaying RENDER_UI to content script:", err));
         }
       } catch (error) {

@@ -2,7 +2,7 @@ import type {RenderPayload} from "@jixo/tools-uikit";
 import assert from "node:assert";
 import {describe, expect, it} from "vitest";
 import type {ToolContext} from "../../types.js";
-import {functionCall, paramsSchema} from "../submitChangeSet.function_call.js";
+import {functionCall, zParams} from "../submitChangeSet.function_call.js";
 
 describe("submitChangeSet tool", () => {
   const changeSetArgs = {
@@ -25,7 +25,7 @@ describe("submitChangeSet tool", () => {
     };
     const mockContext: ToolContext = {render: mockRender, sessionId: "test-session"};
 
-    paramsSchema.parse(changeSetArgs);
+    zParams.parse(changeSetArgs);
     const result = await functionCall(changeSetArgs, mockContext);
 
     expect(result.status).toBe("CHANGESET_APPROVED");

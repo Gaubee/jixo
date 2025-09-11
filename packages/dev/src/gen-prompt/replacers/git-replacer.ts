@@ -49,20 +49,20 @@ export const handleGitReplacement: Replacer = async ({globOrFilepath, mode, para
   const git = simpleGit({baseDir, maxConcurrentProcesses: cpus().length});
 
   let commitHash: string | undefined;
-  let filePattern: string;
+  let filePattern: string[];
   const parts = globOrFilepath.split(":");
   if (parts.length > 1) {
     commitHash = parts.at(0)!;
-    filePattern = parts.slice(1).join(":");
+    filePattern = parts.slice(1).join(":").split(/\s*,\s*/);
   } else {
-    filePattern = globOrFilepath;
+    filePattern = globOrFilepath.split(/\s*,\s*/);
   }
-  filePattern = filePattern.trim();
+  filePattern = filePattern.map(p=>p.trim());
 
   try {
     let filesToProcess: string[] = [];
     if (commitHash) {
-      filesToProcess = (await git.show([commitHash, "-M", "-C", "--pretty=", "--name-only", "--", filePattern])).split("\n").filter(Boolean);
+      filesToProcess = (await git.show([commitHash, "-M", "-C", "--pretty=", "--name-only", "--", ...filePattern])).split("\n").filter(Boolean);
     } else {
       const statusResult = await git.status();
       const uncommittedFiles = statusResult.files.filter((f) => f.index !== " " || f.working_dir !== " ").map((f) => f.path);

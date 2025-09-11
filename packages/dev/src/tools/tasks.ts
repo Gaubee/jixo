@@ -1,15 +1,14 @@
-import {blue, bold, cyan, gray, green, magenta, red} from "@gaubee/nodekit";
-import {func_remember} from "@gaubee/util";
+import {blue, cyan, gray, green, magenta, red} from "@gaubee/nodekit";
+import {map_get_or_put_async} from "@gaubee/util";
 import {createHash} from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import {reactiveFs} from "../../reactive-fs/reactive-fs.js";
-import {createFunctionCallContext, defineFunctionCalls, type FunctionCallsMap} from "../../tools/function_call.js";
-import {zContentsSchema} from "./types.js";
-export interface GoogleAiStudioAutomationOptions {
-  dir?: string; // This is now the WORK_DIR
-  toolsDir?: string; // The specific directory to load tools from
-}
+import {zAgentMetadata} from "../google-aistudio/browser/index.js";
+import {zContentsSchema} from "../google-aistudio/node/types.js";
+import {reactiveFs} from "../reactive-fs/reactive-fs.js";
+import {createFunctionCallContext} from "./function_call.js";
+import {loadAgentTools} from "./load_tools.js";
+import type {FunctionCallsMap} from "./types.js";
 
 const parseContent = async (fcs: FunctionCallsMap, dir: string, basename: string, contentFilepath: string, filenames: string[]) => {
   console.log(magenta("开始处理文件"), path.relative(process.cwd(), contentFilepath));
@@ -73,28 +72,12 @@ const parseContent = async (fcs: FunctionCallsMap, dir: string, basename: string
   }
 };
 
-const getFunctionCalls = func_remember(async (toolsDir: string) => {
-  const fcs = await defineFunctionCalls(toolsDir);
-  if (fcs.size === 0) {
-    console.log(red(`No function calls found in ${toolsDir}`));
-    return;
-  }
-  console.log(green(`Found functionCalls (${fcs.size}):`));
-  for (const [index, [name, fc]] of Array.from(fcs).entries()) {
-    console.log(gray(`${index + 1}.`), bold(blue(name)), gray(fc.module.description ? `: ${fc.module.description}` : ""));
-  }
-  console.log(green("─".repeat(process.stdout.columns ?? 20)));
-  return fcs;
-});
-
-export const googleAiStudioAutomation = async ({dir = process.cwd(), toolsDir}: GoogleAiStudioAutomationOptions) => {
-  const finalToolsDir = toolsDir || path.join(dir, "tools");
-  const fcs = await getFunctionCalls(finalToolsDir);
-  if (!fcs) return;
-
+const _cache = new Map<string, FunctionCallsMap>();
+const _cache_key = new Map<string, string>();
+export const googleAiStudioAutomation = async ({dir = process.cwd()}: GoogleAiStudioAutomationOptions) => {
   const contentNames = reactiveFs.readDirByGlob(dir, "*.contents.json");
   if (contentNames.length === 0) {
-    console.log(red(`No Found aistudio browser output contents file in ${dir}`));
+    console.log(gray(`No Found aistudio browser output contents file in ${dir}`));
     return;
   }
 
@@ -103,10 +86,32 @@ export const googleAiStudioAutomation = async ({dir = process.cwd(), toolsDir}: 
     const contentFilepath = path.join(dir, contentFilename);
     const basename = contentFilename.replace(".contents.json", "");
     try {
-      await parseContent(fcs, dir, basename, contentFilepath, contentNames).catch(console.error);
+      const configPath = path.join(dir, `${basename}.config.json`);
+      const configContent = reactiveFs.readFile(configPath);
+      if (_cache_key.get(configPath) !== configContent) {
+        _cache_key.set(configPath, configContent);
+        _cache.delete(configPath);
+      }
+      const tools = await map_get_or_put_async(_cache, configPath, async () => {
+        if (!configContent) {
+          return new Map();
+        }
+        console.log("loading config", configPath);
+        const config = JSON.parse(configContent);
+        const metadata = zAgentMetadata.parse(config.metadata);
+        const {tools} = await loadAgentTools(metadata);
+        return tools;
+      });
+
+      await parseContent(tools, dir, basename, contentFilepath, contentNames).catch(console.error);
     } catch (e) {
       console.error(red(e instanceof Error ? (e.stack ?? e.message) : String(e)));
     }
   }
   console.log(gray(new Date().toLocaleTimeString()), magenta("Processing finished."));
 };
+
+export interface GoogleAiStudioAutomationOptions {
+  dir?: string; // This is now the WORK_DIR
+  // tools: FunctionCallsMap;
+}

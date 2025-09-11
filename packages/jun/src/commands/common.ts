@@ -1,4 +1,4 @@
-import pty from "@lydell/node-pty";
+import * as pty from "node-pty";
 import Debug from "debug";
 import {execa, type ResultPromise} from "execa";
 import {updateMeta, writeLog} from "../state.js";
@@ -82,8 +82,8 @@ export function spawnAndLog(options: SpawnOptions): SpawnHandle {
       });
     }
   };
-
-  let childProcess: {type: "tty"; cp: pty.IPty} | {type: "cp"; cp: ResultPromise};
+type PtyTerminal =ReturnType<typeof  pty.spawn>;
+  let childProcess: {type: "tty"; cp: PtyTerminal} | {type: "cp"; cp: ResultPromise};
   let osPid: number;
 
   const resultPromiseJob = Promise.withResolvers<SpawnResult>();

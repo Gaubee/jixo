@@ -108,15 +108,15 @@ function safeRegisterTool<TInput extends ZodRawShape, TSuccess extends ZodRawSha
   const combinedOutputSchema = unsafeOutputSchema(successRawShape, errorRawShape);
   const unionOutputSchema = safeOutputSchema(successRawShape, errorRawShape);
 
-  const underlying = server.registerTool(
+  const underlying = (server as any).registerTool(
     name,
     {
       description: config.description,
       inputSchema: config.inputSchema,
       outputSchema: combinedOutputSchema.shape,
     },
-    callback as unknown as ToolCallback<TInput>,
-  );
+    callback
+  );// callback as unknown as ToolCallback<TInput>,
 
   return {
     underlying,

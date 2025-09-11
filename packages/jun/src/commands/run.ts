@@ -1,11 +1,9 @@
 import Debug from "debug";
-import {createRequire} from "node:module";
 import stripAnsi from "strip-ansi";
+import AnsiToHtmlConvert from "../lib/ansi_to_html.js";
 import {getJunDir, updateMeta} from "../state.js";
 import type {JunTask, JunTaskOutput} from "../types.js";
 import {spawnAndLog, updateTaskCompletion, type SpawnResult} from "./common.js";
-const require = createRequire(import.meta.url);
-const AnsiToHtmlConvert = require("ansi-to-html") as typeof import("ansi-to-html");
 
 const debug = Debug("jun:run");
 
@@ -91,5 +89,3 @@ export async function junRunLogic(options: JunRunOptions): Promise<SpawnResult> 
 
   return result;
 }
-
-
