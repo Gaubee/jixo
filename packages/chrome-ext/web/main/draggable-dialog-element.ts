@@ -219,7 +219,7 @@ export class JIXODraggableDialogElement extends HTMLElement {
    */
   public openDialog() {
     if (this.open) return;
-    this._dialogElement.showPopover();
+    // this._dialogElement.showPopover();
     this._dialogElement.open = true;
 
     const raf = () => new Promise((cb) => requestAnimationFrame(cb));

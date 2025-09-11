@@ -9,17 +9,14 @@ interface ConfigPanelProps {
 }
 
 export function ConfigPanel({state}: ConfigPanelProps) {
-  if (state.workspaceStatus === "missing_handle") {
-    return <WorkspaceSelector onSelect={state.handleSelectWorkspace} isLoading={state.isSelecting} />;
-  }
-
-  if (state.workspaceStatus === "linking_required") {
-    return <WorkspaceLinker workspaceName={state.workspaceName} command1={state.command1} command2={state.command2} />;
-  }
-
   if (state.workspaceStatus === "ready") {
     return <ConfigForm {...state} />;
+  } else {
+    return (
+      <>
+        <WorkspaceSelector selectedWorkspaceName={state.workspaceName} onSelect={state.handleSelectWorkspace} isLoading={state.isSelecting} />
+        {state.workspaceStatus === "linking_required" && <WorkspaceLinker workspaceName={state.workspaceName} command1={state.command1} command2={state.command2} />}
+      </>
+    );
   }
-
-  return null; // Or a loading spinner
 }

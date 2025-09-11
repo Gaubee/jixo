@@ -95,13 +95,20 @@ export function useConfigPanelState() {
       return;
     }
 
-    const configFileExists = (await mainApi.readConfigFile(sessionId, false)) !== null;
-    if (!configFileExists) {
+    const configFile = await mainApi.readConfigFile(sessionId);
+    if (!configFile) {
       setWorkspaceStatus("linking_required");
+      // Wait for user to link via terminal
+      const workDir = await sessionApi.whenWorkDirChanged();
+      // Once linked, the local service will have the workDir.
+      // We can now treat it as ready, which will trigger the data loading effect.
+      // We also need to ensure the backend session has the dir.
+      setWorkspaceStatus("ready");
     } else {
+      await sessionApi.setWorkDir(configFile.metadata!.workDir);
       setWorkspaceStatus("ready");
     }
-  }, [mainApi, sessionId]);
+  }, [mainApi, sessionId, sessionApi]);
 
   useEffect(() => {
     checkWorkspaceStatus();
@@ -123,10 +130,21 @@ export function useConfigPanelState() {
 
     const syncState = async () => {
       try {
-        const [active, staged] = await Promise.all([mainApi.readConfigFile(sessionId, false), agentConfigStore.get(stagedConfigKey)]);
+        const [active, staged] = await Promise.all([mainApi.readConfigFile(sessionId), agentConfigStore.get(stagedConfigKey)]);
         if (signal.aborted) return;
 
-        const finalActive = active || initialConfig;
+        // If 'active' is null, it means we just linked. We need to create the initial config.
+        let finalActive: PageConfig;
+        if (!active) {
+          const workDir = await sessionApi.getWorkDir();
+          finalActive = structuredClone(initialConfig);
+          finalActive.metadata!.workDir = workDir;
+          // Write the initial config file
+          await mainApi.writeConfigFile(sessionId, JSON.stringify(finalActive, null, 2));
+        } else {
+          finalActive = active;
+        }
+
         setActiveConfig(finalActive);
         setStagedConfig(staged || finalActive);
         form.reset({metadata: (staged || finalActive).metadata});
@@ -137,7 +155,7 @@ export function useConfigPanelState() {
 
     syncState();
     return () => controller.abort();
-  }, [workspaceStatus, sessionId, mainApi, addNotification]);
+  }, [workspaceStatus, sessionId, mainApi, sessionApi, addNotification]);
 
   // --- Dirty State Calculation Effect ---
   useEffect(() => {
@@ -182,7 +200,7 @@ export function useConfigPanelState() {
     setIsSelecting(true);
     try {
       await mainApi.updateWorkspaceHandle();
-      await checkWorkspaceStatus(); // Re-check status after selection
+      void checkWorkspaceStatus(); // Re-check status after selection
     } finally {
       setIsSelecting(false);
     }
@@ -198,7 +216,7 @@ export function useConfigPanelState() {
       const finalConfig = await isolatedApi.generateConfigFromMetadata(sessionId, stagedConfig.metadata);
 
       // 2. Write the final config to the file system
-      await mainApi.writeConfigFile(sessionId, false, JSON.stringify(finalConfig, null, 2));
+      await mainApi.writeConfigFile(sessionId, JSON.stringify(finalConfig, null, 2));
 
       // 3. Apply the config to the AI Studio page
       await mainApi.applyConfigFile(sessionId);
@@ -210,7 +228,7 @@ export function useConfigPanelState() {
       setActiveConfig(finalConfig);
       setStagedConfig(finalConfig);
       form.reset({metadata: finalConfig.metadata}); // Also reset the form
-      setIsDirty(false);
+      setIsDirty(false); // 立即响应界面状态
 
       addNotification({type: "success", message: "Configuration applied successfully."});
     } catch (err) {

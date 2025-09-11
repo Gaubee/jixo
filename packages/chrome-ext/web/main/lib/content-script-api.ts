@@ -97,10 +97,10 @@ export class MainContentScriptAPI {
     }
   }
 
-  async readConfigFile(sessionId: string, isTemplate: boolean): Promise<PageConfig | null> {
+  async readConfigFile(sessionId: string): Promise<PageConfig | null> {
     try {
       const fs = await getEasyFs();
-      const filename = isTemplate ? `${sessionId}.config-template.json` : `${sessionId}.config.json`;
+      const filename = `${sessionId}.config.json`;
       const content = await fs.readFileText(filename);
       return JSON.parse(content);
     } catch (error) {
@@ -111,28 +111,18 @@ export class MainContentScriptAPI {
     }
   }
 
-  async writeConfigFile(sessionId: string, isTemplate: boolean, configJson: string): Promise<void> {
+  async writeConfigFile(sessionId: string, configJson: string): Promise<void> {
     const fs = await getEasyFs();
-    const filename = isTemplate ? `${sessionId}.config-template.json` : `${sessionId}.config.json`;
+    const filename = `${sessionId}.config.json`;
     await fs.writeFile(filename, configJson);
   }
 
   applyConfigFile = Comlink.clone(async (sessionId: string): Promise<{status: "SUCCESS" | "ERROR"; message?: string}> => {
-    const config = await this.readConfigFile(sessionId, false);
+    const config = await this.readConfigFile(sessionId);
     if (!config) {
       return {status: "ERROR", message: "Config file (config.json) not found."};
     }
     await this.#applyPageConfig(config);
-    return {status: "SUCCESS"};
-  });
-
-  applyTemplateConfigFile = Comlink.clone(async (sessionId: string): Promise<{status: "SUCCESS" | "ERROR"; message?: string}> => {
-    const templateConfig = await this.readConfigFile(sessionId, true);
-    if (!templateConfig) {
-      return {status: "ERROR", message: "Config template not found."};
-    }
-    await this.writeConfigFile(sessionId, false, JSON.stringify(templateConfig, null, 2));
-    await this.#applyPageConfig(templateConfig);
     return {status: "SUCCESS"};
   });
 

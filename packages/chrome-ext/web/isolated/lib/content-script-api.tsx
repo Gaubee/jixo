@@ -63,7 +63,6 @@ export const isolatedContentScriptAPI = new (class IsolatedContentScriptAPI {
 
     const config = await sessionApi.generateConfigFromMetadata(metadata);
 
-    await mainContentScriptAPI.writeConfigFile(sessionId, true, JSON.stringify(config, null, 2));
     return config;
   }
   async renderApp() {

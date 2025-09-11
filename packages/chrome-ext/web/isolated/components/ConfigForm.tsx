@@ -2,7 +2,7 @@ import {Button} from "@/components/ui/button.tsx";
 import {Card, CardContent, CardFooter, CardHeader, CardTitle} from "@/components/ui/card.tsx";
 import {Form, FormControl, FormField, FormItem, FormLabel} from "@/components/ui/form.tsx";
 import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from "@/components/ui/select.tsx";
-import {LoaderCircle} from "lucide-react";
+import {FolderSearch, LoaderCircle} from "lucide-react";
 import React from "react";
 import {useWatch} from "react-hook-form";
 import type {useConfigPanelState} from "../hooks/useConfigPanelState.ts";
@@ -10,7 +10,18 @@ import {CoderAgentConfigPanel} from "./CoderAgentConfigPanel.tsx";
 
 type ConfigFormProps = ReturnType<typeof useConfigPanelState>;
 
-export function ConfigForm({form, stagedConfig, isDirty, isGenerating, isLoading, handleApplyChanges, handleCancelChanges, handlePreview}: ConfigFormProps) {
+export function ConfigForm({
+  form,
+  stagedConfig,
+  isDirty,
+  isGenerating,
+  isLoading,
+  isSelecting,
+  handleApplyChanges,
+  handleCancelChanges,
+  handlePreview,
+  handleSelectWorkspace,
+}: ConfigFormProps) {
   const watchedValues = useWatch({control: form.control});
 
   return (
@@ -31,7 +42,10 @@ export function ConfigForm({form, stagedConfig, isDirty, isGenerating, isLoading
                 <FormItem>
                   <FormLabel>Workspace (workDir)</FormLabel>
                   <FormControl>
-                    <div className="text-muted-foreground rounded-md border bg-gray-100 px-3 py-2 font-mono text-xs">{field.value}</div>
+                    <Button type="button" disabled={isSelecting} onClick={handleSelectWorkspace} variant="outline" className="w-full items-start justify-between text-left font-mono">
+                      <span className="truncate">{field.value || "Click to select..."}</span>
+                      <FolderSearch className="ml-2 h-4 w-4" />
+                    </Button>
                   </FormControl>
                 </FormItem>
               )}
