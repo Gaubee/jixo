@@ -293,31 +293,40 @@ const parseArgValue = (arg: any): any => {
     }
     return arg;
   }
-  return match(arg)
-    .with([P.any, P.any, P.any, P.any, P.any, {[KEYS.CONTENT_KEY]: [P.select()]}], (val) => {
-      if (Array.isArray(val)) {
-        return val.map(parseArgValue);
-      }
-      console.warn("unknown struct 1", val);
-      return null;
-    })
-    // .with([P.any, P.any, P.any, P.any, {[KEYS.CONTENT_KEY]: [P.select(P.instanceOf(Map))]}], (innerMap) => {
-    //   console.warn("unknown struct 2", innerMap);
-    //   const objEntries = Array.from(innerMap.entries()).map(([key, valueWrapper]) => {
-    //     const canonicalValueArray = normalizeNcValue(valueWrapper);
-    //     return [key, canonicalValueArray];
-    //   });
-    //   return Object.fromEntries(objEntries);
-    // })
-    .with([P.any, P.any, P.any, P.any, P.select(P.array())], (nestedPairs) => parseFunctionArgs(nestedPairs[0] as any))
-    .with([P.any, P.any, P.any, 1], () => true)
-    .with([P.any, P.any, P.any, 0], () => false)
-    .with([P.any, P.any, P.select(P.string)], (val) => val)
-    .with([P.any, P.select(P.number)], (val) => val)
-    .otherwise(() => {
-      console.warn("unknown struct 0", arg);
-      return null;
-    });
+  return (
+    match(arg)
+      .with([P.any, P.any, P.any, P.any, P.any, {[KEYS.CONTENT_KEY]: [P.select()]}], (val) => {
+        if (Array.isArray(val)) {
+          return val.map(parseArgValue);
+        }
+        console.warn("unknown struct 1", val);
+        return null;
+      })
+      // .with([P.any, P.any, P.any, P.any, {[KEYS.CONTENT_KEY]: [P.select(P.instanceOf(Map))]}], (innerMap) => {
+      //   console.warn("unknown struct 2", innerMap);
+      //   const objEntries = Array.from(innerMap.entries()).map(([key, valueWrapper]) => {
+      //     const canonicalValueArray = normalizeNcValue(valueWrapper);
+      //     return [key, canonicalValueArray];
+      //   });
+      //   return Object.fromEntries(objEntries);
+      // })
+      .with([P.any, P.any, P.any, P.any, {[KEYS.CONTENT_KEY]: [P.select(P.instanceOf(Map))]}], (map) => {
+        return Object.fromEntries(
+          [...map.entries()].map(([key, valueWrapper]) => {
+            return [key, parseArgValue(valueWrapper)];
+          }),
+        );
+      })
+      .with([P.any, P.any, P.any, P.any, P.select(P.array())], (nestedPairs) => parseFunctionArgs(nestedPairs[0] as any))
+      .with([P.any, P.any, P.any, 1], () => true)
+      .with([P.any, P.any, P.any, 0], () => false)
+      .with([P.any, P.any, P.select(P.string)], (val) => val)
+      .with([P.any, P.select(P.number)], (val) => val)
+      .otherwise(() => {
+        console.warn("unknown struct 0", arg);
+        return null;
+      })
+  );
 };
 const parseFunctionArgs = (argList: [string, any[]][]): Record<string, any> => {
   if (!Array.isArray(argList)) return {};
