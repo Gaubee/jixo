@@ -3,9 +3,10 @@ import {KeyValStore} from "@jixo/dev/idb-keyval";
 import React, {useCallback, useContext, useEffect, useState} from "react";
 import {useConfigPanelState} from "../hooks/useConfigPanelState.ts";
 import {ConfigPanel} from "./ConfigPanel.tsx";
+import {MainAPICtx, PanelSettingsCtx, SessionIdCtx, type PanelSettings} from "./context.ts";
+import {JobsPanel} from "./JobsPanel.tsx";
 import {useNotification} from "./Notification.tsx";
 import {SettingsPanel} from "./SettingsPanel.tsx";
-import {MainAPICtx, PanelSettingsCtx, SessionIdCtx, type PanelSettings} from "./context.ts";
 
 const panelSettingsStore = new KeyValStore<PanelSettings>("jixo-settings");
 
@@ -72,9 +73,10 @@ export function ControlPanelContent({}: ControlPanelContentProps) {
   return (
     <PanelSettingsCtx.Provider value={panelSettings}>
       <Tabs defaultValue="agent">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="agent">Agent</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
+          <TabsTrigger value="jobs">Jobs</TabsTrigger>
         </TabsList>
         <TabsContent value="agent">
           <ConfigPanel state={state} />
@@ -85,6 +87,9 @@ export function ControlPanelContent({}: ControlPanelContentProps) {
             onSubmit={handleSettingsSubmit}
             onClearHistory={() => handleAction("Clear History", mainApi.clearPageHistory, "clear-history-status")}
           />
+        </TabsContent>
+        <TabsContent value="jobs">
+          <JobsPanel />
         </TabsContent>
       </Tabs>
     </PanelSettingsCtx.Provider>

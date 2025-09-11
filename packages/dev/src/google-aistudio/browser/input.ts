@@ -42,7 +42,7 @@ const fillFunctionCall = async (signal?: AbortSignal) => {
         JSON.stringify(JSON.parse(ele.querySelector("code")?.textContent ?? "{}")) === taskResponse.parameters,
     );
     if (null == functionCallEle) {
-      console.error(`找不到指定的可以进行function-call-ele: ${taskResponse.name}(${taskResponse.parameters})`);
+      console.warn(`找不到指定的可以进行function-call-ele: ${taskResponse.name}(${taskResponse.parameters})`);
       return;
     }
 

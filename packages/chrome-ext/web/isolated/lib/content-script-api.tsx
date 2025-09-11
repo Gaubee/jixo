@@ -1,5 +1,5 @@
 import {PortalContainerCtx} from "@/components/ui/context.ts";
-import {pureEvent} from "@gaubee/util";
+import {map_delete_and_get, pureEvent} from "@gaubee/util";
 import type {AgentMetadata} from "@jixo/dev/browser";
 import type {} from "@jixo/dev/node";
 import React, {useContext, useEffect, useState} from "react";
@@ -42,13 +42,9 @@ async function ensureJixoMainRuntime() {
 
 window.addEventListener("jixo-user-response", ((event: CustomEvent) => {
   const {jobId, payload} = event.detail;
-  const listener = jobResponseListeners.get(jobId);
+  const listener = map_delete_and_get(jobResponseListeners, jobId);
   if (listener) {
     listener(payload);
-    jobResponseListeners.delete(jobId);
-    ensureJixoMainRuntime().then(() => {
-      JIXODraggableDialogIsolatedHelper.openDialog();
-    });
   }
 }) as EventListener);
 
@@ -108,6 +104,9 @@ export const isolatedContentScriptAPI = new (class IsolatedContentScriptAPI {
   #onRenderJob = pureEvent<FunctionCallRenderJob>();
   async renderJob(job: FunctionCallRenderJob): Promise<any> {
     this.#onRenderJob.emit(job);
+    jobResponseListeners.set(job.jobId, async (result) => {
+      const {sessionApi} = await ensureJixoMainRuntime();
+    });
   }
 })();
 
