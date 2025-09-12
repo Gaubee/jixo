@@ -1,4 +1,4 @@
-export type {SessionAPI} from "../jixo/ws-server.js";
+export type {SessionAPI, UIApi} from "../jixo/ws-server.js";
 export * from "./config/index.js";
 export * from "./converter.js";
 export * from "./easy_fs.js";

@@ -10,7 +10,7 @@ import {createFunctionCallContext} from "./function_call.js";
 import {loadAgentTools} from "./load_tools.js";
 import type {FunctionCallsMap} from "./types.js";
 
-const parseContent = async (fcs: FunctionCallsMap, dir: string, basename: string, contentFilepath: string, filenames: string[]) => {
+const parseContent = async (fcs: FunctionCallsMap, dir: string, sessionId: string, contentFilepath: string, filenames: string[]) => {
   console.log(magenta("开始处理文件"), path.relative(process.cwd(), contentFilepath));
   const contents = await zContentsSchema.parse(JSON.parse(reactiveFs.readFile(contentFilepath)));
 
@@ -35,7 +35,7 @@ const parseContent = async (fcs: FunctionCallsMap, dir: string, basename: string
 
   const modelIndex = contents.indexOf(modelContent);
   const hash = createHash("sha256").update(`INDEX:${modelIndex}`).update(JSON.stringify(modelContent)).digest("hex").slice(0, 8);
-  const taskFilename = `${basename}.${functionCallPart.name}.${modelIndex}-${hash}.function_call.json`;
+  const taskFilename = `${sessionId}.${functionCallPart.name}.${modelIndex}-${hash}.function_call.json`;
 
   if (filenames.includes(taskFilename)) {
     // A result file already exists, so we skip this task.
@@ -55,8 +55,6 @@ const parseContent = async (fcs: FunctionCallsMap, dir: string, basename: string
     try {
       console.log(cyan("开始执行任务"));
 
-      // TODO: Replace this with a real session ID from the context.
-      const sessionId = basename; // Using the file basename as the session ID for now.
       const context = createFunctionCallContext(sessionId);
 
       const output = await functionCall(input, context);
@@ -113,5 +111,4 @@ export const googleAiStudioAutomation = async ({dir = process.cwd()}: GoogleAiSt
 
 export interface GoogleAiStudioAutomationOptions {
   dir?: string; // This is now the WORK_DIR
-  // tools: FunctionCallsMap;
 }

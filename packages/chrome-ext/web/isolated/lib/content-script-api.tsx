@@ -1,8 +1,8 @@
 import {PortalContainerCtx} from "@/components/ui/context.ts";
-import {map_delete_and_get, pureEvent} from "@gaubee/util";
-import type {AgentMetadata} from "@jixo/dev/browser";
-import type {} from "@jixo/dev/node";
-import React, {useContext, useEffect, useState} from "react";
+import {pureEvent} from "@gaubee/util";
+import type {AgentMetadata, UIApi} from "@jixo/dev/browser";
+import {Comlink} from "@jixo/dev/comlink";
+import React, {useEffect, useState} from "react";
 import {createRoot, type Root} from "react-dom/client";
 import {App} from "../components/App.tsx";
 import {FunctionCallRenderJobsCtx, IsolatedAPICtx, MainAPICtx, SessionAPICtx, SessionIdCtx, type FunctionCallRenderJob} from "../components/context.ts";
@@ -10,7 +10,7 @@ import {JIXODraggableDialogIsolatedHelper} from "../draggable-dialog-isolated.ts
 
 let reactRootEle: HTMLDivElement | null = null;
 let reactRoot: Root | null = null;
-const jobResponseListeners = new Map<string, (payload: any) => void>();
+const jobResponseListeners = new Map<string, Comlink.Remote<(payload: any) => void>>();
 
 async function ensureJixoMainRuntime() {
   const ready = await JIXODraggableDialogIsolatedHelper.prepare();
@@ -40,18 +40,13 @@ async function ensureJixoMainRuntime() {
   return {reactRoot, ...ready};
 }
 
-window.addEventListener("jixo-user-response", ((event: CustomEvent) => {
-  const {jobId, payload} = event.detail;
-  const listener = map_delete_and_get(jobResponseListeners, jobId);
-  if (listener) {
-    listener(payload);
-  }
-}) as EventListener);
+export const isolatedContentScriptAPI = new (class IsolatedContentScriptAPI implements UIApi {
+  #onRenderJob = pureEvent<FunctionCallRenderJob>();
 
-export const isolatedContentScriptAPI = new (class IsolatedContentScriptAPI {
   async ready() {
     await ensureJixoMainRuntime();
   }
+
   async generateConfigFromMetadata(sessionId: string, metadata: AgentMetadata) {
     const {mainContentScriptAPI, sessionApi} = await ensureJixoMainRuntime();
     const workDirHandle = await mainContentScriptAPI.getWorkspaceHandleName();
@@ -61,21 +56,26 @@ export const isolatedContentScriptAPI = new (class IsolatedContentScriptAPI {
 
     return config;
   }
+
   async renderApp() {
     const {reactRoot, mainContentScriptAPI, sessionId, sessionApi} = await ensureJixoMainRuntime();
-    // 1. 找到自定义元素
     const host = document.querySelector("jixo-draggable-dialog") as HTMLElement;
-    // 2. 把 shadowRoot 作为挂载点
     const shadowHost = host?.shadowRoot ?? null;
+
     const Render = () => {
-      const [jobs, setJobs] = useState(useContext(FunctionCallRenderJobsCtx));
+      const [jobs, setJobs] = useState<Map<string, FunctionCallRenderJob>>(new Map());
+
       useEffect(() => {
-        this.#onRenderJob((job) => {
-          setJobs((jobs) => {
-            return [...jobs, job];
+        const off = this.#onRenderJob((job) => {
+          setJobs((prevMap) => {
+            const newMap = new Map(prevMap); // 创建 Map 的副本
+            newMap.set(job.jobId, job);
+            return newMap;
           });
         });
+        return () => void off();
       }, []);
+
       return (
         <FunctionCallRenderJobsCtx.Provider value={jobs}>
           <App />
@@ -88,7 +88,7 @@ export const isolatedContentScriptAPI = new (class IsolatedContentScriptAPI {
         <PortalContainerCtx.Provider value={shadowHost}>
           <SessionIdCtx.Provider value={sessionId}>
             <MainAPICtx.Provider value={mainContentScriptAPI}>
-              <IsolatedAPICtx.Provider value={isolatedContentScriptAPI}>
+              <IsolatedAPICtx.Provider value={this}>
                 <SessionAPICtx.Provider value={sessionApi}>
                   <Render />
                 </SessionAPICtx.Provider>
@@ -100,13 +100,26 @@ export const isolatedContentScriptAPI = new (class IsolatedContentScriptAPI {
     );
   }
 
-  // @TODO 这里应该存储 job + promise
-  #onRenderJob = pureEvent<FunctionCallRenderJob>();
-  async renderJob(job: FunctionCallRenderJob): Promise<any> {
-    this.#onRenderJob.emit(job);
-    jobResponseListeners.set(job.jobId, async (result) => {
-      const {sessionApi} = await ensureJixoMainRuntime();
-    });
+  async renderJob(jobId: string, componentName: string, props: any) {
+    console.log("Received render job via RPC:", {jobId, componentName, props});
+    const renderJob: FunctionCallRenderJob = {
+      jobId,
+      componentName,
+      props,
+      resolvers: Promise.withResolvers(),
+      finished: false,
+    };
+    this.#onRenderJob.emit(renderJob);
+    return renderJob.resolvers.promise.then(
+      (result) => {
+        renderJob.finished = "SUCCESS";
+        return {success: true, result};
+      },
+      (error) => {
+        renderJob.finished = "ERROR";
+        return {success: false, error};
+      },
+    );
   }
 })();
 

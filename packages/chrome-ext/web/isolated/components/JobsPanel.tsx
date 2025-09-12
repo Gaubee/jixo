@@ -1,24 +1,30 @@
 import React, {useContext} from "react";
 import {ErrorBoundary} from "react-error-boundary";
 import {match} from "ts-pattern";
-import {AskUserDialog} from "./AskUserDialog";
 import {FunctionCallRenderJobsCtx, type FunctionCallRenderJob} from "./context";
-import {LogThoughtPanel} from "./LogThoughtPanel";
-import {ProposePlanDialog} from "./ProposePlanDialog";
-import {SubmitChangeSetPanel} from "./SubmitChangeSetPanel";
+import {AskUserDialog} from "./job/AskUserDialog";
+import {LogThoughtPanel} from "./job/LogThoughtPanel";
+import {ProposePlanDialog} from "./job/ProposePlanDialog";
+import {SubmitChangeSetPanel} from "./job/SubmitChangeSetPanel";
 
-export function JobsPanel() {
+interface JobsPanelProps {}
+
+export function JobsPanel({}: JobsPanelProps) {
   const jobs = useContext(FunctionCallRenderJobsCtx);
   return (
     <div className="grid grid-cols-1 gap-4">
-      {jobs.map((job) => (
-        <JobRender job={job} />
+      {[...jobs].map(([key, job]) => (
+        <JobRender key={key} job={job} />
       ))}
     </div>
   );
 }
 
-function JobRender({job}: {job: FunctionCallRenderJob}) {
+interface JobRenderProps {
+  job: FunctionCallRenderJob;
+}
+
+function JobRender({job}: JobRenderProps) {
   return (
     <ErrorBoundary
       fallback={

@@ -1,3 +1,4 @@
+import {delay} from "@jixo/dev/browser";
 import {useEffect, useState} from "react";
 import {getBackgroundAPI} from "../lib/comlink-client.ts";
 
@@ -8,15 +9,21 @@ export function useServiceStatus() {
   const backgroundApi = getBackgroundAPI();
 
   useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const status = await backgroundApi.getServiceStatus();
-        setServiceStatus(status);
-      } catch {
-        setServiceStatus("disconnected");
+    const controller = new AbortController();
+    (async () => {
+      while (!controller.signal.aborted) {
+        try {
+          const status = await backgroundApi.getServiceStatus();
+          setServiceStatus(status);
+          await delay(status === "connected" ? 600 : 300);
+        } catch {
+          setServiceStatus("disconnected");
+          await delay(1000);
+        }
       }
-    }, 2000); // Poll every 2 seconds
-    return () => clearInterval(interval);
+    })();
+
+    return () => controller.abort();
   }, [backgroundApi]);
 
   return serviceStatus;

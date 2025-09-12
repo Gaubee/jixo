@@ -1,36 +1,11 @@
-import {createBackgroundEndpoint, createEndpoint} from "@/lib/comlink-extension/index.ts";
-import {map_get_or_put} from "@gaubee/util";
+import {createBackgroundEndpoint} from "@/lib/comlink-extension/index.ts";
 import {Comlink} from "@jixo/dev/comlink";
-import type {IsolatedContentScriptAPI} from "../web/isolated/lib/content-script-api.tsx";
 import {sidePanelAPI} from "./sidepanel.ts";
-import {globalWebSocket} from "./websocket.ts";
+import {createSessionWebSocket, globalWebSocket} from "./websocket.ts";
 
 export const contentScriptPorts = new Map<number, chrome.runtime.Port>();
 
 export class BackgroundAPI {
-  #activeTabApi = new WeakMap<chrome.runtime.Port, Comlink.Remote<IsolatedContentScriptAPI>>();
-  #getActiveTabApi = async () => {
-    const [activeTab] = await chrome.tabs.query({active: true, currentWindow: true});
-
-    const tabId = activeTab.id;
-    if (null == tabId) {
-      console.error("No active tab found.");
-      return;
-    }
-    const port = contentScriptPorts.get(tabId);
-    if (null == port) {
-      console.error("JIXO content script not connected on the active tab.");
-      return;
-    }
-    return map_get_or_put(this.#activeTabApi, port, (port) => {
-      return Comlink.wrap<IsolatedContentScriptAPI>(createEndpoint(port));
-    });
-  };
-  async renderJobInActiveTab(componentName: string, jobId: string, props: any): Promise<void> {
-    const api = await this.#getActiveTabApi();
-    return await api?.renderJob({componentName, jobId, props});
-  }
-
   getServiceStatus() {
     return globalWebSocket.getStatus();
   }
@@ -57,6 +32,9 @@ export function initializeComlink() {
     } else if (port.name === "background") {
       // For jixo-node
       Comlink.expose(backgroundApiInstance, createBackgroundEndpoint(port));
+    } else if (port.name.startsWith("ws-session:")) {
+      const sessionId = port.name.split(":")[1];
+      createSessionWebSocket(sessionId, port);
     }
   });
 

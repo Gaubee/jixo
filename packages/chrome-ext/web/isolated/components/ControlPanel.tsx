@@ -26,7 +26,7 @@ export function ControlPanel({}: ControlPanelProps) {
             <span>Connecting...</span>
           </div>
         )}
-        {serviceStatus === "connected" && <ControlPanelContent />}
+        {serviceStatus === "connected" && <ControlPanelContent  />}
       </div>
     </NotificationProvider>
   );

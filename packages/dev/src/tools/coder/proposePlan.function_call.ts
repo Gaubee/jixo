@@ -23,17 +23,17 @@ export const functionCall = (async (args, context) => {
   console.log("Proposing plan to user via UI:", args.plan_summary);
 
   try {
-    const response = await context.render({
+    const {approved, reason} = await context.render({
       component: "ProposePlanDialog",
       props: args,
     });
 
-    if (response === true) {
+    if (approved === true) {
       console.log("Plan was approved by the user.");
       return {status: "PLAN_APPROVED"};
     } else {
       // This handles both explicit rejection (response === false) and other falsy values.
-      throw new Error("Plan was rejected by the user.");
+      throw new Error(reason);
     }
   } catch (error) {
     console.error("Failed to get plan approval:", error);

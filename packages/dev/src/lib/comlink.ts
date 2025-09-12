@@ -29,7 +29,7 @@ export const Comlink = {
   releaseProxy,
   finalizer,
   clone: comlink_clone,
-};
+} as const;
 export namespace Comlink {
   export type Remote<T> = ComlinkType.Remote<T>;
   export type Endpoint = ComlinkType.Endpoint;

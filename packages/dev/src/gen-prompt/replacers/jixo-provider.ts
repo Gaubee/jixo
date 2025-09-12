@@ -40,6 +40,9 @@ export const jixoProvider = async (specifier: string, options: ReplacerOptions) 
   } else {
     /// 如果不是JSON文件，那么走md标准做一次输出
     const {_gen_content} = await import("../../gen-prompt.js");
+    if (!content) {
+      throw new Error(`No found jixo specifier: ${specifier}`);
+    }
     content = await _gen_content(options.codeName, content, options.rootResolver);
   }
 

@@ -1,6 +1,6 @@
 import type {BackgroundAPI} from "./comlink.ts";
 
-const WS_PORT = 8765;
+export const WS_PORT = 8765;
 
 class GlobalWebSocket extends EventTarget {
   private socket: WebSocket | null = null;
@@ -46,11 +46,8 @@ class GlobalWebSocket extends EventTarget {
         const message = JSON.parse(event.data);
         console.log("JIXO BG: Received WebSocket message from server:", message);
 
-        if (message.type === "RENDER_UI" && message.jobId && this.backgroundAPI) {
-          this.backgroundAPI
-            .renderJobInActiveTab(message.payload.component, message.jobId, message.payload.props)
-            .catch((err) => console.error("JIXO BG: Error relaying RENDER_UI to content script:", err));
-        }
+        // UI render jobs are now handled directly by the session WebSocket.
+        // This global socket is only for status and generic events.
       } catch (error) {
         console.error("JIXO BG: Failed to parse WebSocket message:", event.data, error);
       }
@@ -71,3 +68,31 @@ class GlobalWebSocket extends EventTarget {
 }
 
 export const globalWebSocket = new GlobalWebSocket();
+
+export const createSessionWebSocket = (sessionId: string, port: chrome.runtime.Port) => {
+  const ws = new WebSocket(`ws://127.0.0.1:${WS_PORT}/session/${sessionId}`);
+  ws.addEventListener("open", () => {
+    port.postMessage({type: "open"});
+  });
+  ws.addEventListener("message", (event) => {
+    port.postMessage({type: "message", data: event.data});
+  });
+  ws.addEventListener("error", () => {
+    port.postMessage({type: "error"});
+  });
+  ws.addEventListener("close", () => {
+    try {
+      port.postMessage({type: "close"});
+    } catch {}
+    port.disconnect();
+  });
+
+  port.onMessage.addListener((msg) => {
+    ws.send(msg);
+  });
+  port.onDisconnect.addListener(() => {
+    queueMicrotask(() => {
+      ws.close();
+    });
+  });
+};

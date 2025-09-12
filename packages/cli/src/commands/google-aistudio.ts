@@ -1,5 +1,5 @@
 import {prompts} from "@gaubee/nodekit";
-import {doGoogleAiStudioAutomation, doInit, doSync, type SyncOptions} from "@jixo/dev/google-aistudio";
+import {doInit, doSync, startWsServer, type SyncOptions} from "@jixo/dev/google-aistudio";
 import type {Arguments, CommandModule} from "yargs";
 
 // 定义 yargs builder 所需的参数接口
@@ -44,29 +44,15 @@ const syncCommand: CommandModule<object, SyncArgs> = {
   },
 };
 
-interface BrowserArgs {
-  dir?: string;
-}
+interface BrowserArgs {}
 
 const browserCommand: CommandModule<object, BrowserArgs> = {
-  command: "browser [dir]",
+  command: "browser",
   aliases: ["B", "b"],
   describe: "browser-kit for aistudio.google.com",
-  builder: (yargs) =>
-    yargs
-      .positional("dir", {
-        describe: "Directory for aistudio output contents",
-        type: "string",
-        default: process.cwd(),
-      })
-      .option("watch", {
-        alias: "W",
-        type: "boolean",
-        describe: "Watch for browser response automatically",
-        default: true,
-      }),
-  handler: async (argv) => {
-    doGoogleAiStudioAutomation(argv);
+  builder: (yargs) => yargs,
+  handler: async () => {
+    startWsServer();
   },
 };
 interface InitOptions {
@@ -116,6 +102,7 @@ export const googleAistudioCommand: CommandModule<object, object> = {
     // 将 syncCommand 注册为 google-aistudio 的子命令
     return (
       yargs
+        .command(syncCommand)
         .command(syncCommand)
         .command(browserCommand)
         .command(initCommand)

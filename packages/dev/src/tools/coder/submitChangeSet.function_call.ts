@@ -32,7 +32,7 @@ export const functionCall = (async (args, context) => {
   console.log("Proposing changeset to user via UI for final approval.");
 
   try {
-    const isApproved = await context.render({
+    const {approved, reason} = await context.render({
       component: "SubmitChangeSetPanel",
       props: {
         change_log: args.change_log,
@@ -40,7 +40,7 @@ export const functionCall = (async (args, context) => {
       },
     });
 
-    if (isApproved === true) {
+    if (approved === true) {
       console.log("Changeset was approved by the user.");
       // The tool's job is done. It returns the validated operations.
       // The host environment is now responsible for executing them.
@@ -50,7 +50,7 @@ export const functionCall = (async (args, context) => {
         final_statement: args.final_statement,
       };
     } else {
-      throw new Error("Changeset was rejected by the user.");
+      throw new Error(reason);
     }
   } catch (error) {
     console.error("Failed to get changeset approval:", error);

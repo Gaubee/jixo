@@ -1,13 +1,12 @@
 import {blue, bold} from "@gaubee/nodekit";
 import {map_get_or_put} from "@gaubee/util";
 import {Comlink} from "@jixo/dev/comlink";
-import type {UIResponse} from "@jixo/tools-uikit";
 import http from "node:http";
 import {URL} from "node:url";
 import {WebSocket, WebSocketServer} from "ws";
 import {webSocketEndpoint} from "../../lib/comlink-adapters/web-socket-adapters.js";
-import {SessionAPI} from "./SessionAPI.js";
-export type {SessionAPI};
+import {SessionAPI, type UIApi} from "./SessionAPI.js";
+export type {SessionAPI, UIApi};
 
 export const globalWsMap = new Map<string, WebSocket>();
 const sessionWsMap = new Map<
@@ -18,20 +17,6 @@ const sessionWsMap = new Map<
   }
 >();
 let globalSessionIdCounter = 0;
-
-// --- Render Service (Global Channel) ---
-type JobResolver = (response: any) => void;
-export const jobListeners = new Map<string, JobResolver>();
-
-function handleGlobalUserResponse(message: UIResponse) {
-  const callback = jobListeners.get(message.jobId);
-  if (callback) {
-    callback(message.payload);
-    jobListeners.delete(message.jobId);
-  } else {
-    console.warn(`Received response for unknown or timed out job ID: ${message.jobId}`);
-  }
-}
 
 const getNid = () => {
   const nids = new Set(Array.from({length: sessionWsMap.size + 1}, (_, i) => i + 1));
@@ -53,14 +38,23 @@ export function startWsServer(port = 8765) {
     if (sessionIdMatch) {
       // Session-specific connection
       const sessionId = sessionIdMatch[1];
-      const ep = webSocketEndpoint({webSocket: ws, messageChannel: sessionId});
+      const sessionApiEp = webSocketEndpoint({webSocket: ws, messageChannel: "session-" + sessionId});
       const nid = getNid();
-      const api = new SessionAPI(nid, sessionId);
-      Comlink.expose(api, ep);
+
       const session = map_get_or_put(sessionWsMap, sessionId, () => {
-        return {instances: new Map(), api};
+        const uiApiEp = webSocketEndpoint({webSocket: ws, messageChannel: "ui-" + sessionId});
+        const uiApi = Comlink.wrap<UIApi>(uiApiEp);
+        ws.on("close", () => {
+          uiApi[Comlink.releaseProxy]();
+        });
+
+        const sessionApi = new SessionAPI(nid, sessionId, uiApi);
+        Comlink.expose(sessionApi, sessionApiEp);
+
+        return {instances: new Map(), api: sessionApi};
       });
-      session.instances.set(ws, ep);
+
+      session.instances.set(ws, sessionApiEp);
       console.log(blue(`WebSocket session client connected: ${bold(sessionId)}`));
 
       ws.on("close", () => {
@@ -81,9 +75,7 @@ export function startWsServer(port = 8765) {
       ws.on("message", (data) => {
         try {
           const message = JSON.parse(data.toString());
-          if (message.type === "USER_RESPONSE" && message.jobId) {
-            handleGlobalUserResponse(message as UIResponse);
-          }
+          console.log("global message", message);
         } catch (e) {
           console.error(`Error processing message from global client ${globalId}:`, e);
         }

@@ -1,9 +1,10 @@
+import {func_catch} from "@gaubee/util";
 import {createRenderer} from "@jixo/tools-uikit";
 import {readdirSync, statSync, type Stats} from "node:fs";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
+import {UIApiContext} from "../google-aistudio/jixo/SessionAPI.js";
 import {zFunctionCallMiniModule, zFunctionCallStandardModule, type FunctionCallFn, type FunctionCallsMap, type FunctionCallStandardModule, type ToolContext} from "./types.js";
-import {webSocketRenderHandler} from "./ws_render.js";
 
 const safeParseModule = (unsafeModule: any) => {
   if (unsafeModule.default) {
@@ -97,8 +98,26 @@ export const defineFunctionCalls = async (dir: string) => {
  * @param sessionId - The session ID of the user triggering the function call.
  */
 export function createFunctionCallContext(sessionId: string): ToolContext {
-  // The renderer is created on-demand for each function call,
-  // bound to the specific session that initiated it.
-  const render = createRenderer(webSocketRenderHandler, sessionId);
+  const uiApi = UIApiContext.getOrNull();
+  if (uiApi == null) {
+    // TODO: 提供一个基于终端的交互
+    throw new Error("UIApi is not available");
+  }
+  const render = createRenderer(async (_sessionId: string, command) => {
+    const job = Promise.withResolvers();
+    try {
+      const payload = await func_catch(() => uiApi.renderJob(command.jobId, command.payload.component, command.payload.props))();
+      if (payload.success) {
+        job.resolve(payload.result);
+      } else {
+        job.reject();
+      }
+    } catch (err) {
+      job.reject(err);
+    }
+
+    return job.promise;
+  }, sessionId);
+
   return {render, sessionId};
 }

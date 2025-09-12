@@ -9,7 +9,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "host_permissions": ["https://aistudio.google.com/*"],
+  "host_permissions": ["https://aistudio.google.com/*", "ws://12.0.0.1:8765/*"],
   "web_accessible_resources": [
     {
       "resources": ["/*"],

@@ -11,11 +11,10 @@ const DiffViewer = ({content}: {content: string}) => {
       </div>
     );
   });
-  return <pre className="bg-gray-50 p-2 rounded-md text-xs whitespace-pre-wrap font-mono max-h-48 overflow-auto">{lines}</pre>;
+  return <pre className="max-h-48 overflow-auto whitespace-pre-wrap rounded-md bg-gray-50 p-2 font-mono text-xs">{lines}</pre>;
 };
 
 interface SubmitChangeSetPanelProps {
-  jobId: string; // jobId is always a string for interactive components
   props: {
     change_log: string;
     operations: Array<{
@@ -25,24 +24,24 @@ interface SubmitChangeSetPanelProps {
       new_path?: string;
     }>;
   };
+  resolvers: PromiseWithResolvers<{approved: boolean; reason?: string}>;
 }
 
-export function SubmitChangeSetPanel({jobId, props}: SubmitChangeSetPanelProps) {
+export function SubmitChangeSetPanel({props, resolvers}: SubmitChangeSetPanelProps) {
   const {change_log, operations} = props;
 
   const handleResponse = (approved: boolean) => {
-    window.dispatchEvent(
-      new CustomEvent("jixo-user-response", {
-        detail: {jobId, payload: {data: approved}},
-      }),
-    );
+    resolvers.resolve({
+      approved,
+      reason: approved ? undefined : "Changeset was rejected by the user.",
+    });
   };
 
   const renderOperation = (op: (typeof operations)[0], index: number) => {
     switch (op.type) {
       case "writeFile":
         return (
-          <div key={index} className="border-t pt-2 mt-2">
+          <div key={index} className="mt-2 border-t pt-2">
             <p className="font-semibold text-blue-700">
               📝 Modify: <code>{op.path}</code>
             </p>
@@ -72,19 +71,19 @@ export function SubmitChangeSetPanel({jobId, props}: SubmitChangeSetPanelProps) 
 
   return (
     <div className="space-y-4 text-sm">
-      <div className="p-3 bg-gray-50 border rounded-md space-y-3">
+      <div className="space-y-3 rounded-md border bg-gray-50 p-3">
         <p className="font-semibold text-gray-700">Commit Message:</p>
-        <pre className="bg-white p-2 border rounded whitespace-pre-wrap">{change_log}</pre>
+        <pre className="whitespace-pre-wrap rounded border bg-white p-2">{change_log}</pre>
       </div>
-      <div className="p-3 bg-gray-50 border rounded-md space-y-2">
+      <div className="space-y-2 rounded-md border bg-gray-50 p-3">
         <p className="font-semibold text-gray-700">File Operations:</p>
         {operations.map(renderOperation)}
       </div>
       <div className="flex justify-end gap-2">
-        <button onClick={() => handleResponse(false)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
+        <button onClick={() => handleResponse(false)} className="rounded bg-gray-500 px-4 py-2 text-white hover:bg-gray-600">
           Cancel
         </button>
-        <button onClick={() => handleResponse(true)} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+        <button onClick={() => handleResponse(true)} className="rounded bg-green-500 px-4 py-2 text-white hover:bg-green-600">
           Apply Changes
         </button>
       </div>

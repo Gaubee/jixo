@@ -17,9 +17,11 @@ export const zPanelSettings = z.object({
 export type PanelSettings = z.infer<typeof zPanelSettings>;
 export const PanelSettingsCtx = React.createContext<PanelSettings>({});
 
-export interface FunctionCallRenderJob {
+export interface FunctionCallRenderJob<I = any, O = any> {
   jobId: string;
   componentName: string;
-  props: any;
+  props: I;
+  resolvers: PromiseWithResolvers<O>;
+  finished: false | "SUCCESS" | "ERROR";
 }
-export const FunctionCallRenderJobsCtx = React.createContext<FunctionCallRenderJob[]>([]);
+export const FunctionCallRenderJobsCtx = React.createContext<Map<string, FunctionCallRenderJob>>(new Map());
