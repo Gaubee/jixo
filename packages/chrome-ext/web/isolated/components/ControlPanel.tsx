@@ -17,7 +17,7 @@ export function ControlPanel({}: ControlPanelProps) {
           <Alert variant="destructive">
             <WifiOff className="h-4 w-4" />
             <AlertTitle>Disconnected</AlertTitle>
-            <AlertDescription>Cannot connect to JIXO service. Please run `deno run -A jsr:@jixo/cli/start ` in your terminal.</AlertDescription>
+            <AlertDescription>Cannot connect to JIXO service. Please run `npx jixo go browser` in your terminal.</AlertDescription>
           </Alert>
         )}
         {serviceStatus === "connecting" && (

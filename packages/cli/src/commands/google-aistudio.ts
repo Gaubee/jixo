@@ -1,5 +1,5 @@
-import {prompts} from "@gaubee/nodekit";
-import {doInit, doSync, startWsServer, type SyncOptions} from "@jixo/dev/google-aistudio";
+import {red} from "@gaubee/nodekit";
+import {doSync, initSession, startWsServer, type SyncOptions} from "@jixo/dev/google-aistudio";
 import type {Arguments, CommandModule} from "yargs";
 
 // 定义 yargs builder 所需的参数接口
@@ -56,36 +56,30 @@ const browserCommand: CommandModule<object, BrowserArgs> = {
   },
 };
 interface InitOptions {
+  nid: number;
   dir?: string;
-  force?: boolean;
 }
 const initCommand: CommandModule<object, InitOptions> = {
-  command: "init [dir]",
+  command: "init <nid>",
   aliases: ["i", "I"],
-  describe: "init an browser-kit directory for aistudio.google.com",
+  describe: "init an chrome ext workspace aistudio.google.com",
   builder: (yargs) =>
     yargs
-      .positional("dir", {
-        describe: "Directory for aistudio input/output contents",
-        type: "string",
+      .positional("nid", {
+        type: "number",
+        demandOption: true,
       })
-      .option("force", {
-        alias: "F",
-        type: "boolean",
-        describe: "override exits files",
+      .option("dir", {
+        alias: ["D", "d"],
+        type: "string",
+        describe: "Specify the workspace directory for chrome-ext",
       }),
   handler: async (argv) => {
-    let {dir} = argv;
-    if (dir == null) {
-      dir = await prompts.input({
-        message: "No directory specified. Do you want to use the default '.ai' directory?",
-        default: ".ai", // 默认值为 Yes
-      });
+    try {
+      initSession(argv.nid!, argv.dir ?? process.cwd());
+    } catch (e) {
+      console.error(red(e instanceof Error ? e.message : String(e)));
     }
-    doInit({
-      ...argv,
-      dir,
-    });
   },
 };
 

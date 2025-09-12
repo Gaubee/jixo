@@ -93,7 +93,7 @@ export function startWsServer(port = 8765) {
 
   server.on("request", (req, res) => {
     if (req.url?.startsWith("/init-session")) {
-      return initSession(req, res);
+      return initSessionByHttp(req, res);
     }
   });
 
@@ -116,7 +116,7 @@ export function startWsServer(port = 8765) {
   });
 }
 
-const initSession = (req: http.IncomingMessage, res: http.ServerResponse) => {
+const initSessionByHttp = (req: http.IncomingMessage, res: http.ServerResponse) => {
   const url = new URL(`http://${process.env.HOST ?? "localhost"}${req.url}`);
   const workDir = url.searchParams.get("workDir");
   if (!workDir) {
@@ -135,6 +135,19 @@ const initSession = (req: http.IncomingMessage, res: http.ServerResponse) => {
   }
   session.api.setWorkDir(workDir);
   return res.writeHead(200).end();
+};
+
+export const initSession = (nid: number | string, workDir: string) => {
+  const sessionId = getSessionByNid(nid)?.api.sessionId;
+  if (!sessionId) {
+    throw new Error(`No found sessionId by nid=${nid}`);
+  }
+
+  const session = sessionWsMap.get(sessionId);
+  if (!session) {
+    throw new Error("Session not found");
+  }
+  session.api.setWorkDir(workDir);
 };
 
 const getSessionByNid = (nid?: number | string | null) => {

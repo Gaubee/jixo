@@ -8,6 +8,7 @@ import {useForm} from "react-hook-form";
 import {z} from "zod";
 import {IsolatedAPICtx, MainAPICtx, SessionAPICtx, SessionIdCtx} from "../components/context.ts";
 import {useNotification} from "../components/Notification.tsx";
+import {WS_PORT} from "../lib/session-websocket.ts";
 
 const agentConfigStore = new KeyValStore<PageConfig>("agent-config");
 
@@ -257,8 +258,8 @@ export function useConfigPanelState() {
     return () => subscription.unsubscribe();
   }, [form.watch]);
 
-  const command1 = `deno run -A jsr:@jixo/cli/session ${nid}`;
-  const command2 = `deno eval "await fetch('http://localhost:8765/init-session?nid=${nid}&workDir='+Deno.cwd())"`;
+  const command1 = `npx jixo go init ${nid}`;
+  const command2 = `node -e "await fetch('http://localhost:${WS_PORT}/init-session?nid=${nid}&workDir='+process.cwd())"`;
 
   return {
     form,
