@@ -10,84 +10,108 @@ import {createFunctionCallContext} from "./function_call.js";
 import {loadAgentTools} from "./load_tools.js";
 import type {FunctionCallsMap} from "./types.js";
 
-const parseContent = async (fcs: FunctionCallsMap, dir: string, sessionId: string, contentFilepath: string, filenames: string[]) => {
+const parseContent = async (fcs: FunctionCallsMap, dir: string, sessionId: string, contentFilepath: string) => {
   console.log(magenta("开始处理文件"), path.relative(process.cwd(), contentFilepath));
   const contents = await zContentsSchema.parse(JSON.parse(reactiveFs.readFile(contentFilepath)));
 
-  const existTaskFilenames = filenames.filter((fn) => fn.startsWith(`${sessionId}.`) && fn.endsWith(".function_call.json"));
-  /// 删除掉残存的任务
-  for (const existTaskFilename of existTaskFilenames.filter((fn) => fn !== taskFilename)) {
-    const [_sessionId, _toolName, modelIndex, contentHash] = existTaskFilename.split(".");
-    const modelContent = contents[+modelIndex];
-    const isMatch = () => {
-      if (modelContent.role !== "model") {
-        return false;
-      }
-      const hash = createHash("sha256").update(`INDEX:${modelIndex}`).update(JSON.stringify(modelContent)).digest("hex").slice(0, 8);
-      if (hash !== contentHash) {
-        return false;
-      }
-      return true;
-    };
+  const taskFilenames = reactiveFs.readDirByGlob(dir, "*.function_call.json").filter((fn) => fn.startsWith(`${sessionId}.`));
+  const rmFiles = new Map<string, boolean>();
+  const rmFile = (filename: string) => {
+    map_get_or_put_async(rmFiles, filename, (filename) => {
+      return fs.promises.rm(path.join(dir, filename)).then(
+        () => true,
+        () => false,
+      );
+    });
+  };
+  try {
+    /// 删除掉残存的任务，用户可能做了redo，所以文件可能不再有效
+    for (const existTaskFilename of taskFilenames) {
+      const [_sessionId, _toolName, modelIndex, contentHash] = existTaskFilename.split(".");
+      const modelContent = contents[+modelIndex];
+      const isMatch = () => {
+        if (modelContent.role !== "model") {
+          return false;
+        }
+        const hash = createHash("sha256").update(`INDEX:${modelIndex}`).update(JSON.stringify(modelContent)).digest("hex").slice(0, 8);
+        if (hash !== contentHash) {
+          return false;
+        }
+        return true;
+      };
 
-    if (!isMatch()) {
-      fs.rmSync(path.join(dir, existTaskFilename));
+      if (!isMatch()) {
+        rmFile(existTaskFilename);
+      }
     }
-  }
 
-  // Find the last user message that contains a functionResponse part.
-  const latestUserContent = contents.findLast((c) => {
-    return c.role === "user" && c.parts.some((p) => "functionResponse" in p);
-  });
-  if (!latestUserContent) return;
+    // Find the last user message that contains a functionResponse part.
+    const latestUserContent = contents.findLast((c) => {
+      return c.role === "user" && c.parts.some((p) => "functionResponse" in p);
+    });
+    if (!latestUserContent) return;
 
-  // Ensure the functionResponse part is empty, meaning it's waiting for our input.
-  const functionResponsePart = latestUserContent.parts.find((p) => "functionResponse" in p);
-  if (!functionResponsePart || (functionResponsePart as any).functionResponse.response !== "") return;
+    // Find the preceding model message that contains the corresponding functionCall.
+    const modelContent = contents.slice(0, contents.lastIndexOf(latestUserContent)).findLast((content) => {
+      return content.role === "model" && content.parts.some((p) => "functionCall" in p);
+    });
+    if (!modelContent) return;
 
-  // Find the preceding model message that contains the corresponding functionCall.
-  const modelContent = contents.slice(0, contents.lastIndexOf(latestUserContent)).findLast((content) => {
-    return content.role === "model" && content.parts.some((p) => "functionCall" in p);
-  });
-  if (!modelContent) return;
+    const functionCallPart = modelContent.parts.find((p) => "functionCall" in p)?.["functionCall"];
+    if (!functionCallPart) return;
 
-  const functionCallPart = modelContent.parts.find((p) => "functionCall" in p)?.["functionCall"];
-  if (!functionCallPart) return;
+    const modelIndex = contents.indexOf(modelContent);
+    if (modelIndex === -1) return;
 
-  const modelIndex = contents.indexOf(modelContent);
-  const hash = createHash("sha256").update(`INDEX:${modelIndex}`).update(JSON.stringify(modelContent)).digest("hex").slice(0, 8);
-  const taskFilename = `${sessionId}.${functionCallPart.name}.${modelIndex}.${hash}.function_call.json`;
+    /// 删除掉modelIndex之前的任务，因为function_call有且只有最后一个能生效。
+    for (const existTaskFilename of taskFilenames) {
+      const [_sessionId, _toolName, existModelIndex] = existTaskFilename.split(".");
+      if (+existModelIndex < modelIndex) {
+        rmFile(existTaskFilename);
+      }
+    }
 
-  if (filenames.includes(taskFilename)) {
-    // A result file already exists, so we skip this task.
-    return;
-  }
+    // Ensure the functionResponse part is empty, meaning it's waiting for our input.
+    const functionResponsePart = latestUserContent.parts.find((p) => "functionResponse" in p);
+    if (!functionResponsePart || (functionResponsePart as any).functionResponse.response !== "") return;
 
-  console.log(blue("收到 functionCallPart 任务请求"), functionCallPart);
+    const hash = createHash("sha256").update(`INDEX:${modelIndex}`).update(JSON.stringify(modelContent)).digest("hex").slice(0, 8);
+    const taskFilename = `${sessionId}.${functionCallPart.name}.${modelIndex}.${hash}.function_call.json`;
 
-  const fc = fcs.get(functionCallPart.name);
+    if (taskFilenames.includes(taskFilename)) {
+      // A result file already exists, so we skip this task.
+      return;
+    }
 
-  if (!fc) {
-    console.warn("找不到任务处理工具");
-    return false;
-  } else {
-    const {functionCall} = fc.module;
-    const input = JSON.parse(functionCallPart.parameters);
-    try {
-      console.log(cyan("开始执行任务"));
+    /// 开始准备执行任务，然后生成文件了
+    console.log(blue("收到 functionCallPart 任务请求"), functionCallPart);
 
-      const context = createFunctionCallContext(sessionId);
+    const fc = fcs.get(functionCallPart.name);
 
-      const output = await functionCall(input, context);
-
-      console.log(green("生成任务结果:"), taskFilename);
-      fs.writeFileSync(path.join(dir, taskFilename), JSON.stringify({...functionCallPart, input, output}, null, 2));
-      return true;
-    } catch (e) {
-      console.log(red("任务执行失败:"), e);
-      fs.writeFileSync(path.join(dir, taskFilename), JSON.stringify({...functionCallPart, input, output: {error: e instanceof Error ? e.message : String(e)}}, null, 2));
+    if (!fc) {
+      console.warn("找不到任务处理工具");
       return false;
+    } else {
+      const {functionCall} = fc.module;
+      const input = JSON.parse(functionCallPart.parameters);
+      try {
+        console.log(cyan("开始执行任务"));
+
+        const context = createFunctionCallContext(sessionId);
+
+        const output = await functionCall(input, context);
+
+        console.log(green("生成任务结果:"), taskFilename);
+        fs.writeFileSync(path.join(dir, taskFilename), JSON.stringify({...functionCallPart, input, output}, null, 2));
+        return true;
+      } catch (e) {
+        console.log(red("任务执行失败:"), e);
+        fs.writeFileSync(path.join(dir, taskFilename), JSON.stringify({...functionCallPart, input, output: {error: e instanceof Error ? e.message : String(e)}}, null, 2));
+        return false;
+      }
     }
+  } finally {
+    await Promise.all([...rmFiles.values()]);
   }
 };
 
@@ -122,7 +146,7 @@ export const googleAiStudioAutomation = async ({dir = process.cwd()}: GoogleAiSt
         return tools;
       });
 
-      await parseContent(tools, dir, basename, contentFilepath, contentNames).catch(console.error);
+      await parseContent(tools, dir, basename, contentFilepath).catch(console.error);
     } catch (e) {
       console.error(red(e instanceof Error ? (e.stack ?? e.message) : String(e)));
     }
