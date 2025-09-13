@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "JIXO AI-Studio",
   "short_name": "jixo",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "Enhances AI Studio with interactive tools and local filesystem integration.",
   "permissions": ["storage", "tabs", "contextMenus", "sidePanel", "scripting"],
   "background": {

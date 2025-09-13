@@ -58,6 +58,17 @@ export default defineConfig(({mode}) => {
           },
         };
       })(),
+      (() => {
+        return {
+          name: "update-version",
+          closeBundle() {
+            const manifest = JSON.parse(fs.readFileSync("./dist/manifest.json", "utf-8"));
+            const {version} = JSON.parse(fs.readFileSync("./package.json", "utf-8"));
+            manifest.version = version;
+            fs.writeFileSync("./dist/manifest.json", JSON.stringify(manifest, null, 2));
+          },
+        };
+      })(),
       // webExtension({manifest: "./public/manifest.json"}),
     ],
     resolve: {
