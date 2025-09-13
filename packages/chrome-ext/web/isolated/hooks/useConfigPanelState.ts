@@ -1,6 +1,6 @@
 import {isEqualCanonical} from "@/lib/utils.ts";
 import {zodResolver} from "@hookform/resolvers/zod";
-import type {AgentMetadata, PageConfig} from "@jixo/dev/browser";
+import {zAgentMetadata, type AgentMetadata, type PageConfig} from "@jixo/dev/browser";
 import {KeyValStore} from "@jixo/dev/idb-keyval";
 import {useDebounce} from "@uidotdev/usehooks";
 import {useCallback, useContext, useEffect, useState} from "react";
@@ -12,45 +12,29 @@ import {WS_PORT} from "../lib/session-websocket.ts";
 
 const agentConfigStore = new KeyValStore<PageConfig>("agent-config");
 
-const AgentFormSchema = z.object({
-  metadata: z.object({
-    workDir: z.string().min(1, "Workspace directory is required."),
-    agent: z.literal("coder"),
-    codeName: z.string().optional(),
-    dirs: z.array(z.string()).optional(),
-    docs: z.array(z.string()).optional(),
-    mcp: z
-      .array(
-        z.object({
-          command: z.string(),
-          prefix: z.string().optional(),
-        }),
-      )
-      .optional(),
-    tools: z
-      .object({
-        exclude: z.array(z.string()).optional(),
-      })
-      .optional(),
-  }),
-});
+const zAgentForm = z.object({metadata: zAgentMetadata});
 
-export type AgentFormValues = z.infer<typeof AgentFormSchema>;
+export type AgentForm = z.infer<typeof zAgentForm>;
 
-const initialMetadata: AgentMetadata = {
+const initialCoderMetadata: AgentMetadata = {
   agent: "coder",
   codeName: "",
   workDir: "",
   dirs: [],
   docs: [],
   mcp: [],
+};
+
+const initCommonMetadata: AgentMetadata = {
+  agent: "common",
+  workDir: "",
   tools: {
     exclude: [],
   },
 };
 
 const initialConfig: PageConfig = {
-  metadata: initialMetadata,
+  metadata: initialCoderMetadata,
   model: "",
   systemPrompt: "",
   tools: [],
@@ -81,9 +65,11 @@ export function useConfigPanelState() {
   const stagedConfigKey = `staged-config-${sessionId}`;
   const debouncedStagedMetadata = useDebounce(stagedConfig.metadata, 300);
 
-  const form = useForm<AgentFormValues>({
-    resolver: zodResolver(AgentFormSchema),
-    defaultValues: {metadata: initialMetadata},
+  const form = useForm<AgentForm>({
+    // resolver: zodResolver(zAgentMetadata),
+    // defaultValues: initialCoderMetadata
+    resolver: zodResolver(zAgentForm),
+    defaultValues: {metadata: initialCoderMetadata},
   });
 
   // --- Workspace Status Machine ---

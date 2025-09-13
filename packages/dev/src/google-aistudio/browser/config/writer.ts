@@ -7,6 +7,9 @@ import type {PageToolConfig} from "./types.js";
  * @param tools - 一个符合JSON Schema格式的工具数组。
  */
 export const setPageFunctionCallTools = async (tools: PageToolConfig[]) => {
+  if (tools.length === 0) {
+    return;
+  }
   const switchBtn = async (label: string, enable: boolean) => {
     const btn = $<HTMLButtonElement>(`button[role="switch"][aria-label="${label}"]`);
     if (btn) {

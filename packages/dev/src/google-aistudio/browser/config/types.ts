@@ -3,8 +3,18 @@ import {z} from "../../node/z-min.js";
 export const zBaseAgentMetadata = z.object({
   /// 工作目录
   workDir: z.string(),
+  tools: z.optional(
+    z.object({
+      exclude: z.optional(z.array(z.string())),
+    }),
+  ),
 });
 export type BaseAgentMetadata = z.output<typeof zBaseAgentMetadata>;
+
+export const zCommonAgentMetadata = z.extend(zBaseAgentMetadata, {
+  agent: z.literal("common"),
+});
+export type CommonAgentMetadata = z.output<typeof zCommonAgentMetadata>;
 
 export const zCoderAgentMetadata = z.extend(zBaseAgentMetadata, {
   agent: z.literal("coder"),
@@ -12,16 +22,20 @@ export const zCoderAgentMetadata = z.extend(zBaseAgentMetadata, {
   codeName: z.string(),
   dirs: z.array(z.string()),
   docs: z.array(z.string()),
-  mcp: z.array(z.object({command: z.string(), prefix: z.optional(z.string())})),
-  tools: z.optional(
+  mcp: z.array(
     z.object({
-      exclude: z.optional(z.array(z.string())),
+      command: z.string(),
+      prefix: z.optional(z.string()),
     }),
   ),
 });
 export type CoderAgentMetadata = z.output<typeof zCoderAgentMetadata>;
 
-export const zAgentMetadata = z.union([zCoderAgentMetadata]);
+export const zAgentMetadata = z.discriminatedUnion("agent", [
+  //
+  zCommonAgentMetadata,
+  zCoderAgentMetadata,
+]);
 export type AgentMetadata = z.output<typeof zAgentMetadata>;
 
 export const zPageToolConfig = z.object({
@@ -34,7 +48,7 @@ export const zPageToolConfig = z.object({
 export type PageToolConfig = z.output<typeof zPageToolConfig>;
 
 export const zPageConfig = z.object({
-  metadata: z.optional(zAgentMetadata),
+  metadata: zAgentMetadata,
   model: z.string(),
   systemPrompt: z.string(),
   tools: z.array(zPageToolConfig),

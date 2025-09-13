@@ -1,7 +1,7 @@
-import {createResolver, } from "@gaubee/nodekit";
+import {createResolver} from "@gaubee/nodekit";
 import {_gen_content} from "../../gen-prompt.js";
+import {loadAgentTools} from "../../tools/load_tools.js";
 import type {AgentMetadata, PageConfig} from "../browser/index.js";
-import { loadAgentTools } from "../../tools/load_tools.js";
 
 /**
  * Dynamically generates a complete page configuration based on agent metadata.
@@ -11,13 +11,22 @@ import { loadAgentTools } from "../../tools/load_tools.js";
  * @returns A promise that resolves to the generated PageConfig object.
  */
 export const genPageConfig = async (metadata: AgentMetadata): Promise<PageConfig> => {
-  const systemPromptTemplate: string[] = ["[JIXO:CODER2](@INJECT)"];
+  let genContentCodeName = "";
+  let agentModel = "";
+  const systemPromptTemplate: string[] = [];
 
   // 1. Dynamically load tools from both built-in and user directories
   const {toolDeclarations} = await loadAgentTools(metadata);
 
   // 2. Build the system prompt template from metadata
-  if (metadata) {
+  if (metadata.agent === "coder") {
+    genContentCodeName =
+      (metadata.codeName ||
+        // Use workDir name as codeName
+        metadata.workDir.split(/[\/\\]+/).findLast((v) => !v.startsWith("."))) ??
+      "NoNameJob";
+    agentModel = "gemini-2.5-pro";
+    systemPromptTemplate.push("[JIXO:CODER2](@INJECT)");
     if (metadata.dirs?.length) {
       systemPromptTemplate.push("\n# Relevant Directories:\n");
       metadata.dirs.forEach((dir) => systemPromptTemplate.push(`[${dir}](@FILE_TREE)`));
@@ -31,15 +40,15 @@ export const genPageConfig = async (metadata: AgentMetadata): Promise<PageConfig
 
   // 3. Use gen-prompt engine to render the final system prompt
   const workDirResolver = createResolver(metadata.workDir);
-  const finalSystemPrompt = await _gen_content(
-    (metadata.codeName || metadata.workDir.split(/[\/\\]+/).findLast((v) => !v.startsWith("."))) ?? "NoNameJob", // Use workDir name as codeName
-    systemPromptTemplate.join("\n"),
-    workDirResolver,
-  );
+  const finalSystemPrompt =
+    systemPromptTemplate.length > 0
+      ? /// 按需生成提示词
+        await _gen_content(genContentCodeName, systemPromptTemplate.join("\n"), workDirResolver)
+      : "";
 
   // 4. Construct the final config object
   const finalConfig: PageConfig = {
-    model: "gemini-1.5-pro", // Or make this configurable via metadata
+    model: agentModel, // Or make this configurable via metadata
     systemPrompt: finalSystemPrompt,
     tools: toolDeclarations,
     metadata,

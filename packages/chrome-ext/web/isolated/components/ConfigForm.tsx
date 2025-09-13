@@ -9,6 +9,7 @@ import React from "react";
 import {useWatch} from "react-hook-form";
 import type {ConfigPanelState} from "../hooks/useConfigPanelState.ts";
 import {CoderAgentConfigPanel} from "./CoderAgentConfigPanel.tsx";
+import {CommonAgentConfigPanel} from "./CommonAgentConfigPanel.tsx";
 
 interface ConfigFormProps extends ConfigPanelState {}
 
@@ -90,6 +91,7 @@ export function ConfigForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="common">Common</SelectItem>
                       <SelectItem value="coder">Coder Agent</SelectItem>
                     </SelectContent>
                   </Select>
@@ -97,6 +99,7 @@ export function ConfigForm({
               )}
             />
             <div className="border-t pt-4">
+              {watchedValues.metadata?.agent === "common" && <CommonAgentConfigPanel control={form.control} tools={stagedConfig.tools} onPreview={handlePreview} />}
               {watchedValues.metadata?.agent === "coder" && <CoderAgentConfigPanel control={form.control} tools={stagedConfig.tools} onPreview={handlePreview} />}
             </div>
           </CardContent>
