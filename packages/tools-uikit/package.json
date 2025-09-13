@@ -1,6 +1,6 @@
 {
   "name": "@jixo/tools-uikit",
-  "version": "0.2.0",
+  "version": "4.0.0",
   "type": "module",
   "exports": {
     ".": "./dist/index.js"
