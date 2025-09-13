@@ -137,17 +137,21 @@ const initSessionByHttp = (req: http.IncomingMessage, res: http.ServerResponse) 
   return res.writeHead(200).end();
 };
 
-export const initSession = (nid: number | string, workDir: string) => {
-  const sessionId = getSessionByNid(nid)?.api.sessionId;
-  if (!sessionId) {
-    throw new Error(`No found sessionId by nid=${nid}`);
+export const initSession = async (nid: number | string, workDir: string) => {
+  const res = await fetch(`http://localhost:8765/init-session?nid=${nid}&workDir=${encodeURIComponent(workDir)}`);
+  if (!res.ok) {
+    throw new Error(await res.text());
   }
+  // const sessionId = getSessionByNid(nid)?.api.sessionId;
+  // if (!sessionId) {
+  //   throw new Error(`No found sessionId by nid=${nid}`);
+  // }
 
-  const session = sessionWsMap.get(sessionId);
-  if (!session) {
-    throw new Error("Session not found");
-  }
-  session.api.setWorkDir(workDir);
+  // const session = sessionWsMap.get(sessionId);
+  // if (!session) {
+  //   throw new Error("Session not found");
+  // }
+  // session.api.setWorkDir(workDir);
 };
 
 const getSessionByNid = (nid?: number | string | null) => {

@@ -1,4 +1,5 @@
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs.tsx";
+import {cn} from "@/lib/utils.ts";
 import {KeyValStore} from "@jixo/dev/idb-keyval";
 import React, {useCallback, useContext, useEffect, useState} from "react";
 import {useConfigPanelState} from "../hooks/useConfigPanelState.ts";
@@ -70,6 +71,15 @@ export function ControlPanelContent({}: ControlPanelContentProps) {
       handleAction("Stop Sync", mainApi.stopSync, "sync-status");
     }
   }, [panelSettings.isSyncEnabled, state.workspaceStatus, mainApi]);
+
+  const tabContentScrollbar = cn(
+    `max-h-[calc(90vh-200px)]`,
+    "overflow-y-scroll",
+    // tailwind-scrollbar 插件
+    "scrollbar-thin",
+    "scrollbar-gutter-stable",
+    "-mr-[6px]", //负值用 - 前缀
+  );
   return (
     <PanelSettingsCtx.Provider value={panelSettings}>
       <Tabs defaultValue="agent">
@@ -78,17 +88,17 @@ export function ControlPanelContent({}: ControlPanelContentProps) {
           <TabsTrigger value="settings">Settings</TabsTrigger>
           <TabsTrigger value="jobs">Jobs</TabsTrigger>
         </TabsList>
-        <TabsContent value="agent">
+        <TabsContent value="agent" className={tabContentScrollbar}>
           <ConfigPanel state={state} />
         </TabsContent>
-        <TabsContent value="settings">
+        <TabsContent value="settings" className={tabContentScrollbar}>
           <SettingsPanel
             values={panelSettings}
             onSubmit={handleSettingsSubmit}
             onClearHistory={() => handleAction("Clear History", mainApi.clearPageHistory, "clear-history-status")}
           />
         </TabsContent>
-        <TabsContent value="jobs">
+        <TabsContent value="jobs" className={tabContentScrollbar}>
           <JobsPanel />
         </TabsContent>
       </Tabs>

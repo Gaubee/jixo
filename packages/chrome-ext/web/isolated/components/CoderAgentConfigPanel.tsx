@@ -5,17 +5,16 @@ import {Switch} from "@/components/ui/switch.tsx";
 import {Tooltip, TooltipContent, TooltipProvider, TooltipTrigger} from "@/components/ui/tooltip.tsx";
 import {X} from "lucide-react";
 import React from "react";
-import {useFieldArray, type Control, useController} from "react-hook-form";
-import {FileListInput} from "./FileListInput.tsx";
+import {useController, useFieldArray, type Control} from "react-hook-form";
 import type {AgentFormValues} from "../hooks/useConfigPanelState.ts";
+import {FileListInput} from "./FileListInput.tsx";
 
-interface CoderAgentConfigPanelProps {
+interface ToolsSwithListProps {
   control: Control<AgentFormValues>;
-  tools: Array<{name: string; filepath: string}>;
-  onPreview: (patterns: string[]) => Promise<string[]>;
+  tools: Array<{name: string; filepath: string; description: string}>;
 }
 
-function ToolsSwitchList({control, tools}: {control: Control<AgentFormValues>; tools: Array<{name: string; filepath: string}>}) {
+function ToolsSwitchList({control, tools}: ToolsSwithListProps) {
   const {field} = useController({
     control,
     name: "metadata.tools.exclude",
@@ -49,8 +48,9 @@ function ToolsSwitchList({control, tools}: {control: Control<AgentFormValues>; t
                   <Switch id={`tool-switch-${tool.name}`} checked={!excludedTools.has(tool.name)} onCheckedChange={(checked) => handleCheckedChange(checked, tool.name)} />
                 </div>
               </TooltipTrigger>
-              <TooltipContent>
-                <p className="font-mono text-xs">{tool.filepath}</p>
+              <TooltipContent className="flex flex-col items-start gap-1.5">
+                <p className="inline-block rounded-lg bg-[color-mix(in_srgb,var(--background)_20%,transparent)] px-1 py-0.5 font-mono text-xs italic">{tool.filepath}</p>
+                <p className="font-mono text-xs">{tool.description}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -60,6 +60,9 @@ function ToolsSwitchList({control, tools}: {control: Control<AgentFormValues>; t
   );
 }
 
+interface CoderAgentConfigPanelProps extends ToolsSwithListProps {
+  onPreview: (patterns: string[]) => Promise<string[]>;
+}
 export function CoderAgentConfigPanel({control, tools, onPreview}: CoderAgentConfigPanelProps) {
   const {fields, append, remove} = useFieldArray({
     control,

@@ -1,5 +1,6 @@
 import {red} from "@gaubee/nodekit";
 import {doSync, initSession, startWsServer, type SyncOptions} from "@jixo/dev/google-aistudio";
+import path from "node:path";
 import type {Arguments, CommandModule} from "yargs";
 
 // 定义 yargs builder 所需的参数接口
@@ -76,7 +77,7 @@ const initCommand: CommandModule<object, InitOptions> = {
       }),
   handler: async (argv) => {
     try {
-      initSession(argv.nid!, argv.dir ?? process.cwd());
+      initSession(argv.nid!, argv.dir ? path.resolve(process.cwd(), argv.dir) : process.cwd());
     } catch (e) {
       console.error(red(e instanceof Error ? e.message : String(e)));
     }

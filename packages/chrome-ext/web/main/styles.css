@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+@plugin "tailwind-scrollbar" {
+  nocompatible: true;
+}
+
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {
@@ -80,6 +85,15 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  /* 滚动条的默认样式 */
+  * {
+    --scrollbar-track: transparent;
+    --scrollbar-thumb:
+      color-mix(in srgb, currentColor, transparent);
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb), var(--scrollbar-track);
+  }
 }
 
 .dark {
@@ -119,7 +133,7 @@
 :host {
   @apply bg-background text-foreground;
 
-  * {
+  *:not(.rounded-full) {
     corner-shape: superellipse(2);
   }
 }

@@ -1,4 +1,4 @@
-import type {PageConfig, Snapshot} from "@jixo/dev/browser";
+import type {PageConfig} from "@jixo/dev/browser";
 import {
   applyPageConfig as applyPageConfigToBrowser,
   clearPageHistory,
@@ -131,20 +131,6 @@ export class MainContentScriptAPI {
     const res = whenFileChanged(...args);
     return Comlink.proxy(res);
   };
-
-  async getConfigFileSnap(sessionId: string, isTemplate: boolean): Promise<Snapshot> {
-    const fs = await getEasyFs();
-    const filename = isTemplate ? `${sessionId}.config-template.json` : `${sessionId}.config.json`;
-    try {
-      const statResult = await fs.stat(filename);
-      if (statResult.isFile) {
-        return {mtime: statResult.lastModified, size: statResult.size};
-      }
-      return null;
-    } catch {
-      return null;
-    }
-  }
 
   clearPageHistory = Comlink.clone(clearPageHistory);
 

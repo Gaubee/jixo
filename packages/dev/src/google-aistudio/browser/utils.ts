@@ -3,7 +3,7 @@ export * from "./easy_fs.js";
 
 let restoredDirHandle: FileSystemDirectoryHandle | undefined;
 export const restoreDirHandle = async (newHandle?: FileSystemDirectoryHandle | null) => {
-  if (restoredDirHandle === newHandle) {
+  if (restoredDirHandle && newHandle && (await restoredDirHandle.isSameEntry(newHandle))) {
     return;
   }
   if ((await newHandle?.queryPermission({mode: "readwrite"})) !== "granted") {

@@ -12,7 +12,7 @@ export function ControlPanel({}: ControlPanelProps) {
 
   return (
     <NotificationProvider>
-      <div className="space-y-2 p-2 text-sm">
+      <div className="w-[max(278px,20vw)] space-y-2 p-2 text-sm">
         {serviceStatus === "disconnected" && (
           <Alert variant="destructive">
             <WifiOff className="h-4 w-4" />
@@ -26,7 +26,7 @@ export function ControlPanel({}: ControlPanelProps) {
             <span>Connecting...</span>
           </div>
         )}
-        {serviceStatus === "connected" && <ControlPanelContent  />}
+        {serviceStatus === "connected" && <ControlPanelContent />}
       </div>
     </NotificationProvider>
   );

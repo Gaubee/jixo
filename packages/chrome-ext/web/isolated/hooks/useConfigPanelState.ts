@@ -100,7 +100,7 @@ export function useConfigPanelState() {
     if (!configFile) {
       setWorkspaceStatus("linking_required");
       // Wait for user to link via terminal
-      const workDir = await sessionApi.whenWorkDirChanged();
+      await sessionApi.whenWorkDirChanged();
       // Once linked, the local service will have the workDir.
       // We can now treat it as ready, which will trigger the data loading effect.
       // We also need to ensure the backend session has the dir.

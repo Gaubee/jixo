@@ -14,6 +14,27 @@ const parseContent = async (fcs: FunctionCallsMap, dir: string, sessionId: strin
   console.log(magenta("开始处理文件"), path.relative(process.cwd(), contentFilepath));
   const contents = await zContentsSchema.parse(JSON.parse(reactiveFs.readFile(contentFilepath)));
 
+  const existTaskFilenames = filenames.filter((fn) => fn.startsWith(`${sessionId}.`) && fn.endsWith(".function_call.json"));
+  /// 删除掉残存的任务
+  for (const existTaskFilename of existTaskFilenames.filter((fn) => fn !== taskFilename)) {
+    const [_sessionId, _toolName, modelIndex, contentHash] = existTaskFilename.split(".");
+    const modelContent = contents[+modelIndex];
+    const isMatch = () => {
+      if (modelContent.role !== "model") {
+        return false;
+      }
+      const hash = createHash("sha256").update(`INDEX:${modelIndex}`).update(JSON.stringify(modelContent)).digest("hex").slice(0, 8);
+      if (hash !== contentHash) {
+        return false;
+      }
+      return true;
+    };
+
+    if (!isMatch()) {
+      fs.rmSync(path.join(dir, existTaskFilename));
+    }
+  }
+
   // Find the last user message that contains a functionResponse part.
   const latestUserContent = contents.findLast((c) => {
     return c.role === "user" && c.parts.some((p) => "functionResponse" in p);
@@ -35,7 +56,7 @@ const parseContent = async (fcs: FunctionCallsMap, dir: string, sessionId: strin
 
   const modelIndex = contents.indexOf(modelContent);
   const hash = createHash("sha256").update(`INDEX:${modelIndex}`).update(JSON.stringify(modelContent)).digest("hex").slice(0, 8);
-  const taskFilename = `${sessionId}.${functionCallPart.name}.${modelIndex}-${hash}.function_call.json`;
+  const taskFilename = `${sessionId}.${functionCallPart.name}.${modelIndex}.${hash}.function_call.json`;
 
   if (filenames.includes(taskFilename)) {
     // A result file already exists, so we skip this task.

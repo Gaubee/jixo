@@ -1,5 +1,5 @@
 import {PortalContainerCtx} from "@/components/ui/context.ts";
-import {pureEvent} from "@gaubee/util";
+import {func_remember, pureEvent} from "@gaubee/util";
 import type {AgentMetadata, UIApi} from "@jixo/dev/browser";
 import {Comlink} from "@jixo/dev/comlink";
 import React, {useEffect, useState} from "react";
@@ -57,7 +57,7 @@ export const isolatedContentScriptAPI = new (class IsolatedContentScriptAPI impl
     return config;
   }
 
-  async renderApp() {
+  renderApp = func_remember(async () => {
     const {reactRoot, mainContentScriptAPI, sessionId, sessionApi} = await ensureJixoMainRuntime();
     const host = document.querySelector("jixo-draggable-dialog") as HTMLElement;
     const shadowHost = host?.shadowRoot ?? null;
@@ -98,7 +98,7 @@ export const isolatedContentScriptAPI = new (class IsolatedContentScriptAPI impl
         </PortalContainerCtx.Provider>
       </React.StrictMode>,
     );
-  }
+  });
 
   async renderJob(jobId: string, componentName: string, props: any) {
     console.log("Received render job via RPC:", {jobId, componentName, props});
