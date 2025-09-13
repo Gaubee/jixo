@@ -1,6 +1,6 @@
 {
   "name": "@jixo/mcp-pnpm",
-  "version": "1.4.0",
+  "version": "0.1.0",
   "description": "Your friendly pnpm CLI pal. Helps you find commands and configs quickly.",
   "type": "module",
   "exports": {
