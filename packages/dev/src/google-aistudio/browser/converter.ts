@@ -132,20 +132,26 @@ const prepareKey = (sourceMessages: any[]) => {
 
 // --- Target Schema and Types ---
 const TargetPartSchema = z.union([
-  z.object({text: z.string()}),
   z.object({
+    id: z.string(),
+    text: z.string(),
+  }),
+  z.object({
+    id: z.string(),
     inlineData: z.object({
       mimeType: z.string(),
       data: z.string(),
     }),
   }),
   z.object({
+    id: z.string(),
     functionCall: z.object({
       name: z.string(),
       parameters: z.any(),
     }),
   }),
   z.object({
+    id: z.optional(z.string()),
     functionResponse: z.object({
       name: z.string(),
       response: z.any(),
@@ -360,11 +366,11 @@ export const convertMessages = async (sourceMessages: any[]): Promise<TargetMess
   // Step 2: Process each group into a target message (asynchronous)
   const finalMessages: TargetMessage[] = [];
   for (const group of groupedMessages) {
-    let functionResponseData = null as {name: string; response: any} | null;
+    let functionResponseData = null as {id: string; name: string; response: any} | null;
 
     // Asynchronously create parts for the current group
-    const partsPromises = group.items.map(async (item): Promise<TargetPart | null> => {
-      return match(item)
+    const partsPromises = group.items.map(async (item) => {
+      const part = match(item)
         .with({[KEYS.TYPE_KEY]: "text", text: P.string}, (msg) => {
           return msg.text.length > 0 ? {text: msg.text} : null;
         })
@@ -393,7 +399,7 @@ export const convertMessages = async (sourceMessages: any[]): Promise<TargetMess
             const {name, argsArray} = getCanonicalFunctionCall(msg);
             const args = parseFunctionArgs(argsArray);
             if (typeof msg[KEYS.FC_RESPONSE_KEY]?.response === "string") {
-              functionResponseData = {name, response: msg[KEYS.FC_RESPONSE_KEY].response};
+              functionResponseData = {id: item.id, name, response: msg[KEYS.FC_RESPONSE_KEY].response};
             }
             return {functionCall: {name, parameters: JSON.stringify(args)}};
           } catch (error) {
@@ -402,6 +408,12 @@ export const convertMessages = async (sourceMessages: any[]): Promise<TargetMess
           }
         })
         .otherwise(() => null);
+      return part
+        ? ({
+            id: item.id,
+            ...part,
+          } as TargetPart)
+        : null;
     });
 
     // Wait for all parts to be processed and filter out nulls
@@ -413,10 +425,10 @@ export const convertMessages = async (sourceMessages: any[]): Promise<TargetMess
     }
     if (functionResponseData) {
       finalMessages.push({
-        id: group.id,
         role: "user",
         parts: [
           {
+            id: functionResponseData.id,
             functionResponse: {
               name: functionResponseData.name,
               response: functionResponseData.response,
@@ -430,7 +442,12 @@ export const convertMessages = async (sourceMessages: any[]): Promise<TargetMess
   // Step 4: Add the final user input placeholder
   finalMessages.push({
     role: "user",
-    parts: [{text: "INSERT_INPUT_HERE"}],
+    parts: [
+      {
+        id: "text-input-chunk-id",
+        text: "INSERT_INPUT_HERE",
+      },
+    ],
   });
 
   return finalMessages;
