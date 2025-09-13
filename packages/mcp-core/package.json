@@ -22,12 +22,12 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5",
-    "zod": "^4.1.5"
+    "@modelcontextprotocol/sdk": "catalog:ai",
+    "zod": "catalog:"
   },
   "devDependencies": {
-    "@types/diff": "^8.0.0",
-    "@types/minimatch": "^6.0.0",
-    "@types/node": "^24.1.0"
+    "@types/diff": "catalog:types",
+    "@types/minimatch": "catalog:types",
+    "@types/node": "catalog:types"
   }
 }

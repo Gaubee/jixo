@@ -23,21 +23,21 @@
     "test:watch": "vitest watch"
   },
   "dependencies": {
-    "date-fns": "^4.1.0",
-    "debug": "^4.4.1",
-    "execa": "^9.6.0",
-    "import-meta-ponyfill": "^3.3.1",
-    "node-pty": "npm:@karinjs/node-pty@^1.1.3",
-    "proper-lockfile": "^4.1.2",
-    "strip-ansi": "^7.1.2",
-    "yargs-parser": "^22.0.0"
+    "date-fns": "catalog:",
+    "debug": "catalog:",
+    "execa": "catalog:",
+    "import-meta-ponyfill": "catalog:",
+    "node-pty": "catalog:",
+    "proper-lockfile": "catalog:",
+    "strip-ansi": "catalog:",
+    "yargs-parser": "catalog:"
   },
   "devDependencies": {
-    "@types/debug": "^4.1.12",
-    "@types/node": "^24.1.0",
-    "@types/proper-lockfile": "^4.1.4",
-    "@types/yargs-parser": "^21.0.3",
-    "tsx": "^4.20.5",
-    "vitest": "^3.2.4"
+    "@types/debug": "catalog:types",
+    "@types/node": "catalog:types",
+    "@types/proper-lockfile": "catalog:types",
+    "@types/yargs-parser": "catalog:types",
+    "tsx": "catalog:",
+    "vitest": "catalog:"
   }
 }

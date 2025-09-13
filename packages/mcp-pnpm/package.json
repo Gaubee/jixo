@@ -27,9 +27,9 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.5",
-    "import-meta-ponyfill": "^3.3.1",
-    "react": "^19.1.1",
-    "zod": "^4.1.5"
+    "@modelcontextprotocol/sdk": "catalog:ai",
+    "import-meta-ponyfill": "catalog:",
+    "react": "catalog:ui",
+    "zod": "catalog:"
   }
 }
