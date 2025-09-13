@@ -1,4 +1,4 @@
-import {v4 as uuidv4} from "uuid";
+import {v7 as uuidv7} from "uuid";
 import type {RenderFunction, RenderHandler, RenderPayload, UIRenderCommand} from "./types.ts";
 
 /**
@@ -19,7 +19,7 @@ export function createRenderer(handler: RenderHandler, sessionId: string): Rende
   const render: RenderFunction = (payload: RenderPayload): Promise<any> => {
     const command: UIRenderCommand = {
       type: "RENDER_UI",
-      jobId: uuidv4(),
+      jobId: uuidv7(),
       payload,
     };
 

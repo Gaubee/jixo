@@ -6,6 +6,6 @@
     ".": "./dist/index.js"
   },
   "dependencies": {
-    "uuid": "^13.0.0"
+    "uuid": "catalog:"
   }
 }
